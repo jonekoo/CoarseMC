@@ -7,6 +7,23 @@ module io
   integer :: partccount,GBcount,Xecount
   namelist /gbxecyl/ radius, height, partccount, GBcount, Xecount   
 
+  interface readState
+
+    module procedure readState
+
+    subroutine readStateOld(filename,N,xs,ys,zs,uxs,uys,uzs,rods,R,Lz)
+    use nrtype
+    implicit none
+    character(len=*), intent(in) :: filename
+    integer, intent(out) :: N
+    real(dp), dimension(:), pointer :: xs,ys,zs,uxs,uys,uzs
+    logical, dimension(:), pointer :: rods
+    real(dp), intent(out) :: R,Lz
+    end subroutine readStateOld
+
+  end interface
+
+
   contains
 
   subroutine writeState(T,P,R,Lz,N,parray,index)
@@ -17,11 +34,11 @@ module io
   type(particledat), dimension(:), intent(in) :: parray
   integer :: i,ios,GB,Xe
   integer, parameter :: outunit=19
-  character(len=30) :: outfile="tempstatefile.out"
+  character(len=30) :: outfile !! ="tempstatefile.out"
   character(len=140) :: string
     GB=N
     Xe=0
-  !!  outfile=trim(adjustl(filename(R,T,P,GB,Xe,index)))
+    outfile=trim(adjustl(filename(R,T,P,GB,Xe,index)))
     open(outunit,file=outfile,status='replace', position='append', &
        & form='formatted', iostat=ios)
     if(ios/=0) then 
@@ -38,82 +55,44 @@ module io
       call particleToString(parray(i), string)
       write(outunit,*) trim(adjustl(string))
     end do
+    close(outunit)
   end subroutine writeState
 
 
-
-  subroutine readstate(filename,N,xs,ys,zs,uxs,uys,uzs,rods,R,Lz)
+  subroutine readState(filename,N,parray,R,Lz)
+  use particle, only : particledat, stringToParticle
+  use nrtype
   implicit none
-  character(len=*), intent(in) :: filename
-  integer,intent(out) :: N
-  real(dp),dimension(:),pointer :: xs,ys,zs,uxs,uys,uzs
-  logical,dimension(:),pointer :: rods
+  character(len=*), intent(in) :: filename  
+  integer, intent(out) :: N
+  type(particledat), dimension(:), pointer :: parray
   real(dp), intent(out) :: R,Lz
-  integer,parameter :: readunit=17   
-  integer :: ios,astat,i
-  character(len=5) :: charvar
-  integer,dimension(:),allocatable :: help
-  integer :: GB,Xe
-  character(len=30) :: errorstring="statefile format is incompatible"
-    R=0.
-    Lz=0.       
-    !Koittaa avata annetun tiedoston
+  integer, parameter :: readunit=17
+  integer :: ios,i
+  character(len=140) :: string
     open(readunit,file=filename,status='old',iostat=ios)
-    if (ios/=0) then
-      write(*,*) 'Tiedoston ',filename,' avaaminen ep‰onnistui.'
-      write(*,*) 'Ohjelman suoritus keskeytyy.'
+    if(ios/=0) then 
+      write(*,*) 'Failed to open statefile ',filename
       stop;
     end if
-    !Luetaan hiukkasten lukum‰‰r‰ tiedostosta
-    read(readunit,nml=gbxecyl) 
-    N=partccount;  !write(*,*) N
-    GB=GBcount;    !write(*,*) GB
-    Xe=Xecount;    !write(*,*) Xe
-    R=radius;      !write(*,*) R
-    Lz=height;     !write(*,*) Lz
-    if (R<=0) then 
-      write(*,*) 'readstate: Cylinder radius is not a positive number.'
-      stop;
-    end if
-    if(N/=(GB+Xe)) then
-      write(*,*) 'readstate: GB+Xe/=N, particlecount doesnt match in &
-                & the file',filename
-      stop;
-    end if
-    !Varaa muistin taulukolle
-    allocate(xs(N),ys(N),zs(N),uxs(N),uys(N),uzs(N),rods(N),help(N),stat=astat)
-    if (astat/=0) then
-      write(*,*) 'readstate:Virhe varattaessa muistia'
-      stop;
-    end if
-    !Luetaan  hiukkasten x-koordinaatit
-    read(readunit,*) charvar;  !write(*,*) charvar
-    read(readunit,*) xs(1:N);  
-    read(readunit,*) charvar; !write(*,*) charvar
-    !if(charvar(1:1)/='$') write(*,*) errorstring; stop;  
-    !Luetaan y-koordinaatit
-    read(readunit,*) ys(1:N)   
-    read(readunit,*) charvar
-    read(readunit,*) zs(1:N)
-    !Luetaan rod-tieto
-    read(readunit,*) charvar
-    read(readunit,*) help(1:N)
-    !Luetaan orientaatiovektoreiden komponentit
-    read(readunit,*) charvar
-    read(readunit,*) uxs(1:N)
-    read(readunit,*) charvar
-    read(readunit,*) uys(1:N)
-    read(readunit,*) charvar
-    read(readunit,*) uzs(1:N)
-    close(readunit)    
+    read(readunit,nml=gbxecyl)
+    N=partccount
+    !GB=GBcount
+    !Xe=Xecount
+    R=radius
+    Lz=height
+    allocate(parray(N))
     do i=1,N
-      if(help(i)==1) then
-        rods(i)=.true.
-      else
-        rods(i)=.false.
+      read(readunit,'(A)',iostat=ios) string
+      if(ios<0)then
+        write(*,*) 'partikkeleita luettiin',i  
+        stop;
       end if
+      call stringToParticle(string,parray(i))
+!      write(*,*) trim(adjustl(string))
     end do
-  end subroutine readstate
+    close(readunit)
+  end subroutine readState
 
 
 
@@ -126,9 +105,10 @@ module io
   end subroutine readerror
 
 
+
   !Palauttaa tiedostonimen annettujen parametrien perusteella. 
   function filename(R,T,P,GB,Xe,index) result(name)
-    implicit none
+  implicit none
     intrinsic anint
     character(len=26) :: name
     real(dp),intent(in) :: T,P,R
