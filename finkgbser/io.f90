@@ -5,36 +5,6 @@ module io
   contains
 
 
-  !Aliohjelma, joka kirjoittaa partikkelien tiedot tiedostoon 
-  !Tekij‰: Jouni Karjalainen 
-  !Muokattu Juho Lintuvuoren alkuper‰isest‰ koodista. 
-  subroutine writeatomsout(N,radius,height,particle)
-    implicit none
-    type(particledat), dimension(:), pointer :: particle
-    real(dp),intent(in) :: radius,height
-    integer :: N
-    integer :: ios,i
-    integer,parameter :: wunit=20
-    type(particledat), pointer :: particlei
-    character(len=40),parameter :: wfile='atoms.out'  
-
-    open(wunit,file=wfile,status='replace',form='formatted',iostat=ios)
-    if(ios/=0)then
-       write(*,*)'Virhe tiedoston ',wfile,'avaamisessa. Ohjelma keskeytyy..'
-       stop;
-    end if
-
-    N=size(particle)
-      
-    write(wunit,*)N,radius,height
-    do i=1,N
-      particlei=>particle(i)
-      write(wunit,*) particlei
-    end do
-    close(wunit);
- 
-  end subroutine writeatomsout
-
   !Kirjoittaa tilan eli sylinterin s‰teen, korkeuden ja partikkelitaulukon
   !tiedostoon  
   subroutine writestate(T,P,R,Lz,particlearray,index)
@@ -245,14 +215,14 @@ module io
   !muutokset: Jouni Karjalainen
   subroutine ReadParams(file,Nrelax,Nprod,Nratio,T,pres,anchor,voltyp,Kw,&
                         & seed,epses,eps0,rsphere,spmyy,epsphere,sigma0,siges,&
-                   & B0, B0angle)
+                        & B0, B0angle, domainw, maxdr, cutoff)
     implicit none
     ! Alkuper√§inen aliohjelma Antti Kurosen k√§sialaa; kurssilta johdatus
     ! atomistisiin simulaatioihin
     integer,intent(out) :: Nrelax,Nprod,Nratio,anchor,seed
     integer,intent(out) :: voltyp
     real(dp),intent(out) :: T,pres,epses,eps0,rsphere,spmyy,epsphere 
-    real(dp),intent(out) :: sigma0,siges,Kw,B0,B0angle
+    real(dp),intent(out) :: sigma0,siges,Kw,B0,B0angle,domainw,maxdr,cutoff
     character(len=*), parameter :: paramsfile='gbcyl.in'
     integer, parameter :: input=20
     character(len=50),intent(out) :: file  
@@ -323,6 +293,12 @@ module io
          B0=x;
        else if(string=='$B0angle')then
          B0angle=x;
+       else if(string=='$cutoff')then
+         cutoff=x;
+       else if(string=='$domainw')then
+         domainw=x;
+       else if(string=='$maxdr')then
+         maxdr=x;
        else
          print '(A,A)','Unknown parameter',string
 	 stop 'Parameter read in error'
