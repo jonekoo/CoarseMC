@@ -1,38 +1,36 @@
 program gbcylinder
-  use nrtype
-  use mcstep, only : step,updatemaxvalues,initmcstep
-  use energy, only : totenergy,totwallprtclV,totpairV
-  use cylinder, only : initcylinder,getradius,getHeight
-  use verlet, only : initvlist, freevlist
-  use particlewall, only : initptwall,rArB
-  use gbgb, only : initgbgb
-  use particle, only : setmaxmoves
-  use io 
-  use mt19937
-  implicit none
-
-  ! 1. muuttujien esittely
-  integer :: anchor      !Ankkuroinnin tyyppi 
-  integer,parameter :: eunit=10
-  integer :: avaus
-  character(LEN=*), parameter :: efile='energy.txt'
-  character(len=50) :: statefile !='T20P20GB0000576Xe00000.000'
-  type(particledat), dimension(:), pointer :: array0,ptrtoarray
-  type(particledat), dimension(:), allocatable,target :: particlearray
-  integer :: N,astat,Nrelax,Nprod,Nratio,seed,i,j,vtype
-  real(dp) :: radius,height,Lz,Kw,rA,rB
-  real(dp) :: T,pres,epses,eps0,rsphere,spmyy,epsphere,sigma0,siges
-  real(dp) :: totE=0.0, maxangle=0.170, maxtrans=0.156,pairE=0.0,wallE=0.0  
-  logical,target :: ol=.false.  
-  logical,pointer :: overlap
-  type(particledat), pointer :: particlej
-  !Vielä turhia muuttujia.
-  integer :: Nsphere,debug,allign
-
+use nrtype
+use mcstep, only : step,updatemaxvalues,initmcstep
+use energy, only : totenergy,totwallprtclV,totpairV
+use cylinder, only : initcylinder,getradius,getHeight
+use verlet, only : initvlist, freevlist
+use particlewall, only : initptwall,rArB
+use gbgb, only : initgbgb
+use particle, only : setmaxmoves
+use io 
+use mt19937
+implicit none
+! 1. muuttujien esittely
+integer :: anchor      !Ankkuroinnin tyyppi 
+integer,parameter :: eunit=10
+integer :: avaus
+character(LEN=*), parameter :: efile='energy.txt'
+character(len=50) :: statefile 
+type(particledat), dimension(:), pointer :: array0,ptrtoarray
+type(particledat), dimension(:), allocatable,target :: particlearray
+integer :: N,astat,Nrelax,Nprod,Nratio,seed,i,j,vtype
+real(dp) :: radius,height,Lz,Kw,rA,rB
+real(dp) :: T,pres,epses,eps0,rsphere,spmyy,epsphere,sigma0,siges,B0,B0angle
+real(dp) :: totE=0.0, maxangle=0.170, maxtrans=0.156,pairE=0.0,wallE=0.0  
+logical,target :: ol=.false.  
+logical,pointer :: overlap
+type(particledat), pointer :: particlej
+!Vielä turhia muuttujia.
+integer :: Nsphere
   overlap=>ol 
   !! 2. parametrien lataus
   call ReadParams(statefile,Nrelax,Nprod,Nratio,T,pres,anchor,vtype,Kw,seed, &
-                  epses,eps0,rsphere,spmyy,epsphere,sigma0,siges,allign,debug) 
+                  epses,eps0,rsphere,spmyy,epsphere,sigma0,siges,B0,B0angle) 
   !! 3. modulien alustus
   call initptwall(anchor,Kw)
   call init_genrand(seed)  

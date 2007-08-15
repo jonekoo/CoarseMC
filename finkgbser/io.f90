@@ -245,14 +245,14 @@ module io
   !muutokset: Jouni Karjalainen
   subroutine ReadParams(file,Nrelax,Nprod,Nratio,T,pres,anchor,voltyp,Kw,&
                         & seed,epses,eps0,rsphere,spmyy,epsphere,sigma0,siges,&
-                        & B, Bangle)
+                   & B0, B0angle)
     implicit none
     ! Alkuperäinen aliohjelma Antti Kurosen käsialaa; kurssilta johdatus
     ! atomistisiin simulaatioihin
     integer,intent(out) :: Nrelax,Nprod,Nratio,anchor,seed
     integer,intent(out) :: voltyp
     real(dp),intent(out) :: T,pres,epses,eps0,rsphere,spmyy,epsphere 
-    real(dp),intent(out) :: sigma0,siges,Kw,B,Bangle
+    real(dp),intent(out) :: sigma0,siges,Kw,B0,B0angle
     character(len=*), parameter :: paramsfile='gbcyl.in'
     integer, parameter :: input=20
     character(len=50),intent(out) :: file  
@@ -319,10 +319,10 @@ module io
          siges=x;
        else if(string=='$Kw')then
          Kw=x;
-       else if(string=='$B')then
-         B=x;
-       else if(string=='$Bangle')then
-         Bangle=x;
+       else if(string=='$B0')then
+         B0=x;
+       else if(string=='$B0angle')then
+         B0angle=x;
        else
          print '(A,A)','Unknown parameter',string
 	 stop 'Parameter read in error'
