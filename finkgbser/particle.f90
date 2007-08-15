@@ -211,7 +211,53 @@ module particle
     angle=dthetamax
   end subroutine getMaxMoves
 
+  subroutine particleToString(prtcl,string)
+  implicit none
+  type(particledat), intent(in) :: prtcl
+  character(len=*) :: string
+  character(len=20) :: xcoord
+  character(len=20) :: ycoord
+  character(len=20) :: zcoord
+  character(len=20) :: uxcoord
+  character(len=20) :: uycoord
+  character(len=20) :: uzcoord
+  character(len=1) :: rodcoord
+    write(xcoord,'(G12.6)') prtcl%x
+    write(ycoord,'(G12.6)') prtcl%y
+    write(zcoord,'(G12.6)') prtcl%z
+    if(prtcl%rod) then
+      write(rodcoord,'(I1.1)') 1
+      write(uxcoord,'(G12.6)') prtcl%ux
+      write(uycoord,'(G12.6)') prtcl%uy
+      write(uzcoord,'(G12.6)') prtcl%uz
+    else
+      write(rodcoord,'(I1.1)') 0
+      write(uxcoord,'(G12.6)') 0
+      write(uycoord,'(G12.6)') 0
+      write(uzcoord,'(G12.6)') 0     
+    end if 
+    string=trim(adjustl(xcoord))//' '//trim(adjustl(ycoord))//' '&
+           &//trim(adjustl(zcoord))//' '//trim(adjustl(rodcoord))//' '&
+           &//trim(adjustl(uxcoord))//' '//trim(adjustl(uycoord))//' '&
+           &//trim(adjustl(uzcoord))
+    string=trim(adjustl(string))
+  end subroutine particleToString
   
+   
+
+  subroutine stringToParticle(string,prtcl)
+  implicit none
+  character(len=*),intent(in) :: string
+  type(particledat),intent(out) :: prtcl
+  integer :: temp
+    read(string,*) prtcl%x,prtcl%y,prtcl%z,temp,prtcl%ux,prtcl%uy,prtcl%uz
+    if(temp==1) then
+      prtcl%rod=.true.
+    else
+      prtcl%rod=.false.
+    end if 
+  end subroutine stringToParticle
+
 end module particle
 
 
