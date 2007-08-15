@@ -47,15 +47,12 @@ module io
     integer :: GB=0,Xe=0,ios,N,astat,i
     integer, parameter :: outunit=19
     integer, dimension(:), allocatable :: help
-
     N=size(particlearray)
-
     allocate(help(N),stat=astat)
     if (astat/=0) then 
       write(*,*) 'writestate: Virhe varattaessa muistia taulukolle help.'
       stop
     end if
-
     GB=0
     Xe=0
     do i=1,N
@@ -67,7 +64,6 @@ module io
         help(i)=0
       end if
     end do 
-    
     outfile=trim(adjustl(filename(R,T,P,GB,Xe,index)) )
     outfile=trim(outfile)
     open(outunit,file=outfile,status='replace',position='append',form='formatted',iostat=ios)
@@ -75,7 +71,6 @@ module io
       write (*,*) 'writestate: tiedostoa ',outfile,'ei voitu avata.'
       stop;
     end if
-
     write(outunit,*) '$R:',R,'$Lz:',Lz
     write(outunit,*) '$N:',N,'$GB:',GB,'$Xe:',Xe
     write(outunit,*) '$x:'
@@ -173,7 +168,6 @@ module io
     character(len=5) :: Xechar
     character(len=4) :: indexchar
     integer,parameter :: mykind=selected_int_kind(8)
-  
     Tint=anint(10*T,mykind)
     Pint=anint(10*P,mykind)
     Rint=anint(R,mykind)
@@ -183,7 +177,6 @@ module io
     write (Xechar,'(I5.5)') Xe
     write (indexchar,'(I4.4)') index
     write (Rchar,'(I3.3)') Rint
-
     name='R'//Rchar//'T'//Tchar//'.'//trim(adjustl(indexchar))
   end function filename
 
@@ -203,7 +196,6 @@ module io
     character(len=*),parameter :: GBColor='Yellow'
     character(len=*),parameter :: XeColor='Red'
     character(len=*),parameter :: CylColor='Grey'
-  
     camdist=2.0*R
     litedist=camdist
     open(povunit,FILE=povfile,status='replace',position='append',iostat=opened)
@@ -222,7 +214,6 @@ module io
       write(povunit,*) 'texture{pigment{color ',CylColor,'}}'
       write(povunit,*) 'clipped_by{'
       write(povunit,*) 'plane{x,0}}}'
-
       N=size(particlearray)
       do i=1,N
         x=particlearray(i)%x
@@ -243,7 +234,6 @@ module io
         end if
         write(povunit,*) 'translate <',x,',',y,',',-z,'>}'
       end do  
-
       close(povunit)
     end if
   end subroutine povout
@@ -255,26 +245,22 @@ module io
   !muutokset: Jouni Karjalainen
   subroutine ReadParams(file,Nrelax,Nprod,Nratio,T,pres,anchor,voltyp,Kw,&
                         & seed,epses,eps0,rsphere,spmyy,epsphere,sigma0,siges,&
-                        & allign,debug)
+                        & B, Bangle)
     implicit none
     ! Alkuperäinen aliohjelma Antti Kurosen käsialaa; kurssilta johdatus
     ! atomistisiin simulaatioihin
-
     integer,intent(out) :: Nrelax,Nprod,Nratio,anchor,seed
-    integer,intent(out) :: allign,debug,voltyp
+    integer,intent(out) :: voltyp
     real(dp),intent(out) :: T,pres,epses,eps0,rsphere,spmyy,epsphere 
-    real(dp),intent(out) :: sigma0,siges,Kw
+    real(dp),intent(out) :: sigma0,siges,Kw,B,Bangle
     character(len=*), parameter :: paramsfile='gbcyl.in'
     integer, parameter :: input=20
     character(len=50),intent(out) :: file  
-
     integer :: i, ios
     character(len=100) :: line
     character(len=50) :: string
     real(dp) :: x
-
     open(input,file=paramsfile,status='old',iostat=ios)
-   
     if (ios /= 0) then
       write(*,*) 'Open error for file ',paramsfile,'.' 
       STOP 
@@ -282,16 +268,13 @@ module io
     ! Loop through file and find all variables
     i=0
     do
-       i=i+1
-
-       ! First read in line in whole.
-       read(input,fmt='(A80)',iostat=ios) line
-       ! Check for probable end-of-file
-       if (ios < 0) exit
-
-       ! If not parameter line, cycle
-       if (line(1:1) /= '$') cycle
-
+     i=i+1
+     ! First read in line in whole.
+     read(input,fmt='(A80)',iostat=ios) line
+     ! Check for probable end-of-file
+     if (ios < 0) exit
+     ! If not parameter line, cycle
+     if (line(1:1) /= '$') cycle
      if (line(1:10)=='$initstate') then
        read(unit=line,fmt=*,iostat=ios) string,file
      else       
@@ -302,11 +285,8 @@ module io
           print *,'ERROR: Data read in error on line',i
           stop 'Invalid parameter file'
        endif
-
        ! From here on line should be in variable format
-     
        ! Look for variable-defining strings
-
        if (string=='$Nrelax') then
 	 Nrelax=int(x+0.5)
        else if (string=='$Nprod') then
@@ -333,16 +313,16 @@ module io
          spmyy=x;
        else if(string=='$epsphere')then
          epsphere=x;
-       else if(string=='$allign')then
-         allign=int(x+0.5);
-       else if(string=='$debug')then
-         debug=int(x+0.5);
        else if(string=='$sigma0')then
          sigma0=x;
        else if(string=='$siges')then
          siges=x;
        else if(string=='$Kw')then
          Kw=x;
+       else if(string=='$B')then
+         B=x;
+       else if(string=='$Bangle')then
+         Bangle=x;
        else
          print '(A,A)','Unknown parameter',string
 	 stop 'Parameter read in error'
