@@ -1,3 +1,57 @@
+module magnetic
+
+
+  subroutine setB0Field(B0, B0theta, B0phi)
+  use nrtype
+  implicit none
+  real(dp), intent(in) :: B0, B0theta, B0phi
+    magneton=.true.
+    B0abs=B0
+    B0vect(1)=sin(B0theta)*cos(B0phi)
+    B0vect(2)=sin(B0theta)*sin(B0phi)
+    B0vect(3)=cos(B0theta)
+  end subroutine setB0Field
+
+
+!  function diamagnetic(particlei)
+!  
+
+!  end function diamagnetic
+
+  function diamagnetic(particlei)
+  use particle
+  use nrtype
+  implicit none
+  intrinsic dot_product
+  type(particledat), intent(in) :: particlei
+  real(dp) :: diamagnetic
+  real(dp), dimension(3) :: B0,u,Bmol
+  real(dp), dimension(3,3) :: sus
+  real(dp) :: susiso,anisosus,antipar,par
+  real(sp), parameter :: kB=1.38065e-23
+  real(sp), parameter :: temp=107.0
+    if(.not.particlei%rod) return;
+    B0=B0abs*B0vect
+    susiso=-3290e-30
+    anisosus=1750e-30
+    antipar=susiso-anisosus/3.0_dp
+    par=susiso+2.0_dp*anisosus/3.0_dp
+    sus(1:3,1:3)=0
+    sus(1,1)=antipar
+    sus(2,2)=antipar
+    sus(3,3)=par
+    u=(/particlei%ux,particlei%uy,particlei%uz/)
+    Bmol(3)=dot_product(B0,u)
+    Bmol(1)=sqrt(0.5_dp*(dot_product(B0,B0)-Bmol(3)**2))
+    Bmol(2)=Bmol(1)
+    diamagnetic=-dot_product(Bmol,matmul(sus,Bmol))
+    diamagnetic=diamagnetic/(kB*temp)
+  end function
+
+
+
+end module magnetic
+
 function diamagnetic(particlei)
   use particle
   use nrtype
