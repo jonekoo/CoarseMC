@@ -4,6 +4,7 @@ module io
 
   contains
 
+
   !Aliohjelma, joka kirjoittaa partikkelien tiedot tiedostoon 
   !Tekij‰: Jouni Karjalainen 
   !Muokattu Juho Lintuvuoren alkuper‰isest‰ koodista. 
@@ -22,16 +23,17 @@ module io
        write(*,*)'Virhe tiedoston ',wfile,'avaamisessa. Ohjelma keskeytyy..'
        stop;
     end if
-    N=size(particle)      
+
+    N=size(particle)
+      
     write(wunit,*)N,radius,height
     do i=1,N
       particlei=>particle(i)
       write(wunit,*) particlei
     end do
     close(wunit);
+ 
   end subroutine writeatomsout
-
-
 
   !Kirjoittaa tilan eli sylinterin s‰teen, korkeuden ja partikkelitaulukon
   !tiedostoon  
@@ -41,17 +43,19 @@ module io
     real(dp), intent(in) :: T,P,R,Lz
     integer, intent(in) :: index
     type(particledat),dimension(:),pointer :: particlearray
-    character(len=31) :: outfile
+    character(len=30) :: outfile
     integer :: GB=0,Xe=0,ios,N,astat,i
     integer, parameter :: outunit=19
     integer, dimension(:), allocatable :: help
 
     N=size(particlearray)
+
     allocate(help(N),stat=astat)
     if (astat/=0) then 
       write(*,*) 'writestate: Virhe varattaessa muistia taulukolle help.'
       stop
     end if
+
     GB=0
     Xe=0
     do i=1,N
@@ -63,49 +67,47 @@ module io
         help(i)=0
       end if
     end do 
+    
     outfile=trim(adjustl(filename(R,T,P,GB,Xe,index)) )
     outfile=trim(outfile)
-    open(outunit,file=outfile,status='replace',position='append',&
-         form='formatted',iostat=ios) 
+    open(outunit,file=outfile,status='replace',position='append',form='formatted',iostat=ios)
     if (ios/=0) then
       write (*,*) 'writestate: tiedostoa ',outfile,'ei voitu avata.'
       stop;
     end if
+
     write(outunit,*) '$R:',R,'$Lz:',Lz
     write(outunit,*) '$N:',N,'$GB:',GB,'$Xe:',Xe
     write(outunit,*) '$x:'
-    write(outunit,'(E12.6E1)') particlearray%x
+    write(outunit,*) particlearray%x
     write(outunit,*) '$y:'
-    write(outunit,'(E12.6E1)') particlearray%y
+    write(outunit,*) particlearray%y
     write(outunit,*) '$z:'
-    write(outunit,'(E12.6E1)') particlearray%z
+    write(outunit,*) particlearray%z
     write(outunit,*) '$rod:'
     write(outunit,*) help
     write(outunit,*) '$ux:'
-    write(outunit,'(E12.6E1)') particlearray%ux
+    write(outunit,*) particlearray%ux
     write(outunit,*) '$uy:'
-    write(outunit,'(E12.6E1)') particlearray%uy
+    write(outunit,*) particlearray%uy
     write(outunit,*) '$uz:'
-    write(outunit,'(E12.6E1)') particlearray%uz
+    write(outunit,*) particlearray%uz
     close(outunit) 
     deallocate(help)
   end subroutine writestate
 
 
-
   subroutine readstate(filename,array0,R,Lz)
-    implicit none
-    character(len=*), intent(in) :: filename
-    type(particledat), dimension(:), pointer :: array0
-    real(dp), intent(out) :: R,Lz
-    integer,parameter :: readunit=17   
-    integer :: ios, N,astat,i
-    character(len=3) :: charvar
-    integer,dimension(:),allocatable :: help
-    
+  implicit none
+  character(len=*), intent(in) :: filename
+  type(particledat), dimension(:), pointer :: array0
+  real(dp), intent(out) :: R,Lz
+  integer,parameter :: readunit=17   
+  integer :: ios, N,astat,i
+  character(len=3) :: charvar
+  integer,dimension(:),allocatable :: help
     R=0.
     Lz=0.  
-     
     !Koittaa avata annetun tiedoston
     open(readunit,file=filename,status='old',iostat=ios)
     if (ios/=0) then
@@ -113,7 +115,6 @@ module io
       write(*,*) 'Ohjelman suoritus keskeytyy.'
       stop;
     end if
-
     !Luetaan hiukkasten lukum‰‰r‰ tiedostosta
     read(readunit,*) charvar,R,charvar,Lz
     read(readunit,*) charvar,N
@@ -123,7 +124,7 @@ module io
     if (astat/=0) then
       write(*,*) 'readstate:Virhe varattaessa muistia: array0,help'
       stop;
-    end if   
+    end if
     !Luetaan  hiukkasten x-koordinaatit
     read(readunit,*) array0(1:N)%x
     read(readunit,*) charvar
@@ -150,8 +151,8 @@ module io
 
 
   subroutine readerror(filename)
-    implicit none
-    character(len=*) :: filename
+  implicit none
+  character(len=*) :: filename
     write(*,*) 'Tiedoston ',filename,' muoto on v‰‰r‰.'
     write(*,*) 'Tilaa ei voitu lukea. Ohjelman suoritus keskeytyy'
     stop;
@@ -162,26 +163,27 @@ module io
   function filename(R,T,P,GB,Xe,index) result(name)
     implicit none
     intrinsic anint
-    character(len=27) :: name
+    character(len=26) :: name
     real(dp),intent(in) :: T,P,R
     integer, intent(in) :: GB,Xe,index
     integer :: Tint,Pint,Rint
-    character(len=3) :: Tchar
+    character(len=2) :: Tchar,Pchar
     character(len=3) :: Rchar
     character(len=7) :: GBchar
     character(len=5) :: Xechar
-    character(len=6) :: indexchar
+    character(len=4) :: indexchar
     integer,parameter :: mykind=selected_int_kind(8)
   
-    Tint=anint(100*T,mykind)
+    Tint=anint(10*T,mykind)
     Pint=anint(10*P,mykind)
     Rint=anint(R,mykind)
-    write (Tchar,'(I3.3)') Tint
-
+    write (Tchar,'(I2.2)') Tint
+    write (Pchar,'(I2.2)') Pint
     write (GBchar,'(I7.7)') GB
     write (Xechar,'(I5.5)') Xe
-    write (indexchar,'(I6.6)') index
+    write (indexchar,'(I4.4)') index
     write (Rchar,'(I3.3)') Rint
+
     name='R'//Rchar//'T'//Tchar//'.'//trim(adjustl(indexchar))
   end function filename
 
@@ -198,6 +200,9 @@ module io
     character(len=*),parameter :: povfile='povout.pov'
     integer :: opened,N,i
     real(dp) :: x,y,z,ux,uy,uz,camdist,litedist
+    character(len=*),parameter :: GBColor='Yellow'
+    character(len=*),parameter :: XeColor='Red'
+    character(len=*),parameter :: CylColor='Grey'
   
     camdist=2.0*R
     litedist=camdist
@@ -214,7 +219,7 @@ module io
       write(povunit,*) 'look_at <0,0,0> }'
       write(povunit,*) 'light_source { <',litedist,',',litedist,',',-Lz,'> color White}'
       write(povunit,*) 'cylinder{<0,0,',-Lz/2,'>,<0,0,',Lz/2,'>,',R,'open'
-      write(povunit,*) 'texture{pigment{color Yellow}}'
+      write(povunit,*) 'texture{pigment{color ',CylColor,'}}'
       write(povunit,*) 'clipped_by{'
       write(povunit,*) 'plane{x,0}}}'
 
@@ -229,12 +234,12 @@ module io
         write(povunit,*) 'sphere {'
         write(povunit,*) '<0,0,0>,0.5'
         if(particlearray(i)%rod) then
-          write(povunit,*) 'texture {pigment{color Grey}}'
+          write(povunit,*) 'texture {pigment{color ',GBColor,'}}'
           write(povunit,*) 'scale <4.4,1,1>'
           write(povunit,*) 'Reorient_Trans(<1,0,0>,<',ux,',',uy,',',-uz,'>)'
         else
           write(povunit,*) 'scale 0.96'
-          write(povunit,*) 'texture {pigment{color Red}}'
+          write(povunit,*) 'texture {pigment{color ',XeColor,'}}'
         end if
         write(povunit,*) 'translate <',x,',',y,',',-z,'>}'
       end do  
@@ -248,9 +253,9 @@ module io
   !Aliohjelma parameterien lukemiseen tiedostosta paramsfile.
   !Tekij‰: Juho Lintuvuori
   !muutokset: Jouni Karjalainen
-  subroutine ReadParams(file,Nrelax,Nprod,Nratio,T,pres,anchor,voltyp,&
-                        Kw,seed,epses,eps0,rsphere,spmyy,epsphere,sigma0,&
-                        siges,allign,debug)
+  subroutine ReadParams(file,Nrelax,Nprod,Nratio,T,pres,anchor,voltyp,Kw,&
+                        & seed,epses,eps0,rsphere,spmyy,epsphere,sigma0,siges,&
+                        & allign,debug)
     implicit none
     ! Alkuper√§inen aliohjelma Antti Kurosen k√§sialaa; kurssilta johdatus
     ! atomistisiin simulaatioihin
@@ -344,9 +349,15 @@ module io
        endif
      end if
        print '(A,A16,A,G13.6)','Read in parameter ',string,' value',x
+    
     enddo
+
     close(input)
+  
+  
   end subroutine ReadParams
+
+  
   
 
 end module io
