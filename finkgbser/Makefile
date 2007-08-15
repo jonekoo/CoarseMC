@@ -1,20 +1,21 @@
-OBJS=nrtype.o nrutil.o nr.o rf_s.o rf_v.o rd_s.o rd_v.o horner.o attwall.o repwall.o utils.o particle.o cylinder.o particlewall.o gbgb.o verlet.o energy.o mt19937.o mcstep.o particledata.o io.o main.o
+OBJS=nrtype.o nrutil.o nr.o rf_s.o rf_v.o rd_s.o rd_v.o horner.o attwall.o repwall.o utils.o particle.o cylinder.o particlewall.o gbgb.o verlet.o energy.o mt19937.o mcstep.o particledata.o io.o main.o readstateold.o particlearray.o
 
-MODS=nrtype.mod nrutil.mod nr.mod utils.mod particle.mod cylinder.mod particlewall.mod gbgb.mod verlet.mod energy.mod mt19937.mod mcstep.mod particledata.mod io.mod
+MODS=nrtype.mod nrutil.mod nr.mod utils.mod particle.mod cylinder.mod particlewall.mod gbgb.mod verlet.mod energy.mod mt19937.mod mcstep.mod particledata.mod io.mod particlearray.mod
 
 F90=g95
 
 %.o : %.f90
-	$(F90) -c $< 
+	$(F90) -c -ftrace=full $< 
 %.mod : %.f90
-	$(F90) -c $<
+	$(F90) -c -ftrace=full $<
 
 gbcyl : $(OBJS) $(MODS)
 	$(F90) $(OBJS) -o gbcyl
 
-
+particlearray.o particlearray.mod : particlearray.f90 nrtype.mod particle.mod
+readstateold.o : readstateold.f90 nrtype.mod
 utils.o utils.mod : utils.f90 nrtype.mod
-io.o io.mod : io.f90 nrtype.mod particle.mod
+io.o io.mod : io.f90 nrtype.mod particle.mod 
 particledata.o particledata.mod : particledata.f90 nrtype.mod particle.mod cylinder.mod  
 mcstep.o mcstep.mod : mcstep.f90 nrtype.mod energy.mod cylinder.mod particle.mod mt19937.mod verlet.mod
 mt19937.o mt19937.mod : mt19937.f90 
@@ -33,7 +34,7 @@ attwall.o : attwall.f90 nr.mod nrtype.mod
 nr.o nr.mod : nr.f90 nrtype.mod 
 nrutil.o nrutil.mod : nrutil.f90 nrtype.mod
 nrtype.o nrtype.mod : nrtype.f90 
-main.o : main.f90 nrtype.mod mcstep.mod energy.mod cylinder.mod verlet.mod particlewall.mod gbgb.mod particle.mod io.mod mt19937.mod
+main.o : main.f90 nrtype.mod mcstep.mod energy.mod cylinder.mod verlet.mod particlewall.mod gbgb.mod particle.mod io.mod mt19937.mod particlearray.mod
 
 clean : 
-	rm *.o *.mod
+	rm $(OBJS) $(MODS)

@@ -16,7 +16,6 @@
   real(dp) :: radius,height
   integer :: partccount,GBcount,Xecount
   namelist /gbxecyl/ radius, height, partccount, GBcount, Xecount   
-
     R=0.
     Lz=0.       
     !Koittaa avata annetun tiedoston

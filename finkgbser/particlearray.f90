@@ -43,9 +43,9 @@ contains
     particlearray%uy=uys
     particlearray%uz=uzs
     particlearray%rod=rods
-    do i=1,N
-      particlearray(i)%index=i
-    end do
+!    do i=1,N
+!      particlearray(i)%index=i
+!    end do
   end subroutine xyzToParticle
 
 

@@ -197,12 +197,12 @@ module io
   !muutokset: Jouni Karjalainen
   subroutine ReadParams(file,Nrelax,Nprod,Nratio,T,pres,anchor,voltyp,Kw,&
                         & seed,epses,eps0,rsphere,spmyy,epsphere,sigma0,siges,&
-                        & B0, B0angle, domainw, maxdr, cutoff)
+                        & B0, B0angle, magneton, domainw, maxdr, cutoff)
     implicit none
     ! Alkuperäinen aliohjelma Antti Kurosen käsialaa; kurssilta johdatus
     ! atomistisiin simulaatioihin
     integer,intent(out) :: Nrelax,Nprod,Nratio,anchor,seed
-    integer,intent(out) :: voltyp
+    integer,intent(out) :: voltyp, magneton
     real(dp),intent(out) :: T,pres,epses,eps0,rsphere,spmyy,epsphere 
     real(dp),intent(out) :: sigma0,siges,Kw,B0,B0angle,domainw,maxdr,cutoff
     character(len=*), parameter :: paramsfile='gbcyl.in'
@@ -275,6 +275,8 @@ module io
          B0=x;
        else if(string=='$B0angle')then
          B0angle=x;
+       else if(string=='$magneton')then
+         magneton=int(x+0.5)
        else if(string=='$cutoff')then
          cutoff=x;
        else if(string=='$domainw')then

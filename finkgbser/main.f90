@@ -1,7 +1,7 @@
 program gbcylinder
 use nrtype
 use mcstep, only : step,updatemaxvalues,initmcstep
-use energy, only : totenergy,totwallprtclV,totpairV
+use energy, only : totenergy,totwallprtclV,totpairV,setB0Field
 use cylinder, only : initcylinder,getradius,getHeight
 use verlet, only : initvlist, freevlist
 use particlewall, only : initptwall,rArB
@@ -19,7 +19,7 @@ character(LEN=*), parameter :: efile='energy.txt'
 character(len=50) :: statefile 
 type(particledat), dimension(:), pointer :: array0,ptrtoarray
 !type(particledat), dimension(:), allocatable,target :: particlearray
-integer :: N,astat,Nrelax,Nprod,Nratio,seed,i,j,vtype
+integer :: N,astat,Nrelax,Nprod,Nratio,seed,i,j,vtype,magneton
 real(dp) :: radius,height,Lz,Kw,rA,rB,domainw,cutoff
 real(dp) :: T,pres,epses,eps0,rsphere,spmyy,epsphere,sigma0,siges,B0,B0angle
 real(dp) :: totE=0.0, maxangle=0.170, maxtrans=0.156,pairE=0.0,wallE=0.0  
@@ -34,8 +34,9 @@ logical, dimension(:), pointer :: rods
   !! 2. parametrien lataus
   call ReadParams(statefile,Nrelax,Nprod,Nratio,T,pres,anchor,vtype,Kw,seed, &
                 & epses,eps0,rsphere,spmyy,epsphere,sigma0,siges,B0,B0angle, &
-                & domainw, maxtrans, cutoff) 
+                & magneton, domainw, maxtrans, cutoff) 
   !! 3. modulien alustus
+  if(magneton==1) call setB0Field(B0,B0angle,0._dp)
   call initptwall(anchor,Kw)
   call init_genrand(seed)  
   call initgbgb()
@@ -56,20 +57,7 @@ logical, dimension(:), pointer :: rods
   write(eunit,*) 'Sylinterin korkeus alussa:',getHeight()
   !! Alustetaan mcstep-moduli
   call initmcstep(vtype)
-!  N=size(array0)
   write (*,*) 'Partikkelien lukumäärä sylinterissä:', N
-!  allocate(particlearray(N),stat=astat)
-!  if(astat/=0) then
-!    write(*,*) 'virhe varattaessa muistia hiukkastaulukolle'
-!    write(*,*) 'Ohjelman suoritus keskeytyy'
-!    stop;
-!  end if
-!  if (associated(array0) .and. size(array0)>1) then  
-!     ptrtoarray=>array0
-!  else
-!    write(*,*) 'Virhe kopioitaessa partikkelitaulukkoa' 
-!    stop; 
-!  end if
   !! 6. Alustetaan Verlet'n lista (ei ehkä tässä vaan ennemmin
   !!    energiamodulissa ja tallennetaan siellä. 
   call initvlist(ptrtoarray)
@@ -91,7 +79,6 @@ logical, dimension(:), pointer :: rods
       call updatemaxvalues(N,Nratio)
     end if
   end do
-
   !! 7.3 Tuotantoajo 
   !! 7.3.1 Kirjoitetaan tiloja levylle 
   write (*,*) 'Aloitetaan tuotantoajo. Nprod=',Nprod
@@ -101,7 +88,7 @@ logical, dimension(:), pointer :: rods
       radius=getRadius()
       height=getHeight()
 !      write (eunit,*) 'MC-askel:',i
-!      call TotEnergy(ptrtoarray,T,overlap,totE)
+!      call getTotEnergy(ptrtoarray,T,overlap,totE)
 !      call totpairV(ptrtoarray,pairE,overlap)
 !      call totwallprtclV(ptrtoarray,wallE,overlap)
 !      write(eunit,*) 'Parivuorovaikutus:',pairE
