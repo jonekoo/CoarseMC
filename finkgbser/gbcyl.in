@@ -3,55 +3,57 @@ Rivit jotka eivät ala tunnisteella $ ei huomioda
 
 Tunniste     	| Arvo
 
-$initstate	"gbxecyl.out"		Tiedosto, josta luetaan
-							alkutila.
+$initstate	"gbxecyl.out"	File for the initial state of the system.
 
-$Nrelax		0              Stabilisointi iteraatioiden lkm.
-$Nprod		10        	Tuotantoajon iteraatioiden lkm.
-$Nratio		5         	Perioidisten tapahtumien teko väli
+$Nrelax		0		Number of MC cycles for stabilization.
+$Nprod		10		Number of MC cycles for the production run.
+$Nratio		5		Ratio of output in MC cycles.
 
-$T		2.0		Simulointi lämpötila, redusoiduissa yksiköissä
-$pres           2.0         	Paine, redusoiduissa yksiköissä
+$T		2.0		Temperature in reduced units.
+$pres           2.0		Pressure in reduced units.
 
-$anchor		1		Ankkuroinnin tyyppi
+$anchor		1		Type of anchoring for the GB-particles.
 				1 = random planar
 				2 = uniform alignment
 				3 = weak homeotropic
 
-$voltyp         2               Tilavuuden muutoksen tyyppi
-                                1=s�teen suunnassa
-                                2=sylinterin akselin suunnassa
+$voltyp         2               Type for the volume change
+                                1=cylinder radius changes
+                                2=cylinder length changes
 
-$seed		432512 		Satunnaislukugeneraattorin siemenluku
+$seed		432512 		RNG seed
 
-$epses		0.16		Pallon ja GB-partikkelin välisen energian
-				suhde end to end ja side by side tilanteessa
-$eps0    	0.67		Pallon ja GB-partikkelin välisen energian
-				epsilon 0 redusoiduissa yksiköissä
-$spmyy		0.35		Pallo-GB potentiaalin eksponentti
+$epses		0.16		Sphere-GB potential energy in "end"
+				configuration compared to a "side"
+				configuration. 
+$eps0    	0.67		Well depth for the Sphere-GB potential energy 
+				in reduced units.
+$spmyy		0.35		Sphere-GB potential exponent.
 
-$sigma0		0.8		Pallo-GB potentiaalin sigma_0
-				redusoiduissa yksiköissä
+$sigma0		0.8		Sphere-GB contact distance in reduced units 
+				for a side configuration.
 
-$siges		3.32 		Pallo-GB potentiaalin kosketusetäisyyksien
-				sigma_e/sigma_s suhde
+$siges		3.32 		Ratio between Sphere-GB contact distances in
+				end and side configurations: sigma_e/sigma_s.
 
-$rsphere	0.48		Pallon säde
+$rsphere	0.48		Radius of the sphere
 
-$epsphere	0.155		Pallon LJ-epsilon
+$epsphere	0.155		Lennard-Jones epsilon for the sphere.
 
-$allign		0		allign = 1, GB-partikkelin energiaan lisätään
-				termi u dot z
-$debug		1		debug = 1, kirjoitetaan ruudulle dataa 
-				simuloinnin edetessö
+$Kw		2.2	        The coefficient of strength for the potential
+				energy between a Lennard-Jones -site and the 
+				cylinder wall. Value Kw=2.2 is about the 
+				makes the interaction as strong as a GB-GB 
+				-interaction in side by side configuration. 
 
-$Kw		2.2		Vuorovaikutuskeskus-sein� -vuorovaikutuksen 
-				voimakkuus. Arvo Kw=2.2 vastaa GB-GB 
-                                -vuorovaikutuksen maksimi (minimi�)
+$cutoff		5.5		Cut off range for all potentials. 
 
-$cutoff		8.5		Gay-Berne -potentiaalin cutoff-sade=5.5
+$maxdr		0.1		Maximum translation for a particle in a single
+				MC move.
 
-$maxdr		0.1		Partikkelin maksimitranslaatio, jota
-				ei yliteta missaan vaiheessa
+$domainw	2		The domain decomposition domain width in cells.
 
-$domainw	2		Prosessorin domainin leveys soluina
+$B0		11.74		Flux density of the external magnetic field
+
+$B0angle	0		Angle between the B0 field and the cylinder 
+				axis
