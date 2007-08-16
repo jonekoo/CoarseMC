@@ -37,6 +37,31 @@ module particle
   end subroutine pairV
 
 
+  function magnetic(B0,I0vect,partcl) 
+  use nrtype
+  implicit none
+  real(dp) :: magnetic
+  real(dp), dimension(3), intent(in) :: I0vect 
+  real(dp), intent(in) :: B0
+  type(particledat), intent(in) :: partcl
+  real(dp), dimension(3) :: ui
+  real(dp), parameter :: chiiso=-3.290e-27
+  real(dp), parameter :: chianiso=1.750e-27 
+  real(dp), parameter :: temperature=107
+  real(dp), parameter :: kB=1.38065e-23
+    if(.not. partcl%rod) then
+      magnetic=0;
+      return
+    end if
+    magnetic=0
+    ui(1)=partcl%ux
+    ui(2)=partcl%uy
+    ui(3)=partcl%uz
+    magnetic=-(B0**2)*(chiiso-1._dp/3._dp*chianiso&
+               &+chianiso*(dot_product(I0vect,ui))**2)
+    magnetic=magnetic/(temperature*kB)
+  end function magnetic
+
   
   subroutine move(oldp,newp)
   implicit none

@@ -9,13 +9,24 @@ module energy
   
   real(dp), parameter :: rcut=5.5
   real(dp), private, save :: totwallE
-  real(dp), private, save :: B0abs=11.74   !!Magnetic flux strength in Teslas
+  real(dp), private, save :: B0abs=11.74   !! Magnetic flux density in Teslas
   real(dp), dimension(3), private, save :: B0vect=(/0.0,0.0,1.0/)  
   logical,private,save :: magneton=.false.
  
   contains
 
-  
+    
+    subroutine setB0Field(B0, B0theta, B0phi)
+    use nrtype
+    implicit none
+    real(dp), intent(in) :: B0, B0theta, B0phi
+      magneton=.true.
+      B0abs=B0
+      B0vect(1)=sin(B0theta)*cos(B0phi)
+      B0vect(2)=sin(B0theta)*sin(B0phi)
+      B0vect(3)=cos(B0theta)
+    end subroutine setB0Field
+
 
 
     !Palauttaa kokonaisenergian
@@ -25,7 +36,7 @@ module energy
       real(dp), intent(in) :: T
       real(dp), intent(out) :: Etot
       logical, pointer :: ovrlp
-      real(dp) :: Vpairtot=0.0,Vwalltot=0.0
+      real(dp) :: Vpairtot=0.0, Vwalltot=0.0
       integer :: i,N
       Etot=0.0
       ovrlp=.false.
@@ -42,7 +53,7 @@ module energy
         return;
       end if
       Etot= Vpairtot + Vwalltot
-      if(magneton) Etot=Etot+totDiamagnetic(prtclarray)
+      if(magneton) Etot=Etot+totMagnetic(prtclarray)
     end subroutine totenergy
  
 
@@ -96,18 +107,18 @@ module energy
     
 
      
-    function totDiamagnetic(particlearray)
+    function totMagnetic(parray)
+    use particle, only : particledat, magnetic
     implicit none
-    type(particledat), dimension(:),intent(in) :: particlearray
-    real(dp) :: totDiamagnetic
+    type(particledat), dimension(:),intent(in) :: parray
+    real(dp) :: totMagnetic
     integer :: N,i
-      totDiamagnetic=0.0
-      N=size(particlearray)
+      totMagnetic=0.0
+      N=size(parray)
       do i=1,N
-        totDiamagnetic=totDiamagnetic+diamagnetic(particlearray(i))
+        totMagnetic=totMagnetic+magnetic(B0abs,B0vect,parray(i))
       end do
-      write(*,*) totDiamagnetic
-    end function totDiamagnetic
+    end function totMagnetic
 
 
     !Laskee hiukkasen i vuorovaikutusenergian muiden hiukkasten
@@ -134,7 +145,6 @@ module energy
           cycle;
         end if
       end do
-      if(magneton) singleV=singleV+diamagnetic(particlei)
     end subroutine singleparticleV
 
 
@@ -144,10 +154,10 @@ module energy
 
   !Palauttaa hiukkasten ja seinän välisen vuorovaikutuksen
   !kokonaisenergian 
-  subroutine totwallprtclV(particlearray,Eptwlltot,ovrlp)
+  subroutine totwallprtclV(parray,Eptwlltot,ovrlp)
     implicit none
     integer :: i,N,astat
-    type(particledat), dimension(:),pointer :: particlearray
+    type(particledat), dimension(:),pointer :: parray
     real(dp), intent(out) :: Eptwlltot
     logical, pointer :: ovrlp 
     real(dp) :: oneprtclV=0.0,add=0.0,all=0.0
@@ -156,7 +166,7 @@ module energy
     
     Eptwlltot=0.0
     ovrlp=.false.
-    N=size(particlearray)
+    N=size(parray)
     allocate(energies(N),stat=astat)
     if(astat/=0) then
       write(*,*) 'totwallprtclV:energies'
@@ -165,7 +175,7 @@ module energy
     energies=0.0
 
     do i=1,N
-      particlei=>particlearray(i)
+      particlei=>parray(i)
       call prtclwallV(particlei,oneprtclV,ovrlp)
       if (ovrlp) then 
         return;
@@ -201,6 +211,7 @@ module energy
       return
     end if
     Vitot=Vipair+Viwall
+    if(magneton) Vitot=Vitot+magnetic(B0abs,B0vect,particlei)
   end subroutine singleprtcltotV
 
 
