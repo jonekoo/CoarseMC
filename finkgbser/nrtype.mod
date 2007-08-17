@@ -1,37 +1,17 @@
-G95 module created on Wed Aug 15 10:14:37 2007 from nrtype.f90
-If you edit this, you'll get what you deserve.
-module-version 3
-(() () () () () () () () () () () () () () () () () () () () ())
-
-()
-
-()
-
-()
-
-()
-
-(2 'dp' 'nrtype' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '8') () '' () ())
-3 'dpc' 'nrtype' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '8') () '' () ())
-4 'i4b' 'nrtype' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '4') () '' () ())
-5 'lgt' 'nrtype' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '4') () '' () ())
-6 'nrtype' 'nrtype' 1 ((MODULE UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-UNKNOWN 0 ()) 0 0 () () '' () ())
-7 'kind' '(intrinsic)' 1 ((PROCEDURE UNKNOWN INTRINSIC UNKNOWN NONE NONE
-FUNCTION) (UNKNOWN 0 ()) 0 0 () () '' () ())
-8 'sp' 'nrtype' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '8') () '' () ())
-9 'spc' 'nrtype' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '8') () '' () ())
-10 'selected_real_kind' '(intrinsic)' 1 ((PROCEDURE UNKNOWN INTRINSIC
-UNKNOWN NONE NONE FUNCTION) (UNKNOWN 0 ()) 0 0 () () '' () ())
-11 'selected_int_kind' '(intrinsic)' 1 ((PROCEDURE UNKNOWN INTRINSIC
-UNKNOWN NONE NONE FUNCTION) (UNKNOWN 0 ()) 0 0 () () '' () ())
-)
-
-('selected_int_kind' 0 11 'kind' 0 7 'i4b' 0 4 'dpc' 0 3 'dp' 0 2 'nrtype'
-0 6 'lgt' 0 5 'selected_real_kind' 0 10 'spc' 0 9 'sp' 0 8)
+V24 nrtype
+10 nrtype.f90 S522 0
+08/17/2007  14:21:31
+enduse
+S 522 24 0 0 0 6 1 0 3735 4 0 0 0 0 0 0 0 0 0 15 0 0 0 0 0 0 0 0 3 0 0 0 0 0 0 nrtype
+S 523 16 0 0 0 6 526 522 3742 800004 400000 0 0 0 0 4 13 0 0 0 0 0 0 0 0 0 0 0 0 0 522 0 0 0 0 i4b
+S 525 3 0 0 0 6 0 1 0 0 0 0 0 0 0 0 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 6
+S 526 16 0 0 0 6 529 522 3746 800004 400000 0 0 0 0 8 18 0 0 0 0 0 0 0 0 0 0 0 0 0 522 0 0 0 0 sp
+S 528 3 0 0 0 6 0 1 0 0 0 0 0 0 0 0 8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 6
+S 529 16 0 0 0 6 530 522 3749 800004 400000 0 0 0 0 8 18 0 0 0 0 0 0 0 0 0 0 0 0 0 522 0 0 0 0 dp
+S 530 16 0 0 0 6 531 522 3752 800004 400000 0 0 0 0 8 18 0 0 0 0 0 0 0 0 0 0 0 0 0 522 0 0 0 0 spc
+S 531 16 0 0 0 6 532 522 3756 800004 400000 0 0 0 0 8 18 0 0 0 0 0 0 0 0 0 0 0 0 0 522 0 0 0 0 dpc
+S 532 16 0 0 0 6 0 522 2003 800004 400000 0 0 0 0 4 13 0 0 0 0 0 0 0 0 0 0 0 0 0 522 0 0 0 0 lgt
+A 13 2 0 0 10 6 525 0 0 0 13 0 0 0 0 0 0 0 0 0
+A 18 2 0 0 0 6 528 0 0 0 18 0 0 0 0 0 0 0 0 0
+Z
+Z

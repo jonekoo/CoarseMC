@@ -1,254 +1,121 @@
-G95 module created on Wed Aug 15 14:18:43 2007 from particledata.f90
-If you edit this, you'll get what you deserve.
-module-version 3
-(() () () () () () () () () () () () () () () () () () () () ())
-
-()
-
-()
-
-()
-
-()
-
-(2 'cylinder' 'cylinder' 1 ((MODULE UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-UNKNOWN 0 ()) 0 0 () () '' () ())
-3 'differences' 'particle' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE SUBROUTINE PURE) (PROCEDURE 0 ()) 0 0 (4 NONE 5 NONE 6 NONE 7 NONE
-8 NONE) () '' () ())
-9 'dpc' 'nrtype' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '8') () '' () ())
-10 'dthetamax' 'particle' 1 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE)
-(REAL 8 ()) 0 0 () () '' () ())
-11 'genrand_int32' 'mt19937' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE FUNCTION) (INTEGER 4 ()) 0 0 () () '' () ())
-12 'genrand_real2' 'mt19937' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE FUNCTION) (REAL 8 ()) 0 0 () () '' () ())
-13 'genrand_res53' 'mt19937' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE FUNCTION) (REAL 8 ()) 0 0 () () '' () ())
-14 'genrand_real3' 'mt19937' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE FUNCTION) (REAL 8 ()) 0 0 () () '' () ())
-15 'genrand_real1' 'mt19937' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE FUNCTION) (REAL 8 ()) 0 0 () () '' () ())
-16 'genrand_int31' 'mt19937' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE FUNCTION) (INTEGER 4 ()) 0 0 () () '' () ())
-17 'i4b' 'nrtype' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '4') () '' () ())
-18 'getmaxmoves' 'particle' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE SUBROUTINE) (PROCEDURE 0 ()) 0 0 (19 NONE 20 NONE) () '' () ())
-21 'dp' 'nrtype' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '8') () '' () ())
-22 'idotsjdots' 'particle' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE SUBROUTINE) (PROCEDURE 0 ()) 0 0 (23 NONE 24 NONE 25 NONE 26 NONE)
-() '' () ())
-27 'initptarray' 'particledata' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL
-NONE NONE SUBROUTINE) (PROCEDURE 0 ()) 0 0 (28 NONE 29 NONE 30 NONE) () ''
-() ())
-31 'kind' '(intrinsic)' 1 ((PROCEDURE UNKNOWN INTRINSIC UNKNOWN NONE
-NONE FUNCTION) (UNKNOWN 0 ()) 0 0 () () '' () ())
-32 'lgt' 'nrtype' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '4') () '' () ())
-33 'init_genrand' 'mt19937' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE SUBROUTINE) (PROCEDURE 0 ()) 0 0 (34 NONE) () '' () ())
-35 'maxdr' 'particle' 1 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-REAL 8 ()) 0 0 () () '' () ())
-36 'init_by_array' 'mt19937' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE SUBROUTINE) (PROCEDURE 0 ()) 0 0 (37 NONE) () '' () ())
-38 'mt19937' 'mt19937' 1 ((MODULE UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-UNKNOWN 0 ()) 0 0 () () '' () ())
-39 'nvec' 'particle' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE NONE
-SUBROUTINE) (PROCEDURE 0 ()) 0 0 (40 NONE 41 NONE 42 NONE) () '' () ())
-43 'particledat' 'particle' 1 ((DERIVED UNKNOWN UNKNOWN UNKNOWN NONE
-NONE) (UNKNOWN 0 ()) 0 0 () () '' ((44 'x' (REAL 8 ()) () 0 0 0 ()) (45
-'y' (REAL 8 ()) () 0 0 0 ()) (46 'z' (REAL 8 ()) () 0 0 0 ()) (47 'ux' (
-REAL 8 ()) () 0 0 0 ()) (48 'uy' (REAL 8 ()) () 0 0 0 ()) (49 'uz' (
-REAL 8 ()) () 0 0 0 ()) (50 'rod' (LOGICAL 4 ()) () 0 0 0 ())) PUBLIC ())
-51 'particle' 'particle' 1 ((MODULE UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-UNKNOWN 0 ()) 0 0 () () '' () ())
-52 'pairv' 'particle' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE NONE
-SUBROUTINE) (PROCEDURE 0 ()) 0 0 (53 NONE 54 NONE 55 NONE 56 NONE) () ''
-() ())
-57 'particledata' 'particledata' 1 ((MODULE UNKNOWN UNKNOWN UNKNOWN NONE
-NONE) (UNKNOWN 0 ()) 0 0 () () '' () ())
-58 'nrtype' 'nrtype' 1 ((MODULE UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-UNKNOWN 0 ()) 0 0 () () '' () ())
-59 'move' 'particle' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE NONE
-SUBROUTINE) (PROCEDURE 0 ()) 0 0 (60 NONE 61 NONE) () '' () ())
-62 'rdist' 'cylinder' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE NONE
-FUNCTION PURE) (REAL 8 ()) 0 0 (63 NONE 64 NONE) () '' () ())
-65 'rotate' 'particle' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE NONE
-SUBROUTINE) (PROCEDURE 0 ()) 0 0 (66 NONE 67 NONE 68 NONE 69 NONE 70
-NONE 71 NONE) () '' () ())
-72 'rotangle' 'particle' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE SUBROUTINE) (PROCEDURE 0 ()) 0 0 (73 NONE 74 NONE) () '' () ())
-75 'selected_real_kind' '(intrinsic)' 1 ((PROCEDURE UNKNOWN INTRINSIC
-UNKNOWN NONE NONE FUNCTION) (UNKNOWN 0 ()) 0 0 () () '' () ())
-76 'selected_int_kind' '(intrinsic)' 1 ((PROCEDURE UNKNOWN INTRINSIC
-UNKNOWN NONE NONE FUNCTION) (UNKNOWN 0 ()) 0 0 () () '' () ())
-77 'setmaxmoves' 'particle' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE SUBROUTINE) (PROCEDURE 0 ()) 0 0 (78 NONE 79 NONE) () '' () ())
-80 'sp' 'nrtype' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '8') () '' () ())
-81 'shell' 'particledata' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE SUBROUTINE) (PROCEDURE 0 ()) 0 0 (82 NONE 83 NONE 84 NONE 85 NONE
-86 NONE) () '' () ())
-87 'stringtoparticle' 'particle' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL
-NONE NONE SUBROUTINE) (PROCEDURE 0 ()) 0 0 (88 NONE 89 NONE) () '' () ())
-90 'transmove' 'particle' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE SUBROUTINE) (PROCEDURE 0 ()) 0 0 (91 NONE 92 NONE 93 NONE 94 NONE
-95 NONE 96 NONE) () '' () ())
-97 'spc' 'nrtype' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '8') () '' () ())
-98 'rij' 'particle' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE NONE
-FUNCTION PURE) (REAL 8 ()) 0 0 (99 NONE 100 NONE) () '' () ())
-101 'particletostring' 'particle' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL
-NONE NONE SUBROUTINE) (PROCEDURE 0 ()) 0 0 (102 NONE 103 NONE) () '' ()
-())
-104 'idotj' 'particle' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE NONE
-FUNCTION PURE) (REAL 8 ()) 0 0 (105 NONE 106 NONE) () '' () ())
-107 'wl' 'mt19937' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '8') () '' () ())
-108 'wr' 'mt19937' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '8') () '' () ())
-109 'wi' 'mt19937' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '4') () '' () ())
-110 'unitvec' 'particle' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE SUBROUTINE) (PROCEDURE 0 ()) 0 0 (111 NONE 112 NONE 113 NONE 114
-NONE) () '' () ())
-30 'rc' '' 115 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-83 'r' '' 116 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-82 'ptrtoarray' '' 116 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE
-DIMENSION POINTER DUMMY) (DERIVED 43 ()) 0 0 () (1 DEFERRED () ()) '' ()
-())
-63 'x' '' 117 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-64 'y' '' 117 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-84 'dr' '' 116 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-86 'nind' '' 116 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-INTEGER 4 ()) 0 0 () () '' () ())
-6 'dx' '' 118 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-4 'particlei' '' 118 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-DERIVED 43 ()) 0 0 () () '' () ())
-5 'particlej' '' 118 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-DERIVED 43 ()) 0 0 () () '' () ())
-7 'dy' '' 118 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-23 'particlei' '' 119 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-DERIVED 43 ()) 0 0 () () '' () ())
-37 'init_key' '' 120 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DIMENSION
-DUMMY) (INTEGER 4 ()) 0 0 () (1 ASSUMED_SHAPE () ()) '' () ())
-26 'jdots' '' 119 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-REAL 8 ()) 0 0 () () '' () ())
-60 'oldp' '' 121 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-DERIVED 43 ()) 0 0 () () '' () ())
-25 'idots' '' 119 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-REAL 8 ()) 0 0 () () '' () ())
-8 'dz' '' 118 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-85 'indicesptr' '' 116 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE
-DIMENSION POINTER DUMMY) (INTEGER 4 ()) 0 0 () (1 DEFERRED () ()) '' ()
-())
-41 'ny' '' 122 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-106 'particlej' '' 123 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE
-POINTER DUMMY) (DERIVED 43 ()) 0 0 () () '' () ())
-105 'particlei' '' 123 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE
-POINTER DUMMY) (DERIVED 43 ()) 0 0 () () '' () ())
-24 'particlej' '' 119 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-DERIVED 43 ()) 0 0 () () '' () ())
-29 'newptarray' '' 115 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE
-DIMENSION POINTER DUMMY) (DERIVED 43 ()) 0 0 () (1 DEFERRED () ()) '' ()
-())
-28 'particlearray' '' 115 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE
-DIMENSION POINTER DUMMY) (DERIVED 43 ()) 0 0 () (1 DEFERRED () ()) '' ()
-())
-42 'nz' '' 122 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-34 's' '' 124 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (INTEGER 4
-()) 0 0 () () '' () ())
-103 'string' '' 125 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE DUMMY)
-(CHARACTER 1 (())) 0 0 () () '' () ())
-54 'particlej' '' 126 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-DERIVED 43 ()) 0 0 () () '' () ())
-53 'particlei' '' 126 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-DERIVED 43 ()) 0 0 () () '' () ())
-67 'uyo' '' 127 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-REAL 8 ()) 0 0 () () '' () ())
-66 'uxo' '' 127 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-REAL 8 ()) 0 0 () () '' () ())
-56 'overlap' '' 126 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE POINTER
-DUMMY) (LOGICAL 4 ()) 0 0 () () '' () ())
-102 'prtcl' '' 125 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-DERIVED 43 ()) 0 0 () () '' () ())
-40 'nx' '' 122 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-69 'uxn' '' 127 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-REAL 8 ()) 0 0 () () '' () ())
-70 'uyn' '' 127 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-REAL 8 ()) 0 0 () () '' () ())
-55 'pote' '' 126 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8
-()) 0 0 () () '' () ())
-79 'angle' '' 128 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-REAL 8 ()) 0 0 () () '' () ())
-78 'distance' '' 128 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE DUMMY)
-(REAL 8 ()) 0 0 () () '' () ())
-19 'distance' '' 129 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (
-REAL 8 ()) 0 0 () () '' () ())
-68 'uzo' '' 127 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-REAL 8 ()) 0 0 () () '' () ())
-20 'angle' '' 129 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL
-8 ()) 0 0 () () '' () ())
-73 'dthetamax' '' 130 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-REAL 8 ()) 0 0 () () '' () ())
-91 'xo' '' 131 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-94 'xn' '' 131 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-92 'yo' '' 131 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-111 'particle' '' 132 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-DERIVED 43 ()) 0 0 () () '' () ())
-95 'yn' '' 131 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-113 'utheta' '' 132 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (
-REAL 8 ()) 0 0 () () '' () ())
-93 'zo' '' 131 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-112 'uro' '' 132 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8
-()) 0 0 () () '' () ())
-96 'zn' '' 131 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-100 'particlej' '' 133 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-DERIVED 43 ()) 0 0 () () '' () ())
-114 'uz' '' 132 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8
-()) 0 0 () () '' () ())
-88 'string' '' 134 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-CHARACTER 1 (())) 0 0 () () '' () ())
-89 'prtcl' '' 134 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (
-DERIVED 43 ()) 0 0 () () '' () ())
-99 'particlei' '' 133 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-DERIVED 43 ()) 0 0 () () '' () ())
-74 'theta' '' 130 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL
-8 ()) 0 0 () () '' () ())
-71 'uzn' '' 127 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-REAL 8 ()) 0 0 () () '' () ())
-61 'newp' '' 121 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (
-DERIVED 43 ()) 0 0 () () '' () ())
-)
-
-('unitvec' 0 110 'idotj' 0 104 'dp' 0 21 'differences' 0 3 'cylinder' 0
-2 'getmaxmoves' 0 18 'genrand_int31' 0 16 'dthetamax' 0 10 'dpc' 0 9
-'genrand_real1' 0 15 'genrand_int32' 0 11 'genrand_real3' 0 14
-'genrand_real2' 0 12 'genrand_res53' 0 13 'i4b' 0 17 'particletostring'
-0 101 'move' 0 59 'init_by_array' 0 36 'idotsjdots' 0 22 'maxdr' 0 35
-'init_genrand' 0 33 'lgt' 0 32 'kind' 0 31 'initptarray' 0 27 'nrtype' 0
-58 'mt19937' 0 38 'particledata' 0 57 'pairv' 0 52 'nvec' 0 39 'particle'
-0 51 'particledat' 0 43 'rij' 0 98 'rdist' 0 62 'spc' 0 97 'shell' 0 81
-'setmaxmoves' 0 77 'selected_int_kind' 0 76 'rotangle' 0 72 'rotate' 0
-65 'selected_real_kind' 0 75 'sp' 0 80 'transmove' 0 90 'stringtoparticle'
-0 87 'wi' 0 109 'wr' 0 108 'wl' 0 107)
+V24 particledata
+16 particledata.f90 S522 0
+08/17/2007  14:21:43
+use nrtype public 0 direct
+use nrtype public 0 direct
+use mt19937 public 0 indirect
+use particle public 0 direct
+use cylinder private
+enduse
+D 39 24 611 56 610 7
+D 48 21 39 1 41 51 0 1 0 0 1
+ 43 47 49 43 47 45
+D 51 21 6 1 0 30 0 0 0 0 0
+ 0 30 0 3 30 0
+D 54 21 39 1 53 59 0 1 0 0 1
+ 54 57 58 54 57 55
+D 57 21 6 1 0 30 0 0 0 0 0
+ 0 30 0 3 30 0
+D 60 21 39 1 61 67 0 1 0 0 1
+ 62 65 66 62 65 63
+D 63 21 6 1 0 30 0 0 0 0 0
+ 0 30 0 3 30 0
+D 66 21 6 1 69 75 0 1 0 0 1
+ 70 73 74 70 73 71
+D 69 21 6 1 0 30 0 0 0 0 0
+ 0 30 0 3 30 0
+S 522 24 0 0 0 8 1 0 3735 5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 3 0 0 0 0 0 0 particledata
+S 526 23 0 0 0 8 732 522 3773 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 522 0 0 0 0 rdist
+S 528 3 0 0 0 6 1 1 0 0 0 0 0 0 0 0 8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 6
+S 538 3 0 0 0 6 1 1 0 0 0 0 0 0 0 0 16 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 6
+R 610 25 1 particle particledat
+R 611 5 2 particle x
+R 612 5 3 particle y
+R 613 5 4 particle z
+R 614 5 5 particle ux
+R 615 5 6 particle uy
+R 616 5 7 particle uz
+R 617 5 8 particle rod
+R 732 14 26 cylinder rdist
+S 765 23 5 0 0 0 769 522 4791 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 initptarray
+S 766 7 3 0 0 48 1 765 4803 10800004 3014 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 particlearray
+S 767 7 3 0 0 54 1 765 4817 10800004 3014 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 newptarray
+S 768 1 3 1 0 9 1 765 4828 4 3000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 rc
+S 769 14 5 0 0 0 1 765 4791 0 400000 0 0 0 122 3 0 0 0 0 0 0 0 0 0 0 0 0 11 0 522 0 0 0 0 initptarray
+F 769 3 766 767 768
+S 770 8 1 0 0 51 1 765 4831 40822004 1020 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 particlearray$sd
+S 774 3 0 0 0 6 1 1 0 0 0 0 0 0 0 0 11 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 6
+S 775 3 0 0 0 6 1 1 0 0 0 0 0 0 0 0 12 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 6
+S 776 3 0 0 0 6 1 1 0 0 0 0 0 0 0 0 15 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 6
+S 777 3 0 0 0 6 1 1 0 0 0 0 0 0 0 0 7 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 6
+S 778 8 1 0 0 57 1 765 4901 40822004 1020 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 newptarray$sd
+S 782 23 5 0 0 0 788 522 4959 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 shell
+S 783 7 3 0 0 60 1 782 4965 10800004 3014 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ptrtoarray
+S 784 1 3 1 0 9 1 782 4976 4 3000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 dr
+S 785 7 3 0 0 66 1 782 4979 10800004 3014 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 indicesptr
+S 786 1 3 0 0 6 1 782 4990 4 3000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 nind
+S 787 1 3 1 0 9 1 782 4577 4 3000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 r
+S 788 14 5 0 0 0 1 782 4959 0 400000 0 0 0 126 5 0 0 0 0 0 0 0 0 0 0 0 0 60 0 522 0 0 0 0 shell
+F 788 5 783 787 784 785 786
+S 789 8 1 0 0 63 1 782 4995 40822004 1020 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ptrtoarray$sd
+S 793 8 1 0 0 69 1 782 5053 40822004 1020 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 indicesptr$sd
+A 13 2 0 0 0 6 528 0 0 0 13 0 0 0 0 0 0 0 0 0
+A 30 2 0 0 29 6 538 0 0 0 30 0 0 0 0 0 0 0 0 0
+A 40 1 0 1 0 51 770 0 0 0 0 0 0 0 0 0 0 0 0 0
+A 41 10 0 0 0 6 40 1 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 13
+A 42 2 0 0 40 6 774 0 0 0 42 0 0 0 0 0 0 0 0 0
+A 43 10 0 0 41 6 40 4 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 42
+A 44 2 0 0 42 6 775 0 0 0 44 0 0 0 0 0 0 0 0 0
+A 45 10 0 0 43 6 40 7 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 44
+A 46 4 0 0 0 6 45 0 3 0 0 0 0 2 0 0 0 0 0 0
+A 47 4 0 0 7 6 43 0 46 0 0 0 0 1 0 0 0 0 0 0
+A 48 2 0 0 44 6 776 0 0 0 48 0 0 0 0 0 0 0 0 0
+A 49 10 0 0 45 6 40 10 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 48
+A 50 2 0 0 48 6 777 0 0 0 50 0 0 0 0 0 0 0 0 0
+A 51 10 0 0 49 6 40 13 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 50
+A 52 1 0 1 50 57 778 0 0 0 0 0 0 0 0 0 0 0 0 0
+A 53 10 0 0 0 6 52 1 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 13
+A 54 10 0 0 53 6 52 4 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 42
+A 55 10 0 0 54 6 52 7 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 44
+A 56 4 0 0 0 6 55 0 3 0 0 0 0 2 0 0 0 0 0 0
+A 57 4 0 0 47 6 54 0 56 0 0 0 0 1 0 0 0 0 0 0
+A 58 10 0 0 55 6 52 10 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 48
+A 59 10 0 0 58 6 52 13 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 50
+A 60 1 0 1 0 63 789 0 0 0 0 0 0 0 0 0 0 0 0 0
+A 61 10 0 0 59 6 60 1 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 13
+A 62 10 0 0 61 6 60 4 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 42
+A 63 10 0 0 62 6 60 7 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 44
+A 64 4 0 0 56 6 63 0 3 0 0 0 0 2 0 0 0 0 0 0
+A 65 4 0 0 0 6 62 0 64 0 0 0 0 1 0 0 0 0 0 0
+A 66 10 0 0 63 6 60 10 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 48
+A 67 10 0 0 66 6 60 13 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 50
+A 68 1 0 1 0 69 793 0 0 0 0 0 0 0 0 0 0 0 0 0
+A 69 10 0 0 0 6 68 1 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 13
+A 70 10 0 0 69 6 68 4 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 42
+A 71 10 0 0 70 6 68 7 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 44
+A 72 4 0 0 0 6 71 0 3 0 0 0 0 2 0 0 0 0 0 0
+A 73 4 0 0 57 6 70 0 72 0 0 0 0 1 0 0 0 0 0 0
+A 74 10 0 0 71 6 68 10 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 48
+A 75 10 0 0 74 6 68 13 0 0 0 0 0 0 0 0 0 0 0 0
+X 1 50
+Z
+Z

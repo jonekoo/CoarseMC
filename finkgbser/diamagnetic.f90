@@ -1,22 +1,29 @@
 module magnetic
 
 
-  subroutine setB0Field(B0, B0theta, B0phi)
-  use nrtype
+
+  function magnetic(B0abs,I0vect,partcl) 
   implicit none
-  real(dp), intent(in) :: B0, B0theta, B0phi
-    magneton=.true.
-    B0abs=B0
-    B0vect(1)=sin(B0theta)*cos(B0phi)
-    B0vect(2)=sin(B0theta)*sin(B0phi)
-    B0vect(3)=cos(B0theta)
-  end subroutine setB0Field
+  real(dp) :: magnetic
+  real(dp), dimension(3), intent(in) :: I0vect 
+  real(dp), intent(in) :: B0abs
+  type(particledat), intent(in) :: partcl
+  real(dp), dimension(3) :: ui
+  real(dp), parameter :: chiiso=-3290e-30
+  real(dp), parameter :: chianiso=1750e-30 
+  real(dp), parameter :: temperature=107
+  real(dp), parameter :: kB=1.38065e-23
+    magnetic=0
+    ui(1)=partcl%ux
+    ui(2)=partcl%uy
+    ui(3)=partcl%uz
+    magnetic=-(B0**2)*(chiiso-1._dp/3._dp*chianiso&
+               &+chianiso*(dot_product(I0vect,ui))**2)
+    magnetic=diamagnetic/(temperature*kB)
+  end function magnetic
+    
 
-
-!  function diamagnetic(particlei)
-!  
-
-!  end function diamagnetic
+  end function diamagnetic
 
   function diamagnetic(particlei)
   use particle

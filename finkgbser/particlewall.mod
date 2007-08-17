@@ -1,110 +1,72 @@
-G95 module created on Wed Aug 15 14:18:43 2007 from particlewall.f90
-If you edit this, you'll get what you deserve.
-module-version 3
-(() () () () () () ()
-() () () () () () () () () () () () () ())
-
-()
-
-()
-
-()
-
-()
-
-(2 'attwall' '(global)' 1 ((PROCEDURE UNKNOWN EXTERNAL BODY NONE NONE
-FUNCTION) (REAL 8 ()) 3 0 (4 NONE 5 NONE 6 NONE) () '' () ())
-7 'cylinder' 'cylinder' 1 ((MODULE UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-UNKNOWN 0 ()) 0 0 () () '' () ())
-8 'getradius' 'cylinder' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE FUNCTION PURE) (REAL 8 ()) 0 0 () () '' () ())
-9 'gbwall' 'particlewall' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE SUBROUTINE) (PROCEDURE 0 ()) 0 0 (10 NONE 11 NONE 12 NONE) () '' ()
-())
-13 'dpc' 'nrtype' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '8') () '' () ())
-14 'dp' 'nrtype' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '8') () '' () ())
-15 'angular' 'particlewall' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE FUNCTION) (REAL 8 ()) 0 0 (16 NONE) () '' () ())
-17 'kind' '(intrinsic)' 1 ((PROCEDURE UNKNOWN INTRINSIC UNKNOWN NONE
-NONE FUNCTION) (UNKNOWN 0 ()) 0 0 () () '' () ())
-18 'initptwall' 'particlewall' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL
-NONE NONE SUBROUTINE) (PROCEDURE 0 ()) 0 0 (19 NONE 20 NONE) () '' () ())
-21 'ljdist' 'particlewall' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE
-NONE) (REAL 8 ()) 0 0 () (CONSTANT (REAL 8 ()) 0 '7656119581278208' 0
-1023) () '' () ())
-22 'lgt' 'nrtype' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '4') () '' () ())
-23 'i4b' 'nrtype' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '4') () '' () ())
-24 'particledat' 'particle' 1 ((DERIVED UNKNOWN UNKNOWN UNKNOWN NONE
-NONE) (UNKNOWN 0 ()) 0 0 () () '' ((25 'x' (REAL 8 ()) () 0 0 0 ()) (26
-'y' (REAL 8 ()) () 0 0 0 ()) (27 'z' (REAL 8 ()) () 0 0 0 ()) (28 'ux' (
-REAL 8 ()) () 0 0 0 ()) (29 'uy' (REAL 8 ()) () 0 0 0 ()) (30 'uz' (
-REAL 8 ()) () 0 0 0 ()) (31 'rod' (LOGICAL 4 ()) () 0 0 0 ())) PUBLIC ())
-32 'prtclwallv' 'particlewall' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL
-NONE NONE SUBROUTINE) (PROCEDURE 0 ()) 0 0 (33 NONE 34 NONE 35 NONE) () ''
-() ())
-36 'particlewall' 'particlewall' 1 ((MODULE UNKNOWN UNKNOWN UNKNOWN NONE
-NONE) (UNKNOWN 0 ()) 0 0 () () '' () ())
-37 'particle' 'particle' 1 ((MODULE UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-UNKNOWN 0 ()) 0 0 () () '' () ())
-38 'repwall' '(global)' 1 ((PROCEDURE UNKNOWN EXTERNAL BODY NONE NONE
-FUNCTION) (REAL 8 ()) 39 0 (40 NONE 41 NONE 42 NONE) () '' () ())
-43 'rarb' 'particlewall' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE
-NONE SUBROUTINE) (PROCEDURE 0 ()) 0 0 (44 NONE 45 NONE 46 NONE) () '' ()
-())
-47 'selected_int_kind' '(intrinsic)' 1 ((PROCEDURE UNKNOWN INTRINSIC
-UNKNOWN NONE NONE FUNCTION) (UNKNOWN 0 ()) 0 0 () () '' () ())
-48 'sp' 'nrtype' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '8') () '' () ())
-49 'spc' 'nrtype' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-INTEGER 4 ()) 0 0 () (CONSTANT (INTEGER 4 ()) 0 '8') () '' () ())
-50 'selected_real_kind' '(intrinsic)' 1 ((PROCEDURE UNKNOWN INTRINSIC
-UNKNOWN NONE NONE FUNCTION) (UNKNOWN 0 ()) 0 0 () () '' () ())
-51 'nrtype' 'nrtype' 1 ((MODULE UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
-UNKNOWN 0 ()) 0 0 () () '' () ())
-19 'i' '' 52 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (INTEGER 4 ())
-0 0 () () '' () ())
-40 'x' '' 39 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-20 'strength' '' 52 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE DUMMY)
-(REAL 8 ()) 0 0 () () '' () ())
-35 'ovrlp' '' 53 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE POINTER
-DUMMY) (LOGICAL 4 ()) 0 0 () () '' () ())
-42 'sig' '' 39 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-5 'rc' '' 3 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ()) 0
-0 () () '' () ())
-41 'rc' '' 39 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-12 'ovrlp' '' 54 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE POINTER
-DUMMY) (LOGICAL 4 ()) 0 0 () () '' () ())
-11 'eptwall' '' 54 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (
-REAL 8 ()) 0 0 () () '' () ())
-44 'particle' '' 55 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-DERIVED 24 ()) 0 0 () () '' () ())
-45 'ra' '' 55 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-10 'prtcldata' '' 54 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-DERIVED 24 ()) 0 0 () () '' () ())
-6 'sig' '' 3 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-4 'x' '' 3 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ()) 0
-0 () () '' () ())
-34 'ptwalle' '' 53 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (
-REAL 8 ()) 0 0 () () '' () ())
-33 'prtcl' '' 53 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-DERIVED 24 ()) 0 0 () () '' () ())
-16 'particle' '' 56 ((VARIABLE IN UNKNOWN UNKNOWN NONE NONE DUMMY) (
-DERIVED 24 ()) 0 0 () () '' () ())
-46 'rb' '' 55 ((VARIABLE OUT UNKNOWN UNKNOWN NONE NONE DUMMY) (REAL 8 ())
-0 0 () () '' () ())
-)
-
-('nrtype' 0 51 'i4b' 0 23 'angular' 0 15 'dp' 0 14 'cylinder' 0 7
-'attwall' 0 2 'dpc' 0 13 'gbwall' 0 9 'getradius' 0 8 'lgt' 0 22
-'initptwall' 0 18 'kind' 0 17 'ljdist' 0 21 'selected_real_kind' 0 50
-'selected_int_kind' 0 47 'rarb' 0 43 'particle' 0 37 'particlewall' 0 36
-'particledat' 0 24 'prtclwallv' 0 32 'repwall' 0 38 'spc' 0 49 'sp' 0 48)
+V24 particlewall
+16 particlewall.f90 S522 0
+08/17/2007  14:21:40
+use nrtype public 0 direct
+use particle private
+use cylinder private
+enduse
+D 39 24 670 56 669 7
+S 522 24 0 0 0 8 1 0 3735 5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 5 0 0 0 0 0 0 particlewall
+S 524 23 0 0 0 8 573 522 3757 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 522 0 0 0 0 getradius
+S 526 23 0 0 0 8 669 522 3776 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 522 0 0 0 0 particledat
+R 573 14 38 cylinder getradius
+R 669 25 1 particle particledat
+R 670 5 2 particle x
+R 671 5 3 particle y
+R 672 5 4 particle z
+R 673 5 5 particle ux
+R 674 5 6 particle uy
+R 675 5 7 particle uz
+R 676 5 8 particle rod
+S 766 6 4 0 0 9 767 522 4793 14 0 0 0 0 0 0 0 0 0 1046 0 0 0 0 0 0 0 0 0 0 522 0 0 0 0 alphaa
+S 767 6 4 0 0 9 768 522 4800 14 0 0 8 0 0 0 0 0 0 1046 0 0 0 0 0 0 0 0 0 0 522 0 0 0 0 alphab
+S 768 6 4 0 0 9 769 522 4807 14 0 0 16 0 0 0 0 0 0 1046 0 0 0 0 0 0 0 0 0 0 522 0 0 0 0 sige
+S 769 6 4 0 0 9 1 522 4812 14 0 0 24 0 0 0 0 0 0 1046 0 0 0 0 0 0 0 0 0 0 522 0 0 0 0 kw
+S 770 16 0 0 0 9 1 522 4815 4 400000 0 0 0 0 772 41 0 0 0 0 0 0 0 0 0 0 0 0 0 522 0 0 0 0 ljdist
+S 772 3 0 0 0 9 0 1 0 0 0 0 0 0 0 1073427251 1073741824 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9
+S 773 6 4 0 0 16 1 522 4826 14 0 0 0 0 0 0 0 0 0 1047 0 0 0 0 0 0 0 0 0 0 522 0 0 0 0 ua
+S 774 14 5 0 0 9 1 522 4829 4 0 0 0 0 122 3 0 0 778 0 0 0 0 0 0 0 0 0 22 0 522 0 0 0 0 repwall
+F 774 3 777 775 776
+S 775 1 3 1 0 9 1 774 4837 2004 2000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 rc
+S 776 1 3 1 0 9 1 774 4840 2004 2000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 sig
+S 777 1 3 1 0 9 1 774 4312 2004 2000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 x
+S 778 1 3 0 0 9 1 774 4829 2004 1002000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 repwall
+S 1039 14 5 0 0 9 1 522 5963 4 0 0 0 0 261 3 0 0 1043 0 0 0 0 0 0 0 0 0 31 0 522 0 0 0 0 attwall
+F 1039 3 1040 1041 1042
+S 1040 1 3 1 0 9 1 1039 4312 2004 2000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 x
+S 1041 1 3 1 0 9 1 1039 4837 2004 2000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 rc
+S 1042 1 3 1 0 9 1 1039 4840 2004 2000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 sig
+S 1043 1 3 0 0 9 1 1039 5963 2004 1002000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 attwall
+S 1046 11 0 0 0 8 679 522 5971 40800010 801000 0 32 0 0 766 769 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 particlewall$5
+S 1047 11 0 0 0 8 1046 522 5986 40800010 801000 0 4 0 0 773 773 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 particlewall$3
+S 1048 23 5 0 0 0 1052 522 6001 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 prtclwallv
+S 1049 1 3 1 0 39 1 1048 6012 4 3000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 prtcl
+S 1050 1 3 2 0 9 1 1048 6018 4 3000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ptwalle
+S 1051 1 3 0 0 16 1 1048 6026 4 3004 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ovrlp
+S 1052 14 5 0 0 0 1 1048 6001 0 400000 0 0 0 265 3 0 0 0 0 0 0 0 0 0 0 0 0 44 0 522 0 0 0 0 prtclwallv
+F 1052 3 1049 1050 1051
+S 1053 23 5 0 0 0 1057 522 6032 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 gbwall
+S 1054 1 3 1 0 39 1 1053 6039 4 3000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 prtcldata
+S 1055 1 3 2 0 9 1 1053 6049 4 3000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 eptwall
+S 1056 1 3 0 0 16 1 1053 6057 4 3004 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ovrlp
+S 1057 14 5 0 0 0 1 1053 6032 0 400000 0 0 0 269 3 0 0 0 0 0 0 0 0 0 0 0 0 64 0 522 0 0 0 0 gbwall
+F 1057 3 1054 1055 1056
+S 1058 23 5 0 0 0 1062 522 6063 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 rarb
+S 1059 1 3 2 0 9 1 1058 6068 4 3000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ra
+S 1060 1 3 2 0 9 1 1058 6071 4 3000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 rb
+S 1061 1 3 1 0 39 1 1058 3767 4 3000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 particle
+S 1062 14 5 0 0 0 1 1058 6063 0 400000 0 0 0 273 3 0 0 0 0 0 0 0 0 0 0 0 0 100 0 522 0 0 0 0 rarb
+F 1062 3 1061 1059 1060
+S 1063 23 5 0 0 0 1066 522 6074 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 initptwall
+S 1064 1 3 1 0 6 1 1063 6085 4 3000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 i
+S 1065 1 3 0 0 9 1 1063 6087 4 3000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 strength
+S 1066 14 5 0 0 0 1 1063 6074 0 400000 0 0 0 277 2 0 0 0 0 0 0 0 0 0 0 0 0 120 0 522 0 0 0 0 initptwall
+F 1066 2 1064 1065
+S 1067 23 5 0 0 9 1069 522 6096 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 angular
+S 1068 1 3 1 0 39 1 1067 3767 4 3000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 particle
+S 1069 14 5 0 0 9 1 1067 6096 4 400000 0 0 0 280 1 0 0 1070 0 0 0 0 0 0 0 0 0 145 0 522 0 0 0 0 angular
+F 1069 1 1068
+S 1070 1 3 0 0 9 1 1067 6096 4 1003000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 angular
+A 41 2 0 0 40 9 772 0 0 0 41 0 0 0 0 0 0 0 0 0
+Z
+Z

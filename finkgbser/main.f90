@@ -27,14 +27,14 @@ logical,target :: ol=.false.
 logical,pointer :: overlap
 type(particledat), pointer :: particlej
 !Vielä turhia muuttujia.
-integer :: Nsphere
+integer :: Nsphere, statefiletype
 real(dp), dimension(:), pointer :: xs,ys,zs,uxs,uys,uzs
 logical, dimension(:), pointer :: rods
   overlap=>ol 
   !! 2. parametrien lataus
-  call ReadParams(statefile,Nrelax,Nprod,Nratio,T,pres,anchor,vtype,Kw,seed, &
-                & epses,eps0,rsphere,spmyy,epsphere,sigma0,siges,B0,B0angle, &
-                & magneton, domainw, maxtrans, cutoff) 
+  call ReadParams(statefile,statefiletype,Nrelax,Nprod,Nratio,T,pres,anchor,&
+                & vtype,Kw,seed, epses,eps0,rsphere,spmyy,epsphere,sigma0,&
+                & siges,B0,B0angle,magneton, domainw, maxtrans, cutoff) 
   !! 3. modulien alustus
   if(magneton==1) call setB0Field(B0,B0angle,0._dp)
   call initptwall(anchor,Kw)
@@ -48,10 +48,20 @@ logical, dimension(:), pointer :: rods
     stop;
   end if
   !! Luetaan hiukkasten tilat tiedostosta
- ! call readstate(statefile,N,xs,ys,zs,uxs,uys,uzs,rods,radius,Lz)
- ! call xyzToParticle(N,xs,ys,zs,uxs,uys,uzs,rods,ptrtoarray)
-  call readState("tempstatefile.out",N,ptrtoarray,radius,Lz)
-  !! Alustetaan sylinteri
+  if(statefiletype==1) then
+    call readstate(statefile,N,xs,ys,zs,uxs,uys,uzs,rods,radius,Lz)
+    call xyzToParticle(N,xs,ys,zs,uxs,uys,uzs,rods,ptrtoarray)
+    if (associated(xs)) deallocate(xs)
+    if (associated(ys)) deallocate(ys)
+    if (associated(zs)) deallocate(zs)
+    if (associated(uxs)) deallocate(uxs)
+    if (associated(uys)) deallocate(uys)
+    if (associated(uzs)) deallocate(uzs)
+    if(associated(rods)) deallocate(rods)
+  else if(statefiletype==2) then 
+    call readState(statefile,N,ptrtoarray,radius,Lz)
+  end if
+    !! Alustetaan sylinteri
   call initcylinder(radius,Lz,T,pres)
   write(eunit,*) 'Sylinterin säde alussa:',getRadius()
   write(eunit,*) 'Sylinterin korkeus alussa:',getHeight()
