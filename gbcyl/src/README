@@ -1,0 +1,50 @@
+This is gbcyl-0.1. A Metropolis Monte Carlo simulation program for a Gay-Berne
+(4.4, 20.0, 1, 1) model liquid crystal in a cylindrical nanocavity.
+
+
+Compiling
+---------
+
+To use the program in jovian compile with PGI compiler with the command
+make -f Makefile_jovian
+
+For use with other machines you may need to make changes to the makefile. 
+
+
+Usage
+-----
+
+
+A new simulation:
+
+You need the following files:
+1. program binary: eg. gbcyl_jovian
+2. parameter file: gbcyl.in
+3. file to read the starting configuration from: eg. R9_GB1290.crystal
+
+Starting configuration file must be the same as set in the parameter file. So 
+you may need to edit the parameter file. 
+
+Run with:
+./gbcyl_jovian
+
+
+Restarting a simulation: 
+
+You need the following files:
+1. program binary: eg. gbcyl_jovian
+2. restart file: restart.out
+
+Run with:
+./gbcyl_jovian restart [n_equilibration_sweeps n_production_sweeps]
+
+
+After:
+
+You should have 
+1. A new restart file written in place of restart.out. This is updated 
+   periodically 
+2. simdata.out where the positions and orientations of the molecule and the 
+   cylinder dimensions have been written during the simulation.
+
+
