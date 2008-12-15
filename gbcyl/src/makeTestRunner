@@ -1,0 +1,21 @@
+
+# makefile to compile TestRunner.f90
+#
+# funit generated this file on Thu Dec 04 16:04:41 +0200 2008.
+
+OBJ=nrtype.o gayberne.o gayberne_fun.o TestRunner.o
+
+all:testrunner
+
+testrunner: $(OBJ)
+	gfortran  -o TestRunner $(OBJ)
+
+gayberne.o: gayberne.f90 nrtype.o
+	(cd .; gfortran   -c gayberne.f90)
+gayberne_fun.o: gayberne_fun.f90 gayberne.o nrtype.o
+	(cd .; gfortran   -c gayberne_fun.f90)
+nrtype.o: nrtype.f90 
+	(cd .; gfortran   -c nrtype.f90)
+TestRunner.o: TestRunner.f90 gayberne_fun.o
+	(cd .; gfortran   -c TestRunner.f90)
+  

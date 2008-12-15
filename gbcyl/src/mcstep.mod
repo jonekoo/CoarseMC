@@ -1,0 +1,254 @@
+GFORTRAN module created from mcstep.f90 on Thu Dec  4 16:07:01 2008
+MD5:db1fddb8ce71cddd9a421fcbc1a8f595 -- If you edit this, you'll get what you deserve.
+
+(() () ()
+() () () () () () () () () () () () () () () () () () () () () () () ())
+
+()
+
+()
+
+()
+
+()
+
+(2 'particledat' 'particle' 'particledat' 1 ((DERIVED UNKNOWN-INTENT
+UNKNOWN-PROC UNKNOWN UNKNOWN) (UNKNOWN 0 0 0 UNKNOWN ()) 0 0 () () 0 ((
+3 'x' (REAL 8 0 0 REAL ()) () 0 0 0 UNKNOWN-ACCESS ()) (4 'y' (REAL 8 0
+0 REAL ()) () 0 0 0 UNKNOWN-ACCESS ()) (5 'z' (REAL 8 0 0 REAL ()) () 0
+0 0 UNKNOWN-ACCESS ()) (6 'ux' (REAL 8 0 0 REAL ()) () 0 0 0
+UNKNOWN-ACCESS ()) (7 'uy' (REAL 8 0 0 REAL ()) () 0 0 0 UNKNOWN-ACCESS
+()) (8 'uz' (REAL 8 0 0 REAL ()) () 0 0 0 UNKNOWN-ACCESS ()) (9 'rod' (
+LOGICAL 4 0 0 LOGICAL ()) () 0 0 0 UNKNOWN-ACCESS ())) PUBLIC () 0 0)
+10 '__convert_r4_r8' '(intrinsic)' '__convert_r4_r8' 1 ((PROCEDURE
+UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN UNKNOWN FUNCTION ELEMENTAL PURE) (
+REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+11 'acceptchange' 'mcstep' 'acceptchange' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN FUNCTION) (LOGICAL 4 0 0 LOGICAL ()) 12 0 (13
+14 15 16) () 17 () () 0 0)
+18 'changelz' 'mcstep' 'changelz' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN SUBROUTINE ALWAYS_EXPLICIT) (UNKNOWN 0 0 0
+UNKNOWN ()) 19 0 (20 21 22 23) () 0 () () 0 0)
+24 'changer' 'mcstep' 'changer' 1 ((PROCEDURE UNKNOWN-INTENT MODULE-PROC
+DECL UNKNOWN SUBROUTINE ALWAYS_EXPLICIT) (UNKNOWN 0 0 0 UNKNOWN ()) 25 0
+(26 27 28) () 0 () () 0 0)
+29 'cylinder' 'cylinder' 'cylinder' 1 ((MODULE UNKNOWN-INTENT
+UNKNOWN-PROC UNKNOWN UNKNOWN) (UNKNOWN 0 0 0 UNKNOWN ()) 0 0 () () 0 ()
+() 0 0)
+30 'dp' 'nrtype' 'dp' 1 ((PARAMETER UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
+IMPLICIT-SAVE) (INTEGER 4 0 0 INTEGER ()) 0 0 () (CONSTANT (INTEGER 4 0
+0 INTEGER ()) 0 '8') () 0 () () 0 0)
+31 'getheight' 'cylinder' 'getheight' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN FUNCTION PURE) (REAL 8 0 0 REAL ()) 0 0 () ()
+32 () () 0 0)
+33 'getmaxmoves' 'particle' 'getmaxmoves' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN SUBROUTINE) (UNKNOWN 0 0 0 UNKNOWN ()) 34 0 (
+35 36) () 0 () () 0 0)
+37 'grnd' 'mtmod' 'grnd' 1 ((PROCEDURE UNKNOWN-INTENT MODULE-PROC DECL
+UNKNOWN FUNCTION) (REAL 8 0 0 REAL ()) 0 0 () () 37 () () 0 0)
+38 'initmcstep' 'mcstep' 'initmcstep' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN SUBROUTINE) (UNKNOWN 0 0 0 UNKNOWN ()) 39 0 (
+40 41 42) () 0 () () 0 0)
+43 'load_state' 'mcstep' 'load_state' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN SUBROUTINE) (UNKNOWN 0 0 0 UNKNOWN ()) 44 0 (
+45) () 0 () () 0 0)
+46 'mcstep' 'mcstep' 'mcstep' 1 ((MODULE UNKNOWN-INTENT UNKNOWN-PROC
+UNKNOWN UNKNOWN) (UNKNOWN 0 0 0 UNKNOWN ()) 0 0 () () 0 () () 0 0)
+47 'move' 'particle' 'move' 1 ((PROCEDURE UNKNOWN-INTENT MODULE-PROC
+DECL UNKNOWN SUBROUTINE) (UNKNOWN 0 0 0 UNKNOWN ()) 48 0 (49 50) () 0 ()
+() 0 0)
+51 'mtmod' 'mtmod' 'mtmod' 1 ((MODULE UNKNOWN-INTENT UNKNOWN-PROC
+UNKNOWN UNKNOWN) (UNKNOWN 0 0 0 UNKNOWN ()) 0 0 () () 0 () () 0 0)
+52 'n_accepted_moves__' 'mcstep' 'n_accepted_moves__' 1 ((VARIABLE
+UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN UNKNOWN IN_NAMELIST) (INTEGER 4 0 0
+INTEGER ()) 0 0 () () 0 () () 0 0)
+53 'newmaxvalue' 'mcstep' 'newmaxvalue' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN FUNCTION) (REAL 8 0 0 REAL ()) 54 0 (55 56) ()
+57 () () 0 0)
+58 'nrtype' 'nrtype' 'nrtype' 1 ((MODULE UNKNOWN-INTENT UNKNOWN-PROC
+UNKNOWN UNKNOWN) (UNKNOWN 0 0 0 UNKNOWN ()) 0 0 () () 0 () () 0 0)
+59 'particle' 'particle' 'particle' 1 ((MODULE UNKNOWN-INTENT
+UNKNOWN-PROC UNKNOWN UNKNOWN) (UNKNOWN 0 0 0 UNKNOWN ()) 0 0 () () 0 ()
+() 0 0)
+60 'ratios' 'mcstep' 'ratios' 1 ((PROCEDURE UNKNOWN-INTENT MODULE-PROC
+DECL UNKNOWN SUBROUTINE) (UNKNOWN 0 0 0 UNKNOWN ()) 61 0 (62 63 64 65) ()
+0 () () 0 0)
+66 'save_state' 'mcstep' 'save_state' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN SUBROUTINE) (UNKNOWN 0 0 0 UNKNOWN ()) 67 0 (
+68) () 0 () () 0 0)
+69 'scale' 'cylinder' 'scale' 1 ((PROCEDURE UNKNOWN-INTENT MODULE-PROC
+DECL UNKNOWN SUBROUTINE) (UNKNOWN 0 0 0 UNKNOWN ()) 70 0 (71 72 73 74 75
+76) () 0 () () 0 0)
+77 'setlz' 'cylinder' 'setlz' 1 ((PROCEDURE UNKNOWN-INTENT MODULE-PROC
+DECL UNKNOWN SUBROUTINE) (UNKNOWN 0 0 0 UNKNOWN ()) 78 0 (79) () 0 () ()
+0 0)
+80 'setmaxmoves' 'particle' 'setmaxmoves' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN SUBROUTINE) (UNKNOWN 0 0 0 UNKNOWN ()) 81 0 (
+82 83) () 0 () () 0 0)
+84 'setr' 'cylinder' 'setr' 1 ((PROCEDURE UNKNOWN-INTENT MODULE-PROC
+DECL UNKNOWN SUBROUTINE) (UNKNOWN 0 0 0 UNKNOWN ()) 85 0 (86) () 0 () ()
+0 0)
+87 'singleprtcltotv' 'energy' 'singleprtcltotv' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN SUBROUTINE ALWAYS_EXPLICIT) (
+UNKNOWN 0 0 0 UNKNOWN ()) 88 0 (89 90 91 92 93 94) () 0 () () 0 0)
+95 'step' 'mcstep' 'step' 1 ((PROCEDURE UNKNOWN-INTENT MODULE-PROC DECL
+UNKNOWN SUBROUTINE ALWAYS_EXPLICIT) (UNKNOWN 0 0 0 UNKNOWN ()) 96 0 (97
+98) () 0 () () 0 0)
+99 'totenergy' 'energy' 'totenergy' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN SUBROUTINE ALWAYS_EXPLICIT) (UNKNOWN 0 0 0
+UNKNOWN ()) 100 0 (101 102 103 104) () 0 () () 0 0)
+105 'totpairv' 'energy' 'totpairv' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN SUBROUTINE ALWAYS_EXPLICIT) (UNKNOWN 0 0 0
+UNKNOWN ()) 106 0 (107 108 109 110) () 0 () () 0 0)
+111 'updatelist' 'verlet' 'updatelist' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN SUBROUTINE ALWAYS_EXPLICIT) (UNKNOWN 0 0 0
+UNKNOWN ()) 112 0 (113 114) () 0 () () 0 0)
+115 'updatemaxvalues' 'mcstep' 'updatemaxvalues' 1 ((PROCEDURE
+UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN SUBROUTINE) (UNKNOWN 0 0 0
+UNKNOWN ()) 116 0 (117 118) () 0 () () 0 0)
+119 'verlet' 'verlet' 'verlet' 1 ((MODULE UNKNOWN-INTENT UNKNOWN-PROC
+UNKNOWN UNKNOWN) (UNKNOWN 0 0 0 UNKNOWN ()) 0 0 () () 0 () () 0 0)
+120 'volume' 'cylinder' 'volume' 1 ((PROCEDURE UNKNOWN-INTENT
+MODULE-PROC DECL UNKNOWN FUNCTION PURE) (REAL 8 0 0 REAL ()) 0 0 () ()
+120 () () 0 0)
+68 'write_unit' '' 'write_unit' 67 ((VARIABLE IN UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () 0 0)
+45 'read_unit' '' 'read_unit' 44 ((VARIABLE IN UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () 0 0)
+97 'particles' '' 'particles' 96 ((VARIABLE INOUT UNKNOWN-PROC UNKNOWN
+UNKNOWN DIMENSION DUMMY) (DERIVED 2 0 0 DERIVED ()) 0 0 () (1
+ASSUMED_SHAPE (CONSTANT (INTEGER 4 0 0 INTEGER ()) 0 '1') ()) 0 () () 0
+0)
+98 'n_particles' '' 'n_particles' 96 ((VARIABLE IN UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () 0 0)
+40 'volume_change_type' '' 'volume_change_type' 39 ((VARIABLE IN
+UNKNOWN-PROC UNKNOWN UNKNOWN DUMMY) (INTEGER 4 0 0 INTEGER ()) 0 0 () ()
+0 () () 0 0)
+41 'temperature' '' 'temperature' 39 ((VARIABLE IN UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+92 'i' '' 'i' 88 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN DUMMY) (
+INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () 0 0)
+93 'vitot' '' 'vitot' 88 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN UNKNOWN
+DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+91 'particlei' '' 'particlei' 88 ((VARIABLE IN UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (DERIVED 2 0 0 DERIVED ()) 0 0 () () 0 () () 0 0)
+90 'n_particles' '' 'n_particles' 88 ((VARIABLE IN UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () 0 0)
+94 'ovrlp' '' 'ovrlp' 88 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN UNKNOWN
+DUMMY) (LOGICAL 4 0 0 LOGICAL ()) 0 0 () () 0 () () 0 0)
+89 'particles' '' 'particles' 88 ((VARIABLE IN UNKNOWN-PROC UNKNOWN
+UNKNOWN DIMENSION DUMMY) (DERIVED 2 0 0 DERIVED ()) 0 0 () (1
+ASSUMED_SHAPE (CONSTANT (INTEGER 4 0 0 INTEGER ()) 0 '1') ()) 0 () () 0
+0)
+108 'n_particles' '' 'n_particles' 106 ((VARIABLE IN UNKNOWN-PROC
+UNKNOWN UNKNOWN DUMMY) (INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () 0 0)
+107 'particles' '' 'particles' 106 ((VARIABLE IN UNKNOWN-PROC UNKNOWN
+UNKNOWN DIMENSION DUMMY) (DERIVED 2 0 0 DERIVED ()) 0 0 () (1
+ASSUMED_SHAPE (CONSTANT (INTEGER 4 0 0 INTEGER ()) 0 '1') ()) 0 () () 0
+0)
+109 'vtot' '' 'vtot' 106 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN UNKNOWN
+DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+110 'ovrlp' '' 'ovrlp' 106 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN UNKNOWN
+DUMMY) (LOGICAL 4 0 0 LOGICAL ()) 0 0 () () 0 () () 0 0)
+104 'etot' '' 'etot' 100 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN UNKNOWN
+DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+103 'ovrlp' '' 'ovrlp' 100 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN UNKNOWN
+DUMMY) (LOGICAL 4 0 0 LOGICAL ()) 0 0 () () 0 () () 0 0)
+101 'particles' '' 'particles' 100 ((VARIABLE UNKNOWN-INTENT
+UNKNOWN-PROC UNKNOWN UNKNOWN DIMENSION POINTER DUMMY) (DERIVED 2 0 0
+DERIVED ()) 0 0 () (1 DEFERRED () ()) 0 () () 0 0)
+102 'n_particles' '' 'n_particles' 100 ((VARIABLE IN UNKNOWN-PROC
+UNKNOWN UNKNOWN DUMMY) (INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () 0 0)
+113 'particles' '' 'particles' 112 ((VARIABLE IN UNKNOWN-PROC UNKNOWN
+UNKNOWN DIMENSION DUMMY) (DERIVED 2 0 0 DERIVED ()) 0 0 () (1
+ASSUMED_SHAPE (CONSTANT (INTEGER 4 0 0 INTEGER ()) 0 '1') ()) 0 () () 0
+0)
+114 'n_particles' '' 'n_particles' 112 ((VARIABLE IN UNKNOWN-PROC
+UNKNOWN UNKNOWN DUMMY) (INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () 0 0)
+32 'height' '' 'height' 121 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC
+UNKNOWN UNKNOWN RESULT) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+73 'xnew' '' 'xnew' 70 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN UNKNOWN DUMMY)
+(REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+72 'y0' '' 'y0' 70 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN DUMMY) (
+REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+76 'rnew' '' 'rnew' 70 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN DUMMY)
+(REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+75 'r0' '' 'r0' 70 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN DUMMY) (
+REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+42 'pressure' '' 'pressure' 39 ((VARIABLE IN UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+86 'newr' '' 'newr' 85 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN DUMMY)
+(REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+74 'ynew' '' 'ynew' 70 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN UNKNOWN DUMMY)
+(REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+71 'x0' '' 'x0' 70 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN DUMMY) (
+REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+79 'newlz' '' 'newlz' 78 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN
+DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+83 'angle' '' 'angle' 81 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+82 'distance' '' 'distance' 81 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC
+UNKNOWN UNKNOWN DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+35 'distance' '' 'distance' 34 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+36 'angle' '' 'angle' 34 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN UNKNOWN
+DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+50 'newp' '' 'newp' 48 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN UNKNOWN DUMMY)
+(DERIVED 2 0 0 DERIVED ()) 0 0 () () 0 () () 0 0)
+49 'oldp' '' 'oldp' 48 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN DUMMY)
+(DERIVED 2 0 0 DERIVED ()) 0 0 () () 0 () () 0 0)
+13 'oldenergy' '' 'oldenergy' 12 ((VARIABLE IN UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+14 'newenergy' '' 'newenergy' 12 ((VARIABLE IN UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+15 'temperature' '' 'temperature' 12 ((VARIABLE IN UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+16 'overlap' '' 'overlap' 12 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN
+DUMMY) (LOGICAL 4 0 0 LOGICAL ()) 0 0 () () 0 () () 0 0)
+17 'ok' '' 'ok' 12 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
+UNKNOWN RESULT) (LOGICAL 4 0 0 LOGICAL ()) 0 0 () () 0 () () 0 0)
+62 'nparticles' '' 'nparticles' 61 ((VARIABLE IN UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () 0 0)
+63 'period' '' 'period' 61 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN
+DUMMY) (INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () 0 0)
+64 'movratio' '' 'movratio' 61 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (REAL 4 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+65 'volratio' '' 'volratio' 61 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (REAL 4 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+117 'nparticles' '' 'nparticles' 116 ((VARIABLE IN UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () 0 0)
+118 'period' '' 'period' 116 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN
+DUMMY) (INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () 0 0)
+55 'increase' '' 'increase' 54 ((VARIABLE IN UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (LOGICAL 4 0 0 LOGICAL ()) 0 0 () () 0 () () 0 0)
+56 'oldvalue' '' 'oldvalue' 54 ((VARIABLE IN UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+57 'newvalue' '' 'newvalue' 54 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC
+UNKNOWN UNKNOWN RESULT) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+26 'particlearray' '' 'particlearray' 25 ((VARIABLE UNKNOWN-INTENT
+UNKNOWN-PROC UNKNOWN UNKNOWN DIMENSION POINTER DUMMY) (DERIVED 2 0 0
+DERIVED ()) 0 0 () (1 DEFERRED () ()) 0 () () 0 0)
+27 'oldr' '' 'oldr' 25 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN DUMMY)
+(REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+28 'newr' '' 'newr' 25 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN DUMMY)
+(REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+20 'particles' '' 'particles' 19 ((VARIABLE INOUT UNKNOWN-PROC UNKNOWN
+UNKNOWN DIMENSION DUMMY) (DERIVED 2 0 0 DERIVED ()) 0 0 () (1
+ASSUMED_SHAPE (CONSTANT (INTEGER 4 0 0 INTEGER ()) 0 '1') ()) 0 () () 0
+0)
+21 'n_particles' '' 'n_particles' 19 ((VARIABLE IN UNKNOWN-PROC UNKNOWN
+UNKNOWN DUMMY) (INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () 0 0)
+22 'oldlz' '' 'oldlz' 19 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN
+DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+23 'newlz' '' 'newlz' 19 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN
+DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () 0 0)
+)
+
+('__convert_r4_r8' 0 10 'acceptchange' 0 11 'changelz' 0 18 'changer' 0
+24 'cylinder' 0 29 'dp' 0 30 'getheight' 0 31 'getmaxmoves' 0 33 'grnd'
+0 37 'initmcstep' 0 38 'load_state' 0 43 'mcstep' 0 46 'move' 0 47 'mtmod'
+0 51 'n_accepted_moves__' 0 52 'newmaxvalue' 0 53 'nrtype' 0 58 'particle'
+0 59 'particledat' 0 2 'ratios' 0 60 'save_state' 0 66 'scale' 0 69
+'setlz' 0 77 'setmaxmoves' 0 80 'setr' 0 84 'singleprtcltotv' 0 87 'step'
+0 95 'totenergy' 0 99 'totpairv' 0 105 'updatelist' 0 111
+'updatemaxvalues' 0 115 'verlet' 0 119 'volume' 0 120)

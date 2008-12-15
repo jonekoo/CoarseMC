@@ -1,0 +1,42 @@
+OBJS=nrtype.o nrutil.o nr.o rf_s.o rf_v.o rd_s.o rd_v.o horner.o attwall.o repwall.o utils.o particle.o cylinder.o particlewall.o gayberne.o verlet.o energy.o mtfort90.o mcstep.o particledata.o io.o mc_engine.o gbcyl.o
+
+MODS=nrtype.mod nrutil.mod nr.mod utils.mod particle.mod cylinder.mod \
+particlewall.mod gayberne.mod verlet.mod energy.mod mtmod.mod mcstep.mod io.mod mc_engine.mod
+
+F90=gfortran
+FLGS=-Wall -pedantic
+#-fast -Mipa=fast,inline -Mprof=time
+
+TARGET=gbcyl_macosx_10.5.5_intel_core_2_duo
+
+%.o %.mod : %.f90
+	$(F90) $(FLGS) -std=f95 -c $< 
+
+$(TARGET) : $(OBJS) $(MODS)
+	$(F90) $(OBJS) $(FLGS) -Bstatic -o $(TARGET)
+
+gbcyl.o : mc_engine.mod
+	$(F90) $(FLGS) -c gbcyl.f90 
+mtfort90.o mtmod.mod : mtfort90.f90 
+	   $(F90) -std=f95 -Wall -c $<
+utils.o utils.mod : nrtype.mod
+io.o io.mod : io.f90 nrtype.mod particle.mod
+mcstep.o mcstep.mod : nrtype.mod energy.mod cylinder.mod particle.mod mtmod.mod verlet.mod
+energy.o energy.mod : nrtype.mod verlet.mod particlewall.mod cylinder.mod particle.mod
+verlet.o verlet.mod : nrtype.mod particle.mod cylinder.mod
+gayberne.o gayberne.mod : nrtype.mod
+particlewall.o particlewall.mod : nrtype.mod cylinder.mod particle.mod nr.mod
+cylinder.o cylinder.mod : nrtype.mod
+particle.o particle.mod : utils.mod nrtype.mod cylinder.mod gayberne.mod mtmod.mod
+rf_s.o : nrtype.mod nrutil.mod
+rf_v.o : nrtype.mod nrutil.mod
+rd_s.o : nrtype.mod nrutil.mod
+rd_v.o : nrtype.mod nrutil.mod
+repwall.o : nr.mod nrtype.mod
+attwall.o : nr.mod nrtype.mod
+nr.o nr.mod : nrtype.mod 
+nrutil.o nrutil.mod : nrtype.mod 
+mc_engine.o mc_engine.mod : nrtype.mod mcstep.mod energy.mod cylinder.mod verlet.mod particlewall.mod gayberne.mod particle.mod io.mod mtmod.mod 
+
+clean : 
+	rm $(OBJS) $(MODS) $(TARGET)
