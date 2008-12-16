@@ -21,27 +21,35 @@ module mc_engine
   use verlet, only: initvlist, freevlist, &
     & verlet_save_state => save_state, &
     & verlet_load_state => load_state
-  
-  integer, private, save :: n_particles_
-  type(particledat), dimension(:), pointer, save :: particles_
-  integer, private, save :: n_equilibration_sweeps_
-  integer, private, save :: n_production_sweeps_
-  integer, private, save :: production_period_
-  integer, parameter :: adjusting_period_ = 20
-  integer, private, save :: i_sweep_
-  integer, parameter :: restart_period_ = 1000
-  integer, parameter :: restart_unit_ = 13
-  character(len=*), parameter :: restart_file_ = "restart.out"
 
+  public :: init
+  public :: run
+  public :: save_state
+  public :: load_state
+  public :: write_restart_to 
+  public :: read_restart_from
+  
+
+
+  private
+  
+  integer, save :: n_particles_
+  type(particledat), dimension(:), pointer, save :: particles_
+  integer, save :: n_equilibration_sweeps_
+  integer, save :: n_production_sweeps_
+  integer, save :: production_period_
+  integer, save :: adjusting_period_ = 20
+  integer, save :: i_sweep_
+  integer, save :: restart_period_ = 1000
+  integer, save :: restart_unit_ = 13
+  character(len=*), parameter :: restart_file_ = "restart.out"
   namelist /mc_engine_nml/ n_particles_, n_equilibration_sweeps_, &
-    & n_production_sweeps_, production_period_, i_sweep_
-  PRIVATE :: mc_engine_nml
+    n_production_sweeps_, production_period_, i_sweep_, restart_period_, &
+    restart_unit_ 
 
   
 
   contains
-
-
 
   !! Initializes the state of the simulation. 
   !!
@@ -98,6 +106,8 @@ module mc_engine
     call energy_init(magnetic_field_direction, magnetic_field_teslas, &
       & is_magnet_on) 
     i_sweep_ = 0
+    restart_period_ = 1000
+    restart_unit_ = 13
   end subroutine init
 
 
