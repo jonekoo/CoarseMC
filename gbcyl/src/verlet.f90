@@ -4,20 +4,33 @@ module verlet
   use particle, only: particledat, rij, differences
   implicit none 
 
-  real(dp), parameter :: rlist = 6.8, rcut = 5.5
-  integer, private, save :: n_particles_
-  integer, private, save :: n_neighbours_
-  real(dp), dimension(:, :), allocatable, target, private, save :: xyzlist
-  integer, dimension(:), allocatable, target, private, save :: Nvlist
-  integer, dimension(:, :), allocatable, target, private, save ::  vlist
-  namelist /verlet_nml/ n_particles_, n_neighbours_
-  PRIVATE :: verlet_nml
+
+
+  public :: initvlist
+  public :: getvlist
+  public :: updatelist
+  public :: freevlist
+  public :: save_state
+  public :: load_state
+
+
+
+  private
+
+  real(dp), save :: r_list_
+  real(dp), save :: r_cutoff_
+  integer, save :: n_particles_
+  integer, save :: n_neighbours_
+  real(dp), dimension(:, :), allocatable, target, save :: xyzlist
+  integer, dimension(:), allocatable, target, save :: Nvlist
+  integer, dimension(:, :), allocatable, target, save ::  vlist
+  integer, save :: n_neighbours_max_
+  namelist /verlet_nml/ n_particles_, n_neighbours_, r_list_, r_cutoff_, &
+    n_neighbours_max_
 
 
 
   contains
-
-
 
   !Alustaa naapurilistan
   subroutine initvlist(particles, n_particles)
@@ -26,9 +39,11 @@ module verlet
     type(particledat), dimension(:), intent(in) :: particles
     integer, intent(in) :: n_particles
     integer :: astat
-    integer, parameter :: n_neighbours_max = 500
+    r_list_ = 6.8
+    r_cutoff_ = 5.5
+    n_neighbours_max_ = 500
     n_particles_ = n_particles
-    n_neighbours_ = min(n_particles_, n_neighbours_max) 
+    n_neighbours_ = min(n_particles_, n_neighbours_max_) 
     if (n_particles_ < n_neighbours_) then
       n_neighbours_ = n_particles_
     end if
@@ -108,7 +123,7 @@ module verlet
     end do 
     do i = 1, (n_particles-1)
       do j = (i+1), n_particles
-         if(rij(particles(i), particles(j)) < rlist ) then
+         if(rij(particles(i), particles(j)) < r_list_ ) then
            Nvlist(i) = Nvlist(i)+1
            Nvlist(j) = Nvlist(j)+1
            vlist(i, Nvlist(i)) = j
@@ -143,7 +158,7 @@ module verlet
       dy = abs(dy)
       dz = abs(dz)
       dmax1 = max(dmax1, dx, dy, dz)
-      if(dmax1 > (0.29*(rlist-rcut))) then
+      if(dmax1 > (0.29*(r_list_-r_cutoff_))) then
         call newlist(particles, n_particles)
         exit;
       end if
