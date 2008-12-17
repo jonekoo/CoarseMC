@@ -24,11 +24,13 @@ module mc_engine
 
   public :: init
   public :: run
-  public :: save_state
-  public :: load_state
+  public :: write_restart
+  public :: read_restart
   public :: write_restart_to 
   public :: read_restart_from
-  
+  public :: finalize
+  public :: equilibration_sweeps
+  public :: production_sweeps  
 
 
   private
