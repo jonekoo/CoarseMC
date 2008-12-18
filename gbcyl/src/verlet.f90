@@ -7,13 +7,12 @@ module verlet
 
 
   public :: initvlist
-  public :: getvlist
   public :: updatelist
   public :: freevlist
   public :: save_state
   public :: load_state
   public :: totpairV
-
+  public :: singleparticleV
 
 
   private
@@ -124,6 +123,33 @@ module verlet
       end do
     end do
   end subroutine totpairV
+
+
+
+  !! Laskee hiukkasen i vuorovaikutusenergian muiden hiukkasten
+  !! kanssa
+  subroutine singleparticleV(particles, n_particles, particlei, i, &
+    singleV, ovrlp)
+    implicit none
+    integer, intent(in) :: i
+    type(particledat),dimension(:), intent(in) :: particles
+    integer, intent(in) :: n_particles
+    type(particledat), intent(in) :: particlei
+    real(dp), intent(out) :: singleV
+    logical, intent(out) :: ovrlp
+    integer :: j
+    real(dp) :: pairE = 0.0
+    type(particledat) :: particlevij    
+    singleV = 0.0
+    do j = 1, neighbour_counts_(i)
+      particlevij = particles(neighbours_(i, j))
+      if (rij(particlei, particlevij) < r_cutoff_) then 
+        call pairV(particlei, particlevij, pairE, ovrlp)
+        if (ovrlp) return;
+        singleV = singleV + pairE
+      end if
+    end do
+  end subroutine singleparticleV
 
 
 

@@ -2,7 +2,7 @@ module energy
   use nrtype, only: sp, dp
   use particle, only: particledat, rij, pairV
   use particlewall, only: prtclwallV
-  use verlet, only: getvlist, totpairV
+  use verlet, only: totpairV, singleparticleV
   implicit none
  
 
@@ -124,37 +124,6 @@ module energy
         totDiamagnetic=totDiamagnetic+diamagnetic(particlearray(i))
       end do
     end function totDiamagnetic
-
-
-
-    !Laskee hiukkasen i vuorovaikutusenergian muiden hiukkasten
-    !kanssa
-    subroutine singleparticleV(particles, n_particles, particlei, i, & 
-                             & singleV, ovrlp)
-    implicit none
-    integer, intent(in) :: i
-    type(particledat),dimension(:), intent(in) :: particles
-    integer, intent(in) :: n_particles
-    type(particledat), intent(in) :: particlei
-    real(dp), intent(out) :: singleV
-    logical, intent(out) :: ovrlp
-    integer :: j
-    integer, dimension(:,:), pointer :: verletl
-    integer, dimension(:), pointer :: Nverletl
-    real(dp) :: pairE = 0.0
-    type(particledat) :: particlevij    
-      call getvlist(verletl, Nverletl)
-      singleV = 0.0
-      do j = 1, Nverletl(i)
-        particlevij = particles(verletl(i, j))
-        if (rij(particlei, particlevij) < rcut) then 
-          call pairV(particlei, particlevij, pairE, ovrlp)
-          if (ovrlp) return;
-          singleV = singleV + pairE
-        end if
-      end do
-      if(is_magnet_on_) singleV = singleV + diamagnetic(particlei)
-    end subroutine singleparticleV
 
 
 
