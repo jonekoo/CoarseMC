@@ -1,3 +1,16 @@
+  subroutine init(magnetic_field_direction, magnetic_field, &
+    & is_magnet_on)
+    implicit none
+    real(dp), dimension(3), intent(in) :: magnetic_field_direction
+    real(dp), intent(in) :: magnetic_field
+    logical, intent(in) :: is_magnet_on
+    magnetic_field_ = magnetic_field
+    magnetic_field_direction_ = magnetic_field_direction
+    is_magnet_on_ = is_magnet_on   
+  end subroutine init
+
+
+
 function diamagnetic(particlei)
   use particle
   use nrtype
