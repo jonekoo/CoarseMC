@@ -7,18 +7,14 @@ module energy
  
 
 
-  public :: totenergy
-  public :: singleprtcltotV
+  public :: total_energy
+  public :: potential_energy
   !! public :: save_state
   !! public :: load_state 
 
 
 
   private
-
-  !! namelist /energy_nml/ 
-
-
 
   contains
  
@@ -39,7 +35,7 @@ module energy
   
 
   !! Palauttaa kokonaisenergian
-  subroutine totenergy(particles, n_particles, ovrlp, Etot)
+  subroutine total_energy(particles, n_particles, ovrlp, Etot)
     implicit none
     type(particledat), dimension(:), pointer :: particles
     integer, intent(in) :: n_particles
@@ -54,7 +50,7 @@ module energy
     if (.not. ovrlp) then
       Etot = Vpairtot + Vwalltot
     end if
-  end subroutine totenergy
+  end subroutine total_energy
      
 
      
@@ -85,7 +81,7 @@ module energy
   !! Palauttaa yhden hiukkasen kokonaisenergian, eli
   !! vuorovaikutusenergian seinän ja muiden hiukkasten 
   !! kanssa. 
-  subroutine singleprtcltotV(particles, n_particles, particlei, i, Vitot, &
+  subroutine potential_energy(particles, n_particles, particlei, i, Vitot, &
     ovrlp)
     implicit none
     type(particledat), dimension(:), intent(in) :: particles
@@ -104,7 +100,7 @@ module energy
     if (.not. ovrlp) then 
       Vitot = Vipair + Viwall
     end if
-  end subroutine singleprtcltotV
+  end subroutine potential_energy
 
 
 
