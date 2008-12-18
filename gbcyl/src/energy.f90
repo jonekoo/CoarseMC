@@ -90,26 +90,23 @@ module energy
 
 
     !Palauttaa kokonaisenergian
-    subroutine totenergy(particles, n_particles, ovrlp, Etot)
-      implicit none
-      type(particledat), dimension(:),pointer :: particles
-      integer, intent(in) :: n_particles
-      real(dp), intent(out) :: Etot
-      logical, intent(out) :: ovrlp
-      real(dp) :: Vpairtot = 0.0, Vwalltot=0.0
-      Etot=0.0
-      ovrlp=.false.
-      call totpairV(particles, n_particles, Vpairtot, ovrlp)
-      if (ovrlp) then
-        return
-      end if
-      call totwallprtclV(particles, n_particles, Vwalltot,ovrlp)
-      if (ovrlp) then 
-         return;
-      end if
+  subroutine totenergy(particles, n_particles, ovrlp, Etot)
+    implicit none
+    type(particledat), dimension(:), pointer :: particles
+    integer, intent(in) :: n_particles
+    real(dp), intent(out) :: Etot
+    logical, intent(out) :: ovrlp
+    real(dp) :: Vpairtot = 0.0
+    real(dp) :: Vwalltot = 0.0
+    Etot = 0.0
+    ovrlp = .false.
+    call totpairV(particles, n_particles, Vpairtot, ovrlp)
+    if (.not. ovrlp) call totwallprtclV(particles, n_particles, Vwalltot,ovrlp)
+    if (.not. ovrlp) then
       Etot = Vpairtot + Vwalltot
-      if(is_magnet_on_) Etot=Etot+totDiamagnetic(particles)
-    end subroutine totenergy
+      if(is_magnet_on_) Etot = Etot + totDiamagnetic(particles)
+    end if
+  end subroutine totenergy
      
 
      
@@ -127,8 +124,8 @@ module energy
 
 
 
-  !Palauttaa hiukkasten ja seinän välisen vuorovaikutuksen
-  !kokonaisenergian 
+  !! Palauttaa hiukkasten ja seinän välisen vuorovaikutuksen
+  !! kokonaisenergian 
   subroutine totwallprtclV(particles, n_particles, Eptwlltot, ovrlp)
     implicit none
     type(particledat), dimension(:), intent(in) :: particles
@@ -151,11 +148,11 @@ module energy
 
 
 
-  !Palauttaa yhden hiukkasen kokonaisenergian, eli
-  !vuorovaikutusenergian seinän ja muiden hiukkasten 
-  !kanssa. 
+  !! Palauttaa yhden hiukkasen kokonaisenergian, eli
+  !! vuorovaikutusenergian seinän ja muiden hiukkasten 
+  !! kanssa. 
   subroutine singleprtcltotV(particles, n_particles, particlei, i, Vitot, &
-                           & ovrlp)
+    ovrlp)
     implicit none
     type(particledat), dimension(:), intent(in) :: particles
     integer, intent(in) :: n_particles
@@ -164,17 +161,15 @@ module energy
     integer, intent(in) :: i
     real(dp) :: Vipair = 0.0, Viwall = 0.0   
     type(particledat), intent(in) :: particlei
-    ovrlp=.false.
-    Vitot=0.0
+    ovrlp = .false.
+    Vitot = 0.0
     call prtclwallV(particlei,Viwall,ovrlp)
-    if (ovrlp) then
-      return
+    if (.not. ovrlp) then
+      call singleparticleV(particles, n_particles, particlei, i, Vipair, ovrlp)
     end if
-    call singleparticleV(particles, n_particles, particlei, i, Vipair, ovrlp)
-    if (ovrlp) then 
-      return
+    if (.not. ovrlp) then 
+      Vitot = Vipair + Viwall
     end if
-    Vitot = Vipair + Viwall
   end subroutine singleprtcltotV
 
 
