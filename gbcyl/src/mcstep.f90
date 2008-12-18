@@ -1,26 +1,31 @@
 module mcstep
   use nrtype, only : dp
-  use energy, only: totenergy, singleprtcltotV
+  use energy, only: total_energy, potential_energy
   use cylinder, only: getHeight, volume, setLz, setR, scale
   use particle, only : particledat, move, setmaxmoves, getmaxmoves
   use mtmod, only : grnd
   use verlet, only : updatelist, totpairV
 
-  integer, private, save :: n_accepted_moves_ = 0
-  integer, private, save :: n_accepted_scalings_ = 0 
-  real(dp), private, save :: max_scaling_ = 0.1
-  integer, private, save :: volume_change_type_ 
-  real(dp), private, save :: temperature_
-  real(dp), private, save :: pressure_
+
+
+  public :: step
+
+
+
+  private 
+
+  integer, save :: n_accepted_moves_ = 0
+  integer, save :: n_accepted_scalings_ = 0 
+  real(dp), save :: max_scaling_ = 0.1
+  integer, save :: volume_change_type_ 
+  real(dp), save :: temperature_
+  real(dp), save :: pressure_
   namelist /mcstep_nml/ temperature_, pressure_, n_accepted_moves__, &
     & n_accepted_scalings_, max_scaling_, volume_change_type_
 
-  PRIVATE :: mcstep_nml
 
 
   contains
-
-
 
     subroutine initmcstep(volume_change_type, temperature, pressure)
       implicit none
@@ -69,10 +74,10 @@ module mcstep
         Eold = 0
         overlap = .false.
         call move(particles(i), newparticle)
-        call singleprtcltotV(particles, n_particles, newparticle, i, Enew, & 
+        call potential_energy(particles, n_particles, newparticle, i, Enew, & 
                            & overlap)
         if(.not. overlap) then 
-          call singleprtcltotV(particles, n_particles, particles(i), i, & 
+          call potential_energy(particles, n_particles, particles(i), i, & 
             & Eold, overlap)   
           accept = acceptchange(Eold, Enew, temperature_, overlap)       
           if(accept) then
