@@ -1,36 +1,37 @@
 module mc_engine
   use nrtype, only: dp
   use io, only: ReadParams, readstate, writestate, init_io => init, &
-    & finalizeOutput, io_save_state => save_state, io_load_state => load_state
+    finalizeOutput, io_save_state => save_state, io_load_state => load_state
   use particlewall, only: initptwall, particlewall_save_state => save_state, &
-    & particlewall_load_state => load_state
-  use gayberne, only: gayberne_init => init, gayberne_save_state => save_state, &
-    & gayberne_load_state => load_state
+    particlewall_load_state => load_state
+  use gayberne, only: gayberne_init => init, &
+    gayberne_save_state => save_state, gayberne_load_state => load_state
   use mtmod, only: sgrnd
   use particle, only: particledat, initParticle, &
-    & particle_save_state => save_state, &
-    & particle_load_state => load_state
+    particle_save_state => save_state, &
+    particle_load_state => load_state
   use cylinder, only: initcylinder, getHeight, getRadius, &
-    & cylinder_save_state => save_state, &
-    & cylinder_load_state => load_state
-  use energy, only: energy_save_state => save_state, &
-    & energy_load_state => load_state, energy_init => init
-  use mcstep, only: initmcstep, updatemaxvalues, step, &
-    & mcstep_save_state => save_state, &
-    & mcstep_load_state => load_state
+    cylinder_save_state => save_state, &
+    cylinder_load_state => load_state
+  use mcstep, only: mc_step_init => init, updatemaxvalues, step, &
+    mcstep_save_state => save_state, &
+    mcstep_load_state => load_state
   use verlet, only: initvlist, freevlist, &
-    & verlet_save_state => save_state, &
-    & verlet_load_state => load_state
+    verlet_save_state => save_state, &
+    verlet_load_state => load_state
+
+
 
   public :: init
   public :: run
+  public :: finalize
   public :: write_restart
   public :: read_restart
   public :: write_restart_to 
   public :: read_restart_from
-  public :: finalize
   public :: equilibration_sweeps
   public :: production_sweeps  
+
 
 
   private
@@ -40,11 +41,11 @@ module mc_engine
   integer, save :: n_equilibration_sweeps_
   integer, save :: n_production_sweeps_
   integer, save :: production_period_
-  integer, save :: adjusting_period_ = 20
+  integer, save :: adjusting_period_
   integer, save :: i_sweep_
-  integer, save :: restart_period_ = 1000
-  integer, save :: restart_unit_ = 13
-  character(len=*), parameter :: restart_file_ = "restart.out"
+  integer, save :: restart_period_
+  integer, save :: restart_unit_
+  character(len=*), parameter :: restart_file_ = "restart.gbcyl"
   namelist /mc_engine_nml/ n_particles_, n_equilibration_sweeps_, &
     n_production_sweeps_, production_period_, i_sweep_, restart_period_, &
     restart_unit_ 
@@ -102,14 +103,13 @@ module mc_engine
     call gayberne_init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
     call init_io
     call initcylinder(radius, height)
-    call initmcstep(volume_scaling_type, temperature, pressure)
+    call mc_step_init(volume_scaling_type, temperature, pressure)
     call initvlist(particles_, n_particles_)
     call initParticle(maxtrans, maxangle)
-    call energy_init(magnetic_field_direction, magnetic_field_teslas, &
-      & is_magnet_on) 
     i_sweep_ = 0
     restart_period_ = 1000
     restart_unit_ = 13
+    adjusting_period_ = 20
   end subroutine init
 
 
@@ -184,7 +184,6 @@ module mc_engine
     integer, intent(in) :: write_unit
     call io_save_state(write_unit)
     call mcstep_save_state(write_unit)
-    call energy_save_state(write_unit) 
     call cylinder_save_state(write_unit)
     call particlewall_save_state(write_unit)
     call gayberne_save_state(write_unit)
@@ -231,7 +230,6 @@ module mc_engine
     integer, intent(in) :: read_unit
     call io_load_state(read_unit)
     call mcstep_load_state(read_unit)
-    call energy_load_state(read_unit) 
     call cylinder_load_state(read_unit)
     call particlewall_load_state(read_unit)
     call gayberne_load_state(read_unit)
