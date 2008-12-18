@@ -1,7 +1,7 @@
 !Verlet'n listan käsittelyyn tarvittavia muuttujia ja aliohjelmia. 
 module verlet
   use nrtype, only: dp
-  use particle, only: particledat, rij, differences
+  use particle, only: particledat, rij, differences, pairV
   implicit none 
 
 
@@ -12,7 +12,7 @@ module verlet
   public :: freevlist
   public :: save_state
   public :: load_state
-
+  public :: totpairV
 
 
   private
@@ -92,6 +92,35 @@ module verlet
     if(.not. allocated(vlist)) allocate(vlist(n_particles_, n_neighbours_))
     read(read_unit, *) vlist(1:n_particles_, 1:n_neighbours_)
   end subroutine load_state
+
+
+
+  !Palauttaa parivuorovaikutuksen kokonaisenergian
+  subroutine totpairV(particles, n_particles, Vtot, ovrlp)
+    implicit none
+    type(particledat), dimension(:), intent(in) :: particles
+    integer, intent(in) :: n_particles
+    integer :: i,j,jj
+    real(dp), intent(out) :: Vtot 
+    real(dp) :: pairE
+    logical, intent(out) :: ovrlp
+    integer,dimension(:,:), pointer :: verletl
+    integer,dimension(:), pointer :: nvlist
+    Vtot = 0.0
+    call getvlist(verletl, nvlist)
+    do i=1, n_particles
+      if(nvlist(i) == 0) cycle;
+      do jj = 1, nvlist(i)
+        j = verletl(i, jj)
+        if(j <= i) cycle;
+        if (rij(particles(i), particles(j)) < r_cutoff_) then 
+          call pairV(particles(i), particles(j), pairE, ovrlp)
+          if (ovrlp) return;
+          Vtot = Vtot+pairE      
+        end if 
+      end do
+    end do
+  end subroutine totpairV
 
 
 

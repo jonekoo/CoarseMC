@@ -2,12 +2,13 @@ module energy
   use nrtype, only: sp, dp
   use particle, only: particledat, rij, pairV
   use particlewall, only: prtclwallV
-  use verlet, only: getvlist
+  use verlet, only: getvlist, totpairV
   implicit none
  
+
+
   public :: totenergy
   public :: singleprtcltotV
-  public :: totpairV
   public :: init
   public :: save_state
   public :: load_state 
@@ -109,36 +110,7 @@ module energy
       Etot = Vpairtot + Vwalltot
       if(is_magnet_on_) Etot=Etot+totDiamagnetic(particles)
     end subroutine totenergy
- 
-
-
-    !Palauttaa parivuorovaikutuksen kokonaisenergian
-    subroutine totpairV(particles, n_particles, Vtot, ovrlp)
-      implicit none
-      type(particledat), dimension(:), intent(in) :: particles
-      integer, intent(in) :: n_particles
-      integer :: i,j,jj
-      real(dp), intent(out) :: Vtot
-      real(dp) :: pairE
-      logical, intent(out) :: ovrlp
-      integer,dimension(:,:), pointer :: verletl
-      integer,dimension(:), pointer :: nvlist
-      Vtot = 0.0
-      call getvlist(verletl,nvlist)
-      do i=1, n_particles
-        if(nvlist(i)==0) cycle;
-        do jj = 1, nvlist(i)
-          j = verletl(i, jj)
-          if(j <= i) cycle;
-          if (rij(particles(i),particles(j)) < rcut) then 
-            call pairV(particles(i),particles(j),pairE,ovrlp)
-            if (ovrlp) return;
-            Vtot = Vtot+pairE      
-          end if 
-        end do
-      end do
-    end subroutine totpairV
-    
+     
 
      
     function totDiamagnetic(particlearray)

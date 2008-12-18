@@ -1,10 +1,10 @@
 module mcstep
   use nrtype, only : dp
-  use energy, only: totenergy, singleprtcltotV, totpairv
+  use energy, only: totenergy, singleprtcltotV
   use cylinder, only: getHeight, volume, setLz, setR, scale
   use particle, only : particledat, move, setmaxmoves, getmaxmoves
   use mtmod, only : grnd
-  use verlet, only : updatelist
+  use verlet, only : updatelist, totpairV
 
   integer, private, save :: n_accepted_moves_ = 0
   integer, private, save :: n_accepted_scalings_ = 0 
