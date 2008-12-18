@@ -5,20 +5,33 @@ module particle
   use nrtype
   use gayberne, only: potential
   use mtmod, only: grnd
+  use utils, only: xvec2
+  use cylinder, only: getHeight
   implicit none
   
+
+
   type particledat
      real(dp) :: x, y, z, ux, uy, uz
      logical :: rod
   end type particledat
 
-  real(dp), private, save :: dthetamax, maxdr
-  namelist /particle_nml/ dthetamax, maxdr
+  real(dp), private, save :: max_rotation_angle_
+  real(dp), private, save :: max_translation_
+  namelist /particle_nml/ max_rotation_angle_, max_translation_
   private :: particle_nml
 
 
 
   contains
+
+  subroutine initParticle(maxTranslation, maxRotation)
+    implicit none
+    real(dp), intent(in) :: maxTranslation 
+    real(dp), intent(in) :: maxRotation
+    max_rotation_angle_ = maxRotation
+    max_translation_ = maxTranslation
+  end subroutine initParticle
 
 
 
@@ -35,24 +48,6 @@ module particle
     integer, intent(in) :: read_unit
     read(read_unit, NML = particle_nml)
   end subroutine load_state
-
-
-
-  subroutine initParticle(maxTranslation, maxRotation)
-    implicit none
-    real(dp), intent(in) :: maxTranslation 
-    real(dp), intent(in) :: maxRotation
-    dthetamax = maxRotation
-    maxdr = maxTranslation
-  end subroutine initParticle
-
-
-
-  subroutine write_module_state(unit)
-    implicit none    
-    integer, intent(in) :: unit
-    write(unit, *) maxdr, dthetamax
-  end subroutine write_module_state
 
 
 
@@ -77,36 +72,34 @@ module particle
 
 
   
-  subroutine move(oldp,newp)
+  subroutine move(oldp, newp)
     implicit none
     type(particledat), intent(in) :: oldp
     type(particledat), intent(out) :: newp
     newp = oldp
-    call transmove(oldp%x,oldp%y,oldp%z,newp%x,newp%y,newp%z)
+    call transmove(oldp%x, oldp%y, oldp%z, newp%x, newp%y, newp%z)
     if (oldp%rod) then
-      call rotate(oldp%ux,oldp%uy,oldp%uz,newp%ux,newp%uy,newp%uz)
+      call rotate(oldp%ux, oldp%uy, oldp%uz, newp%ux, newp%uy, newp%uz)
     end if
   end subroutine move
   
 
  
-  subroutine transmove(xo,yo,zo,xn,yn,zn)
-    use cylinder, only : getHeight
+  subroutine transmove(xo, yo, zo, xn, yn, zn)
     implicit none
-    real(dp), intent(in) :: xo,yo,zo
-    real(dp), intent(out) :: xn,yn,zn
+    real(dp), intent(in) :: xo, yo, zo
+    real(dp), intent(out) :: xn, yn, zn
     real(dp) :: Lz
-    xn = xo + (2.0*grnd()-1.0)*maxdr;
-    yn = yo + (2.0*grnd()-1.0)*maxdr;
-    zn = zo + (2.0*grnd()-1.0)*maxdr;
+    xn = xo + (2.0*grnd()-1.0)*max_translation_;
+    yn = yo + (2.0*grnd()-1.0)*max_translation_;
+    zn = zo + (2.0*grnd()-1.0)*max_translation_;
     Lz=getHeight()
     zn = zn - nint(zn/Lz)*Lz;
   end subroutine transmove
 
 
 
-    pure subroutine differences(particlei,particlej,dx,dy,dz)
-      use cylinder
+    pure subroutine differences(particlei, particlej, dx, dy, dz)
       implicit none
       type(particledat),intent(in) :: particlei, particlej
       real(dp), intent(out):: dx, dy, dz
@@ -125,14 +118,14 @@ module particle
 
     !Funktio, joka laskee kahden partikkelin et‰isyyden
     !toisistaan
-    pure function rij(particlei,particlej)
+    pure function rij(particlei, particlej)
       implicit none
       type(particledat), intent(in) :: particlei,particlej
       real(dp) :: rij
       real(dp) :: dx,dy,dz,rijsq
-      call differences(particlei,particlej,dx,dy,dz)      
-      rijsq=dx*dx+dy*dy+dz*dz;
-      rij=sqrt(rijsq) 
+      call differences(particlei, particlej, dx, dy, dz)      
+      rijsq = dx*dx+dy*dy+dz*dz;
+      rij = sqrt(rijsq) 
     end function rij
 
 
@@ -164,69 +157,66 @@ module particle
 
 
 
-    !Palauttaa partikkelin orientaatiovektorin komponentit
-    !sylinterikoordinaatistossa. 
-    subroutine unitvec(particle, uro, utheta, uz)
-      use utils
-      implicit none
-      intrinsic atan2
-      type(particledat), intent(in) :: particle
-      real(dp), intent(out) :: uro,utheta,uz
-      real(dp) :: nx,ny,nz,uxn,uyn,uzn,theta
-      theta = -atan2(particle%y, particle%x)
-      nx=0.0
-      ny=0.0
-      nz=1.0
-      call xvec2(particle%ux, particle%uy, particle%uz, nx, ny, nz, &
-               & theta, uxn, uyn, uzn)
-      uro=uxn
-      utheta=uyn
-      uz=uzn
-    end subroutine unitvec
+  !! Palauttaa partikkelin orientaatiovektorin komponentit
+  !! sylinterikoordinaatistossa. 
+  subroutine unitvec(particle, uro, utheta, uz)
+    implicit none
+    intrinsic atan2
+    type(particledat), intent(in) :: particle
+    real(dp), intent(out) :: uro, utheta, uz
+    real(dp) :: nx, ny, nz, uxn, uyn, uzn, theta
+    theta = -atan2(particle%y, particle%x)
+    nx=0.0
+    ny=0.0
+    nz=1.0
+    call xvec2(particle%ux, particle%uy, particle%uz, nx, ny, nz, theta, &
+      uxn, uyn, uzn)
+    uro=uxn
+    utheta=uyn
+    uz=uzn
+  end subroutine unitvec
 
 
     
-  !Kierto:
   subroutine rotate(uxo, uyo, uzo, uxn, uyn, uzn)
-    use utils, only : xvec2
     implicit none
-    real(dp) :: uxo,uyo,uzo
-    real(dp) :: uxn,uyn,uzn
-    real(dp) :: theta,nx,ny,nz
-    call nvec(nx,ny,nz);
-    call rotangle(dthetamax,theta);
-    call XVEC2(uxo,uyo,uzo,nx,ny,nz,theta,uxn,uyn,uzn)
+    real(dp) :: uxo, uyo, uzo
+    real(dp) :: uxn, uyn, uzn
+    real(dp) :: theta, nx, ny, nz
+    call nvec(nx, ny, nz);
+    call rotangle(max_rotation_angle_, theta);
+    call xvec2(uxo, uyo, uzo, nx, ny, nz, theta, uxn, uyn, uzn)
   end subroutine rotate    
 
 
 
-  subroutine rotangle(dthetamax,theta)
+  subroutine rotangle(max_rotation_angle_,theta)
     implicit none
-    double precision,intent(in) :: dthetamax
+    double precision,intent(in) :: max_rotation_angle_
     double precision,intent(out) :: theta
-    theta=(2.0*grnd()-1.0)*dthetamax;
+    theta=(2.0*grnd()-1.0)*max_rotation_angle_;
   end subroutine rotangle
 
 
 
-  subroutine nvec(nx,ny,nz)
+  subroutine nvec(nx, ny, nz)
     ! Aliohjelma satunnaisen yksikk√∂vektorin muodostamista varten
     ! Understanding Mol. Sim. 2nd Ed.  Frenkel, Smit
     ! s.  578
     implicit none
     double precision, intent(out) :: nx, ny, nz
     double precision :: l, u1, u2, s
-    l=0.0;
+    l = 0.0
     do
-       u1 = 1.0-2.0*grnd();
-       u2 = 1.0-2.0*grnd();
-       l = u1*u1+u2*u2;
-       if(l <= 1.0) exit;
+       u1 = 1.0-2.0*grnd()
+       u2 = 1.0-2.0*grnd()
+       l = u1*u1+u2*u2
+       if(l <= 1.0) exit
     end do
-    s = 2.0*sqrt(1.0-l);
-    nx = u1*s;
-    ny = u2*s;
-    nz = 1.0-2.0*l;
+    s = 2.0*sqrt(1.0-l)
+    nx = u1*s
+    ny = u2*s
+    nz = 1.0-2.0*l
   end subroutine nvec
 
 
@@ -234,17 +224,18 @@ module particle
   subroutine setmaxmoves(distance, angle)
     implicit none
     real(dp) :: distance,angle
-    maxdr = distance
-    dthetamax = angle
+    max_translation_ = distance
+    max_rotation_angle_ = angle
   end subroutine setmaxmoves
 
 
 
   subroutine getMaxMoves(distance, angle)
     implicit none
-    real(dp), intent(out) :: distance,angle
-    distance = maxdr
-    angle = dthetamax
+    real(dp), intent(out) :: distance
+    real(dp), intent(out) :: angle
+    distance = max_translation_
+    angle = max_rotation_angle_
   end subroutine getMaxMoves
 
 

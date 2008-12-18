@@ -9,8 +9,6 @@ module energy
 
   public :: total_energy
   public :: potential_energy
-  !! public :: save_state
-  !! public :: load_state 
 
 
 
@@ -18,22 +16,6 @@ module energy
 
   contains
  
-  !!subroutine save_state(write_unit)
-  !!  implicit none
-  !!  integer, intent(in) :: write_unit
-  !!  write(write_unit, NML=energy_nml)
-  !!end subroutine save_state
-
-
-
-  !!subroutine load_state(read_unit)
-  !!  implicit none
-  !!  integer, intent(in) :: read_unit
-  !!  read(read_unit, NML=energy_nml)
-  !!end subroutine load_state
-
-  
-
   !! Palauttaa kokonaisenergian
   subroutine total_energy(particles, n_particles, ovrlp, Etot)
     implicit none
@@ -89,7 +71,8 @@ module energy
     logical, intent(out) :: ovrlp
     real(dp), intent(out) :: Vitot
     integer, intent(in) :: i
-    real(dp) :: Vipair = 0.0, Viwall = 0.0   
+    real(dp) :: Vipair = 0.0
+    real(dp) :: Viwall = 0.0   
     type(particledat), intent(in) :: particlei
     ovrlp = .false.
     Vitot = 0.0
