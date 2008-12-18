@@ -1,31 +1,32 @@
 Input tiedosto gbcyl ohjelmalle.
-Rivit jotka eivät ala tunnisteella $ ei huomioda
+Rivej� jotka eiv�t ala tunnisteella $ ei huomioida parametreja luettaessa.
 
 Tunniste     	| Arvo
 
-$initstate	"R9CrMC0.000"		Tiedosto, josta luetaan
-							alkutila.
+$initstate	"r9-n1290-cr.gbcyl"	Tiedosto, josta luetaan alkutila.
 
-$Nrelax		25              Stabilisointi iteraatioiden lkm.
-$Nprod		25        	Tuotantoajon iteraatioiden lkm.
-$Nratio		5         	Perioidisten tapahtumien teko väli
+$Nrelax		25              	Stabilisointi iteraatioiden lkm.
+$Nprod		25        		Tuotantoajon iteraatioiden lkm.
+$Nratio		5         		Perioidisten tapahtumien teko väli
 
-$T		2.0		Simulointi lämpötila, redusoiduissa yksiköissä
-$pres           2.0         	Paine, redusoiduissa yksiköissä
+$T		2.0			Simulointi lämpötila, redusoiduissa 
+					yksiköissä
+$pres           2.0         		Paine, redusoiduissa yksiköissä
 
-$anchor		1		Ankkuroinnin tyyppi
-				1 = random planar
-				2 = uniform alignment
-				3 = weak homeotropic
+$anchor		1			Ankkuroinnin tyyppi
+					1 = random planar
+					2 = uniform alignment
+					3 = weak homeotropic
 
-$voltyp         2               Tilavuuden muutoksen tyyppi
-                                1=s�teen suunnassa
-                                2=sylinterin akselin suunnassa
+$voltyp         2               	Tilavuuden muutoksen tyyppi
+                               		1=s�teen suunnassa
+                              		2=sylinterin akselin suunnassa
 
-$seed		432512 		Satunnaislukugeneraattorin siemenluku
+$seed		432512 			Satunnaislukugeneraattorin siemenluku
 
-$epses		0.16		Pallon ja GB-partikkelin välisen energian
-				suhde end to end ja side by side tilanteessa
+$epses		0.16			Pallon ja GB-partikkelin välisen 
+					energian suhde end to end ja side by 
+					side tilanteessa
 $eps0    	0.67		Pallon ja GB-partikkelin välisen energian
 				epsilon 0 redusoiduissa yksiköissä
 $spmyy		0.35		Pallo-GB potentiaalin eksponentti
