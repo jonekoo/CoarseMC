@@ -13,9 +13,9 @@ module mc_engine
   use cylinder, only: initcylinder, getHeight, getRadius, &
     cylinder_save_state => save_state, &
     cylinder_load_state => load_state
-  use mcstep, only: mc_step_init => init, updatemaxvalues, step, &
-    mcstep_save_state => save_state, &
-    mcstep_load_state => load_state
+  use mc_sweep, only: mc_sweep_init => init, updatemaxvalues, sweep, &
+    mc_sweep_save_state => save_state, &
+    mc_sweep_load_state => load_state
   use verlet, only: initvlist, freevlist, &
     verlet_save_state => save_state, &
     verlet_load_state => load_state
@@ -103,7 +103,7 @@ module mc_engine
     call gayberne_init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
     call init_io
     call initcylinder(radius, height)
-    call mc_step_init(volume_scaling_type, temperature, pressure)
+    call mc_sweep_init(volume_scaling_type, temperature, pressure)
     call initvlist(particles_, n_particles_)
     call initParticle(maxtrans, maxangle)
     i_sweep_ = 0
@@ -183,7 +183,7 @@ module mc_engine
     implicit none
     integer, intent(in) :: write_unit
     call io_save_state(write_unit)
-    call mcstep_save_state(write_unit)
+    call mc_sweep_save_state(write_unit)
     call cylinder_save_state(write_unit)
     call particlewall_save_state(write_unit)
     call gayberne_save_state(write_unit)
@@ -229,7 +229,7 @@ module mc_engine
     implicit none
     integer, intent(in) :: read_unit
     call io_load_state(read_unit)
-    call mcstep_load_state(read_unit)
+    call mc_sweep_load_state(read_unit)
     call cylinder_load_state(read_unit)
     call particlewall_load_state(read_unit)
     call gayberne_load_state(read_unit)
@@ -278,7 +278,7 @@ module mc_engine
       if (i_sweep_ .lt. n_equilibration_sweeps_) call run_equilibration_tasks
       if (i_sweep_ .ge. n_equilibration_sweeps_) call run_production_tasks
       i_sweep_ = i_sweep_ + 1
-      call step(particles_, n_particles_)
+      call sweep(particles_, n_particles_)
     end do
   end subroutine run
 
