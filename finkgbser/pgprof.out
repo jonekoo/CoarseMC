@@ -1,0 +1,7 @@
+PROF EVENT 0 a.out 1187086800 0
+h compute-0-37.local 12875 0 1 0.000000
+t 1 1 47190 0x80480d4 0x8100638
+p 0
+e 0 seconds 100
+s 47190
+z
