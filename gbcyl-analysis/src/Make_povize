@@ -1,0 +1,19 @@
+F90=g95
+OBJS=povize.o io.o particle.o nrtype.o utils.o
+MODS=io.mod particle.mod nrtype.mod utils.mod
+
+%.o : %.f90
+	$(F90) -c $<
+%.mod : %.f90
+	$(F90) -c $<
+
+povize : $(OBJS) $(MODS)
+	$(F90) -o povize $(OBJS)
+utils.o utils.mod : utils.f90 nrtype.mod
+nrtype.o nrtype.mod : nrtype.f90
+particle.o particle.mod : particle.f90 nrtype.mod utils.mod
+io.o io.mod : io.f90 particle.mod nrtype.mod
+povize.o : povize.f90 io.mod particle.mod nrtype.mod 
+
+clean : 
+	rm $(OBJS) $(MODS)
