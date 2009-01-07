@@ -1,0 +1,21 @@
+F90=g95
+OBJS=tau1radial.o order.o nrtype.o particle.o io.o utils.o
+MODS=order.mod nrtype.mod particle.mod io.mod utils.mod
+
+tau1radial : $(OBJS) $(MODS)
+	$(F90) -o tau1radial $(OBJS) 
+
+%.o : %.f90
+	$(F90) -c $<
+%.mod : %.f90
+	$(F90) -c $<
+
+tau1radial.o : tau1radial.f90 nrtype.mod order.mod io.mod
+order.o order.mod : order.f90 nrtype.mod particle.mod 
+nrtype.mod nrtype.o : nrtype.f90
+particle.mod particle.o : particle.f90 utils.mod nrtype.mod
+io.o io.mod : io.f90 
+utils.mod utils.o : utils.f90 nrtype.mod
+
+clean : 
+	rm $(OBJS) $(MODS)
