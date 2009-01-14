@@ -1,4 +1,21 @@
 module nr
+
+  INTERFACE 
+    FUNCTION brent(ax,bx,cx,func,tol,xmin) 
+    USE nrtype 
+    REAL(SP), INTENT(IN) :: ax,bx,cx,tol 
+    REAL(SP), INTENT(OUT) :: xmin 
+    REAL(SP) :: brent 
+    INTERFACE 
+      FUNCTION func(x) 
+      USE nrtype 
+      REAL(SP), INTENT(IN) :: x 
+      REAL(SP) :: func 
+      END FUNCTION func 
+    END INTERFACE 
+    END FUNCTION brent 
+  END INTERFACE 
+
   interface
     subroutine bsstep(y,dydx,x,htry,eps,yscal,hdid,hnext,derivs)
       use nrtype
@@ -100,6 +117,20 @@ module nr
     END SUBROUTINE mmid
   END INTERFACE
 
+  INTERFACE 
+    SUBROUTINE mnbrak(ax,bx,cx,fa,fb,fc,func) 
+    USE nrtype 
+    REAL(SP), INTENT(INOUT) :: ax,bx 
+    REAL(SP), INTENT(OUT) :: cx,fa,fb,fc 
+    INTERFACE 
+      FUNCTION func(x) 
+      USE nrtype 
+      REAL(SP), INTENT(IN) :: x 
+      REAL(SP) :: func 
+      END FUNCTION func 
+    END INTERFACE 
+    END SUBROUTINE mnbrak 
+  END INTERFACE 
 
   interface 
     subroutine odeint(ystart,x1,x2,eps,h1,hmin,derivs,rkqs)
