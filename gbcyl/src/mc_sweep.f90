@@ -9,7 +9,7 @@ module mc_sweep
 
 
   public :: init
-  public :: sweep
+!  public :: sweep
   public :: save_state
   public :: load_state
   public :: updatemaxvalues
