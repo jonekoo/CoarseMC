@@ -12,6 +12,8 @@ AC_PROG_FC
 # Checks for header files.
 
 # Checks for typedefs, structures, and compiler characteristics.
+AX_F90_MODULE_EXTENSION
+AC_SUBST(MODEXT, [$ax_f90_modext])
 
 # Checks for library functions.
 
