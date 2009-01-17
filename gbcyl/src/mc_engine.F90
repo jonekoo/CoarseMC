@@ -19,7 +19,7 @@ module mc_engine
   use verlet, only: initvlist, freevlist, &
     verlet_save_state => save_state, &
     verlet_load_state => load_state
-
+  implicit none
 
 
   public :: init
