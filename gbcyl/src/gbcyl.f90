@@ -1,6 +1,5 @@
 program gbcyl
-  use mc_engine, only: init, run, finalize, equilibration_sweeps, &
-    & production_sweeps, read_restart
+  use mc_engine
   implicit none
   intrinsic command_argument_count, get_command_argument
   character(len=32) :: argument
