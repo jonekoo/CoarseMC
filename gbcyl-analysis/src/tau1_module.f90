@@ -10,7 +10,7 @@ implicit none
 PRIVATE 
 
   public :: tau1_routine
-
+  public :: calculate_and_print
   
 
 
@@ -31,9 +31,27 @@ PRIVATE
  
 contains
 
+  
+
+  subroutine calculate_and_print(particles, n_particles, radius, height)
+  implicit none
+  type(particledat), dimension(:), intent(in) :: particles
+  integer, intent(in) :: n_particles
+  real(dp), intent(in) :: radius
+  real(dp), intent(in) :: height
+  real(dp) :: value
+  real(dp) :: layer_distance
+  real(dp), dimension(3) :: direction
+    call tau1_routine(particles, n_particles, value, layer_distance, direction)
+    write(*,*) value, layer_distance, direction
+  end subroutine calculate_and_print
+
+
+
   subroutine tau1_routine(particles, n_particles, value, layer_distance, &
     direction)
     implicit none
+    intrinsic dot_product
     type(particledat), dimension(:), intent(in) :: particles
     integer, intent(in) :: n_particles
     real(dp), intent(out) :: value
@@ -57,21 +75,21 @@ contains
     end do
     ax = 1.0
     bx = 2.0
-    call mnbrak(ax, bx, cx, fa, fb, fc, -tau1_unary)
+    call mnbrak(ax, bx, cx, fa, fb, fc, tau1_negative)
     !! (2.3. if needed, improve with brent.)
     direction = director_
-    value = fb
+    value = -fb
     layer_distance = bx
   end subroutine tau1_routine
 
 
 
-  function tau1_unary(layer_distance) 
+  function tau1_negative(layer_distance) 
     implicit none
     real(dp), intent(in) :: layer_distance
-    real(dp) :: tau1_unary 
-    tau1_unary = tau1(rs_, n_particles_, layer_distance)   
-  end function
+    real(dp) :: tau1_negative
+    tau1_negative = -tau1(rs_, n_particles_, layer_distance)   
+  end function tau1_negative
 
 
 
