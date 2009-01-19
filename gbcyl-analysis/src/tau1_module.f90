@@ -73,8 +73,9 @@ contains
       position = (/particles(i)%x, particles(i)%y, particles(i)%z/)
       rs_(i) = dot_product(position, director_)
     end do
-    ax = 1.0
-    bx = 2.0
+    ax = 3.9
+    bx = 4.1
+    write(*,*) 'Bracketing minimum with mnbrak.'
     call mnbrak(ax, bx, cx, fa, fb, fc, tau1_negative)
     !! (2.3. if needed, improve with brent.)
     direction = director_
