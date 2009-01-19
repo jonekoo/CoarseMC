@@ -75,7 +75,6 @@ contains
     end do
     ax = 3.9
     bx = 4.1
-    write(*,*) 'Bracketing minimum with mnbrak.'
     call mnbrak(ax, bx, cx, fa, fb, fc, tau1_negative)
     !! (2.3. if needed, improve with brent.)
     direction = director_
