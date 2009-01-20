@@ -57,7 +57,7 @@ contains
     real(dp), intent(out) :: value
     real(dp), intent(out) :: layer_distance
     real(dp), dimension(3), intent(out) :: direction
-    real(dp) :: ax, bx, cx, fa, fb, fc 
+    real(dp) :: ax, bx, cx, fa, fb, fc, tol 
     integer :: i
     real(dp), dimension(3) :: position
     !! 1. choose direction by calculating the order parameter and the 
@@ -76,10 +76,9 @@ contains
     ax = 3.9
     bx = 4.1
     call mnbrak(ax, bx, cx, fa, fb, fc, tau1_negative)
-    !! (2.3. if needed, improve with brent.)
+    tol = 1e-6
+    value=-brent(ax, bx, cx, tau1_negative, tol, layer_distance)
     direction = director_
-    value = -fb
-    layer_distance = bx
   end subroutine tau1_routine
 
 
