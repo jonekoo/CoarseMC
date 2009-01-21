@@ -62,7 +62,7 @@ do
   else if ((cx-u)*(u-ulim) > 0.0) then 
     !! Parabolic ﬁt is between c and its allowed limit. 
     fu=func(u) 
-    if (fu <fc) then 
+    if (fu < fc) then 
       bx=cx 
       cx=u 
       u=cx+GOLD*(cx-bx) 
