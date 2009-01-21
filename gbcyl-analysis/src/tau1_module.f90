@@ -81,8 +81,9 @@ contains
     !! Calculate initial estimate for the global minimum
     tau1_max = -simple_min(interval_begin, interval_end, tau1_negative, &
       resolution, layer_distance)
-    bx = layer_distance
     ax = layer_distance - resolution
+    bx = layer_distance
+    cx = layer_distance + resolution
     tol = 1e-4
     tau1_max = -brent(ax, bx, cx, tau1_negative, tol, layer_distance)
     direction = director_
