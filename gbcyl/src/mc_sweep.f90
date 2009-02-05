@@ -108,7 +108,7 @@ module mc_sweep
     totEold = totEold+pressure_*V0-real(n_particles)*temperature_*log(V0)
     accept = acceptchange(totEold, totEnew, overlap)
     if (accept) then
-      call changeLz(particles, n_particles, Lz0, Lzn);
+      call changeLz(particles, n_particles, Lz0, Lzn)
       n_accepted_scalings_ = n_accepted_scalings_ + 1
     end if 
     call updatelist(particles, n_particles)
@@ -146,7 +146,7 @@ module mc_sweep
 
   !! Palauttaa hyväksymisuhteet siirron ja kierron yhdistelmälle,
   !! sekä tilavuuden muutokselle
-  subroutine ratios(Nparticles,period,movratio,volratio)
+  subroutine ratios(Nparticles, period, movratio, volratio)
     implicit none    
     real, intent(out) :: movratio, volratio
     integer, intent(in) :: Nparticles, period
@@ -161,23 +161,20 @@ module mc_sweep
   subroutine updatemaxvalues(Nparticles, period)
     implicit none
     real :: mratio, vratio
-    logical :: volinc, movinc
     real(dp) :: olddximax, olddthetamax
     real(dp) :: newdximax, newdthetamax
     integer, intent(in) :: Nparticles, period
     call ratios(Nparticles, period, mratio, vratio)      
-    !Jos tilavuuden muutoksista on hyväksytty yli 25%,
-    !kasvatetaan säteen maksimimuutosarvoa. Vastaavasti
-    !siirrolle/kierrolle rajana 33%.
-    volinc = (0.25 < vratio)
-    movinc = (0.33 < mratio)
-    !Nollataan hyväksyntälaskurit
+    !! Jos tilavuuden muutoksista on hyväksytty yli 25%,
+    !! kasvatetaan säteen maksimimuutosarvoa. Vastaavasti
+    !! siirrolle/kierrolle rajana 33%.
+    !! Nollataan hyväksyntälaskurit
     n_accepted_scalings_ = 0
     n_accepted_moves_ = 0
-    max_scaling_ = newmaxvalue(volinc, max_scaling_)      
+    max_scaling_ = newmaxvalue(vratio > 0.25, max_scaling_)
     call getmaxmoves(olddximax, olddthetamax)
-    newdthetamax = newmaxvalue(movinc, olddthetamax)
-    newdximax = newmaxvalue(movinc, olddximax)
+    newdthetamax = newmaxvalue(mratio > 0.33, olddthetamax)
+    newdximax = newmaxvalue(mratio > 0.33, olddximax)
     call setmaxmoves(newdximax, newdthetamax)
   end subroutine updatemaxvalues
   
