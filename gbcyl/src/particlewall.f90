@@ -8,24 +8,29 @@ module particlewall
   use nrtype
   implicit none
   
+  public :: repwall
+  public :: attwall
+  public :: gbwall
+
+  private
     
   !! :TODO: Give these better names and document.
   !!
-  real(dp), private, save :: alphaA, alphaB, sige, Kw
+  real(dp), save :: alpha_A_, alpha_B_, K_w_
   real(dp), parameter :: LJdist=1.7 
     !LJdist = GB-partikkelin vuorovaikutuskeskuksen etäisyydet
     !partikkelin keskipisteestä.  
-  logical, private, save :: ua
-  namelist /particlewall_nml/ alphaA, alphaB, sige, Kw, ua
-  private :: particlewall_nml
+  logical, save :: ua
+  namelist /particlewall_nml/ alpha_A_, alpha_B_, K_w_, ua
+
 
 
 
   interface 
-    function repwall(x,rc,sig)
+    function repwall(x, rc, sig)
     use nrtype
-    use nr, only : rf,rd
-    real(dp),intent(in) :: x,rc,sig
+    use nr, only : rf, rd
+    real(dp),intent(in) :: x, rc, sig
     real(dp) :: repwall
     end function
   end interface
@@ -33,8 +38,8 @@ module particlewall
   interface
     function attwall(x,rc,sig)
     use nrtype
-    use nr, only : rf,rd
-    real(dp), intent(in) :: x,rc,sig
+    use nr, only : rf, rd
+    real(dp), intent(in) :: x, rc, sig
     real(dp) :: attwall
     end function attwall
   end interface 
@@ -93,27 +98,26 @@ contains
     real(dp) :: rAperR,rBperR
     real(dp),parameter :: rperRcut=0.999
     real(dp),parameter :: rwcut=0.4 
- 
-    ovrlp=.false.
-    Eptwall=0.0   
-    Rc=getradius()
-    call rArB(prtcldata,rsiteA,rsiteB)
-    if(rsiteA>=Rc .or. rsiteB>=Rc) then
-      ovrlp=.true.
+    ovrlp = .false.
+    Eptwall = 0.0   
+    Rc = getradius()
+    call rArB(prtcldata, rsiteA, rsiteB)
+    if(rsiteA >= Rc .or. rsiteB >= Rc) then
+      ovrlp = .true.
       return;
     end if
-    rAperR=rsiteA/Rc
-    rBperR=rsiteB/Rc
-    attracA=attwall(rAperR,Rc,sig)
-    repulA=repwall(rAperR,Rc,sig)
-    attracB=attwall(rBperR,Rc,sig)
-    repulB=repwall(rBperR,Rc,sig)
+    rAperR  = rsiteA/Rc
+    rBperR  = rsiteB/Rc
+    attracA = attwall(rAperR,Rc,sig)
+    repulA  = repwall(rAperR,Rc,sig)
+    attracB = attwall(rBperR,Rc,sig)
+    repulB  = repwall(rBperR,Rc,sig)
     if(.not. ua) then
-      fu=1.0
+      fu = 1.0
     else if (ua) then
-      fu=angular(prtcldata)  
+      fu = angular(prtcldata)  
     end if
-    Eptwall=fu*Kw*((repulA-alphaA*attracA)+(repulB-alphaB*attracB))     
+    Eptwall = fu*K_w_*((repulA-alpha_A_*attracA)+(repulB-alpha_B_*attracB))     
   end subroutine gbwall
 
   !Palauttaa partikkelin ja seinän välisten
@@ -142,21 +146,21 @@ contains
     implicit none
     integer,intent(in) :: i
     real(dp) :: strength
-    Kw=strength
+    K_w_=strength
     select case(i)
     case(1)
       ua=.false.
-      alphaA=1.0
-      alphaB=1.0
+      alpha_A_=1.0
+      alpha_B_=1.0
     case(2)
       ua=.true.
-      alphaA=1.0
-      alphaB=1.0
+      alpha_A_=1.0
+      alpha_B_=1.0
     case(3)
       ua=.false.
-      alphaA=1.0
-      alphaB=0.0
-      Kw=2*Kw      
+      alpha_A_=1.0
+      alpha_B_=0.0
+      K_w_=2*K_w_      
     case default 
       write (*,*) 'Virhe alustettaessa modulia particlewall.'
       write (*,*) 'initialize(i) , i/={1,2,3}'
