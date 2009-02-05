@@ -48,7 +48,7 @@ module mc_engine
   character(len=*), parameter :: restart_file_ = "restart.gbcyl"
   namelist /mc_engine_nml/ n_particles_, n_equilibration_sweeps_, &
     n_production_sweeps_, production_period_, i_sweep_, restart_period_, &
-    restart_unit_ 
+    restart_unit_, adjusting_period_ 
 
   
 
