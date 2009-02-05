@@ -24,10 +24,17 @@ module gayberne
   real(dp), save :: chi_epsilon_
   real(dp), save :: chi_sigma_
   real(dp), save :: chi_sigma_squared_
+  
+  real(dp), save :: overlap_cutoff_
 
   namelist /gbgb_nml/ kappa_sigma_, kappa_epsilon_, mu_, nu_, sigma_0_, &
-    & epsilon_0_, chi_epsilon_, chi_sigma_, chi_sigma_squared_
+    epsilon_0_, chi_epsilon_, chi_sigma_, chi_sigma_squared_, &
+    overlap_cutoff_
  
+  interface potential
+    module procedure potential
+    module procedure potential_wt_overlap
+  end interface
 
 
   contains
@@ -48,6 +55,7 @@ module gayberne
     nu_ = nu
     sigma_0_ = sigma_0
     epsilon_0_ = epsilon_0
+    overlap_cutoff_ = 0.6
     chi_epsilon_ = &
       & (kappa_epsilon_**(1.0/mu_) - 1.0)/(kappa_epsilon_**(1.0/mu_) + 1.0)
     chi_sigma_ = &
@@ -73,48 +81,40 @@ module gayberne
 
 
 
+  !! Calculates the Gay-Berne potential for two particles 
+  !! particlei and particlej. If r_gb=rij-sig+sig0<=0.6 
+  !! routine returns with ovrlp=.true. 
+  !!
+  function potential_wt_overlap(ui, uj, rij, overlap) result(V)
+    implicit none
+    real(dp), dimension(3), intent(in) :: ui
+    real(dp), dimension(3), intent(in) :: uj
+    real(dp), dimension(3), intent(in) :: rij
+    logical, intent(out) :: overlap
+    real(dp) :: V 
+    if(separation(ui, uj, rij) < overlap_cutoff_) then
+      overlap = .true.
+      V = 0.0
+    else
+      V = potential(ui, uj, rij) 
+    end if    
+  end function potential_wt_overlap
+
+
+
   real(dp) function potential(ui, uj, rij)
     implicit none
     real(dp), dimension(3), intent(in) :: ui
     real(dp), dimension(3), intent(in) :: uj
     real(dp), dimension(3), intent(in) :: rij
     real(dp) :: r_gb, gb6
-    real(sp) :: single_precision
+    real(dp), dimension(3) :: urij
     r_gb = separation(ui, uj, rij)
-    if(r_gb <= 1e-6*tiny(single_precision)) then
-      potential = 0.5*huge(potential)
-    else
-      gb6 = r_gb**(-6)
-      potential = gb6*(gb6-1.0)
-      potential = 4*epsilon(ui, uj, rij)*potential
-    end if
+    gb6 = r_gb**(-6)
+    potential = gb6*(gb6-1.0)
+    urij = rij/sqrt(dot_product(rij, rij))
+    potential = 4*epsilon(ui, uj, urij)*potential
   end function
-
-
-
-  !! Calculates the Gay-Berne potential for two particles 
-  !! particlei and particlej. If r_gb=rij-sig+sig0<=0.6 
-  !! routine returns with ovrlp=.true. 
-  !!
-  !! :TODO: check if ovrlp is really needed and in which conditions.
-  !!
-  subroutine gbgbV(rij, ui, uj, gbV, ovrlp)
-    implicit none
-    real(dp), dimension(3), intent(in) :: rij, ui, uj
-    real(dp), intent(out) :: gbV
-    logical, intent(out) :: ovrlp
-    real(dp) :: r_gb, gb6
-    real(sp) :: single_precision
-    r_gb = separation(ui, uj, rij)
-    if(r_gb <= 1e-6*tiny(single_precision)) then
-      ovrlp = .true.
-      gbV = 0.5*huge(gbV)
-    else
-      gb6 = r_gb**(-6)
-      gbV = gb6*(gb6-1.0)
-      gbV = 4*epsilon(ui, uj, rij)*gbV
-    end if
-  end subroutine gbgbV
 
 
 

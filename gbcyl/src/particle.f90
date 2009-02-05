@@ -58,7 +58,6 @@ module particle
     logical, intent(out) :: overlap
     real(dp),dimension(3) :: rij,ui,uj
     potE = 0.0
-    !if(.not. (particlei%rod .and. particlej%rod)) return;
     call differences(particlei, particlej, rij(1), rij(2), rij(3))
     ui(1)=particlei%ux
     ui(2)=particlei%uy
@@ -66,8 +65,7 @@ module particle
     uj(1)=particlej%ux
     uj(2)=particlej%uy
     uj(3)=particlej%uz
-    potE = potential(ui, uj, rij)
-    overlap = .false. 
+    potE = potential(ui, uj, rij, overlap)
   end subroutine pairV
 
 
