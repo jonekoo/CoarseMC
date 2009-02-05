@@ -32,6 +32,7 @@ module energy
     if (.not. ovrlp) then
       Etot = Vpairtot + Vwalltot
     end if
+    !! write(*,*) 'Etot = ', Etot
   end subroutine total_energy
      
 
