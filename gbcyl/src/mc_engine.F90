@@ -287,7 +287,7 @@ module mc_engine
   subroutine run_equilibration_tasks
     implicit none 
     if (mod(i_sweep_, adjusting_period_) == 0) then
-      call updateMaxValues(n_particles_, production_period_)
+      call updateMaxValues(n_particles_, adjusting_period_)
     end if
   end subroutine run_equilibration_tasks
 
