@@ -7,7 +7,11 @@ module particlewall
   use particle, only : particledat
   use nrtype
   implicit none
-  
+
+  public :: initptwall
+  public :: save_state
+  public :: load_state
+  public :: prtclwallV  
   public :: repwall
   public :: attwall
   public :: gbwall
