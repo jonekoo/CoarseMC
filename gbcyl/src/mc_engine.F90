@@ -6,7 +6,7 @@ module mc_engine
     particlewall_load_state => load_state
   use gayberne, only: gayberne_init => init, &
     gayberne_save_state => save_state, gayberne_load_state => load_state
-  use mtmod, only: sgrnd
+  use mtmod, only: sgrnd, mtsave, mtget
   use particle, only: particledat, initParticle, &
     particle_save_state => save_state, &
     particle_load_state => load_state
@@ -44,11 +44,11 @@ module mc_engine
   integer, save :: adjusting_period_
   integer, save :: i_sweep_
   integer, save :: restart_period_
-  integer, save :: restart_unit_
+  integer, parameter :: restart_unit_ = 13
   character(len=*), parameter :: restart_file_ = "restart.gbcyl"
   namelist /mc_engine_nml/ n_particles_, n_equilibration_sweeps_, &
     n_production_sweeps_, production_period_, i_sweep_, restart_period_, &
-    restart_unit_, adjusting_period_ 
+    adjusting_period_ 
 
   
 
@@ -108,7 +108,6 @@ module mc_engine
     call initParticle(maxtrans, maxangle)
     i_sweep_ = 0
     restart_period_ = 1000
-    restart_unit_ = 13
     adjusting_period_ = 20
   end subroutine init
 
@@ -184,6 +183,7 @@ module mc_engine
     integer, intent(in) :: write_unit
     call io_save_state(write_unit)
     call mc_sweep_save_state(write_unit)
+    call mtsave(write_unit, '')
     call cylinder_save_state(write_unit)
     call particlewall_save_state(write_unit)
     call gayberne_save_state(write_unit)
@@ -230,6 +230,7 @@ module mc_engine
     integer, intent(in) :: read_unit
     call io_load_state(read_unit)
     call mc_sweep_load_state(read_unit)
+    call mtget(read_unit, '')
     call cylinder_load_state(read_unit)
     call particlewall_load_state(read_unit)
     call gayberne_load_state(read_unit)
@@ -273,13 +274,17 @@ module mc_engine
   !! 
   subroutine run
     implicit none
-    do while ((n_equilibration_sweeps_ + n_production_sweeps_) > i_sweep_)
-      if (mod(i_sweep_, restart_period_) == 0) call write_restart
-      if (i_sweep_ .lt. n_equilibration_sweeps_) call run_equilibration_tasks
-      if (i_sweep_ .ge. n_equilibration_sweeps_) call run_production_tasks
-      i_sweep_ = i_sweep_ + 1
+    call write_restart
+    do i_sweep_ = 1, n_equilibration_sweeps_ + n_production_sweeps_
       call sweep(particles_, n_particles_)
+      if (i_sweep_ .le. n_equilibration_sweeps_) then
+        call run_equilibration_tasks
+      else 
+        call run_production_tasks
+      end if
+      if (mod(i_sweep_, restart_period_) == 0) call write_restart
     end do
+    call write_restart
   end subroutine run
 
 
