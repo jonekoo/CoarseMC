@@ -190,8 +190,8 @@ module particle
 
   subroutine rotangle(max_rotation_angle_,theta)
     implicit none
-    double precision,intent(in) :: max_rotation_angle_
-    double precision,intent(out) :: theta
+    real(dp), intent(in) :: max_rotation_angle_
+    real(dp), intent(out) :: theta
     theta=(2.0*grnd()-1.0)*max_rotation_angle_;
   end subroutine rotangle
 
@@ -202,8 +202,8 @@ module particle
     ! Understanding Mol. Sim. 2nd Ed.  Frenkel, Smit
     ! s.  578
     implicit none
-    double precision, intent(out) :: nx, ny, nz
-    double precision :: l, u1, u2, s
+    real(dp), intent(out) :: nx, ny, nz
+    real(dp) :: l, u1, u2, s
     l = 0.0
     do
        u1 = 1.0-2.0*grnd()
