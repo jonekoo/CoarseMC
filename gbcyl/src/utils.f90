@@ -11,13 +11,13 @@ use nrtype
   !
   IMPLICIT NONE
   !
-  DOUBLE PRECISION X,Y,Z,NX,NY,NZ,PHI,XP,YP,ZP,DP,CP,SP
+  REAL(DP) X,Y,Z,NX,NY,NZ,PHI,XP,YP,ZP,DP,CP,SP
   !
   ! called functions
   !
-  !DOUBLE PRECISION DOTP
+  !REAL(DP) DOTP
   !
-  DP = DOTP(NX,NY,NZ,X,Y,Z)
+  DP = dot_product((/NX, NY, NZ/), (/X, Y, Z/))
   CP = COS(PHI)
   SP = SIN(PHI)
    
@@ -31,27 +31,12 @@ END SUBROUTINE XVEC2
 
 
 
-  FUNCTION DOTP(AX,AY,AZ,BX,BY,BZ) result(dotprod)
-  !
-  ! calculates (AX,AY,AZ) . (BX,BY,BZ) = DOTP
-  !
-    IMPLICIT NONE
-    real(dp),intent(in) ::  AX,AY,AZ,BX,BY,BZ
-    real(dp) :: dotprod 
-  !
-    dotprod = AX * BX + AY * BY + AZ * BZ
-    
-    RETURN
-  END FUNCTION DOTP
-
-
-
   SUBROUTINE CROSSP(AX,AY,AZ,BX,BY,BZ,CX,CY,CZ)
   !
-  ! calculates (AX,AY,AZ) x (BX,BY,BZ) = CZ,CY,CZ)
+  ! calculates (AX,AY,AZ) x (BX,BY,BZ) = (CZ,CY,CZ)
   !
     IMPLICIT NONE
-    DOUBLE PRECISION AX,AY,AZ,BX,BY,BZ,CX,CY,CZ
+    REAL(DP) AX,AY,AZ,BX,BY,BZ,CX,CY,CZ
   !
     CX = AY * BZ - AZ * BY
     CY = AZ * BX - AX * BZ
