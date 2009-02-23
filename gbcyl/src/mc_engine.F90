@@ -158,7 +158,7 @@ module mc_engine
     implicit none
     integer :: file_status
     open(unit = restart_unit_, file = restart_file_, action = 'WRITE', &
-     & status = 'REPLACE', iostat = file_status)
+     & status = 'REPLACE', delim='QUOTE', iostat = file_status)
     if (file_status /= 0) then
       stop 'Could not open restart file for writing! Stopping.'
     end if
