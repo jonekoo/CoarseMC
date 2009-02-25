@@ -2,7 +2,7 @@ test_suite gayberne
 
 
 
-test potential_matches_zero_at_cross_contact
+test zero_at_cross_contact
   use nrtype, only: dp
   real(dp) :: kappa_sigma = 4.4
   real(dp) :: kappa_epsilon = 20.0
@@ -20,7 +20,7 @@ end test
 
 
 
-test kappa_sigma_matches_sigmaee_per_sigmass
+test kappa_sigma_defined
   use nrtype, only: dp
   real(dp) :: kappa_sigma = 4.4
   real(dp) :: kappa_epsilon = 20.0
@@ -40,7 +40,7 @@ end test
 
 
 
-test kappa_epsilon_matches_epsilonss_per_epsilonee
+test kappa_epsilon_defined
   use nrtype, only: dp
   real(dp) :: kappa_sigma = 4.4
   real(dp) :: kappa_epsilon = 20.0
@@ -80,7 +80,7 @@ end test
 
 
 
-test separation_millionth_of_tiny_single_precision
+test small_separation
   use nrtype, only: sp, dp
   intrinsic huge
   intrinsic tiny

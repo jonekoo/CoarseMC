@@ -1,7 +1,7 @@
 ! gayberne_fun.f90 - a unit test suite for gayberne.f90
 !
 ! funit generated this file from gayberne.fun
-! at Thu Dec 04 15:59:26 +0200 2008
+! at Wed Feb 11 16:42:55 +0200 2009
 
 module gayberne_fun
 
@@ -26,7 +26,7 @@ module gayberne_fun
 
  contains
 
- subroutine potential_matches_zero_at_cross_contact
+ subroutine zero_at_cross_contact
 
   use nrtype, only: dp
   real(dp) :: kappa_sigma = 4.4
@@ -52,7 +52,7 @@ module gayberne_fun
       -2*spacing(real(0.0_dp)) ) &
       .le. &
        (potential(ui, uj, rij)) )) then
-      print *, " *Assert_Real_Equal failed* in test potential_matches_zero_at_cross_contact &
+      print *, " *Assert_Real_Equal failed* in test zero_at_cross_contact &
               &[gayberne.fun:18]"
       print *, "  ", "potential(ui, uj, rij) (", &
  potential(ui, uj, rij), &
@@ -70,12 +70,12 @@ module gayberne_fun
 
   numTests = numTests + 1
 
- end subroutine potential_matches_zero_at_cross_contact
+ end subroutine zero_at_cross_contact
 
 
 
 
- subroutine kappa_sigma_matches_sigmaee_per_sigmass
+ subroutine kappa_sigma_defined
 
   use nrtype, only: dp
   real(dp) :: kappa_sigma = 4.4
@@ -103,7 +103,7 @@ module gayberne_fun
       -2*spacing(real(kappa_sigma)) ) &
       .le. &
        (sigma(ui, uj, urij_ee)/sigma(ui, uj, urij_ss)) )) then
-      print *, " *Assert_Real_Equal failed* in test kappa_sigma_matches_sigmaee_per_sigmass &
+      print *, " *Assert_Real_Equal failed* in test kappa_sigma_defined &
               &[gayberne.fun:38]"
       print *, "  ", "sigma(ui, uj, urij_ee)/sigma(ui, uj, urij_ss) (", &
  sigma(ui, uj, urij_ee)/sigma(ui, uj, urij_ss), &
@@ -121,12 +121,12 @@ module gayberne_fun
 
   numTests = numTests + 1
 
- end subroutine kappa_sigma_matches_sigmaee_per_sigmass
+ end subroutine kappa_sigma_defined
 
 
 
 
- subroutine kappa_epsilon_matches_epsilonss_per_epsilonee
+ subroutine kappa_epsilon_defined
 
   use nrtype, only: dp
   real(dp) :: kappa_sigma = 4.4
@@ -154,7 +154,7 @@ module gayberne_fun
       -2*spacing(real(kappa_epsilon)) ) &
       .le. &
        (epsilon(ui, uj, urij_ss)/epsilon(ui, uj, urij_ee)) )) then
-      print *, " *Assert_Real_Equal failed* in test kappa_epsilon_matches_epsilonss_per_epsilonee &
+      print *, " *Assert_Real_Equal failed* in test kappa_epsilon_defined &
               &[gayberne.fun:58]"
       print *, "  ", "epsilon(ui, uj, urij_ss)/epsilon(ui, uj, urij_ee) (", &
  epsilon(ui, uj, urij_ss)/epsilon(ui, uj, urij_ee), &
@@ -172,7 +172,7 @@ module gayberne_fun
 
   numTests = numTests + 1
 
- end subroutine kappa_epsilon_matches_epsilonss_per_epsilonee
+ end subroutine kappa_epsilon_defined
 
 
 
@@ -228,7 +228,7 @@ module gayberne_fun
 
 
 
- subroutine separation_millionth_of_tiny_single_precision
+ subroutine small_separation
 
   use nrtype, only: sp, dp
   intrinsic huge
@@ -252,7 +252,7 @@ module gayberne_fun
   numAsserts = numAsserts + 1
   if (noAssertFailed) then
     if (.not.(huge(r_absolute) > potential(ui, uj, rij))) then
-      print *, " *Assert_True failed* in test separation_millionth_of_tiny_single_precision &
+      print *, " *Assert_True failed* in test small_separation &
               &[gayberne.fun:102]"
       print *, "  ", "huge(r_absolute) > potential(ui, uj, rij) is not true"
       print *, ""
@@ -266,7 +266,7 @@ module gayberne_fun
   numAsserts = numAsserts + 1
   if (noAssertFailed) then
     if (.not.(sqrt(dot_product(rij, rij)) > tiny(r_absolute))) then
-      print *, " *Assert_True failed* in test separation_millionth_of_tiny_single_precision &
+      print *, " *Assert_True failed* in test small_separation &
               &[gayberne.fun:103]"
       print *, "  ", "sqrt(dot_product(rij, rij)) > tiny(r_absolute) is not true"
       print *, ""
@@ -279,7 +279,7 @@ module gayberne_fun
 
   numTests = numTests + 1
 
- end subroutine separation_millionth_of_tiny_single_precision
+ end subroutine small_separation
 
 
  subroutine Setup
@@ -301,15 +301,15 @@ module gayberne_fun
   continue
 
   call Setup
-  call potential_matches_zero_at_cross_contact
+  call zero_at_cross_contact
   call Teardown
 
   call Setup
-  call kappa_sigma_matches_sigmaee_per_sigmass
+  call kappa_sigma_defined
   call Teardown
 
   call Setup
-  call kappa_epsilon_matches_epsilonss_per_epsilonee
+  call kappa_epsilon_defined
   call Teardown
 
   call Setup
@@ -317,7 +317,7 @@ module gayberne_fun
   call Teardown
 
   call Setup
-  call separation_millionth_of_tiny_single_precision
+  call small_separation
   call Teardown
 
   nTests          = numTests
