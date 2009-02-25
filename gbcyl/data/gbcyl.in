@@ -3,7 +3,7 @@ Rivejä jotka eivät ala tunnisteella $ ei huomioida parametreja luettaessa.
 
 Tunniste     	| Arvo
 
-$initstate	"r9-n1290-cr.gbcyl"	Tiedosto, josta luetaan alkutila.
+$initstate	"r9-n1290-cr.gb"	Tiedosto, josta luetaan alkutila.
 
 $Nrelax		25              	Stabilisointi iteraatioiden lkm.
 $Nprod		25        		Tuotantoajon iteraatioiden lkm.
