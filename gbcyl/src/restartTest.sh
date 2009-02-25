@@ -113,6 +113,7 @@ fi
 
 
 # 3. Test that continuing a run works the same way as running at once.
+
 # 3.1. Run equilibration 5 sweeps, production 10 sweeps.
 cat gbcyl.in.tmp|
 awk '
@@ -120,18 +121,23 @@ awk '
   /Nrelax/{$2 = "5"}
   {print}' > gbcyl.in
 ./gbcyl
+
 # 3.2. Edit restart.gbcyl: Production sweeps = 15.
 cp restart.gbcyl restart.gbcyl.old
 cat restart.gbcyl.old|
 awk '
   /N_PRODUCTION/{$2 = "15,"}
   {print}' > restart.gbcyl
+
 # 3.3. Restart.
 ./gbcyl restart
+
 # 3.4. Save simdata.out as simdata.out.old.
 mv simdata.out simdata.out.old
+
 # 3.5. Save restart.gbcyl as restart.gbcyl.old.
 cp restart.gbcyl restart.gbcyl.old
+
 # 3.6. Run equilibration 5 sweeps, production 15 sweeps.
 cat gbcyl.in.tmp|
 awk '
@@ -149,8 +155,8 @@ diff -q restart.gbcyl restart.gbcyl.old
 DIFF_RESTARTFILE=$?
 
 # 3.9. Clean up. 
-#rm -f simdata.out
-#rm -f *.old
+rm -f simdata.out
+rm -f *.old
 
 # 3.10. Exit if failed.
 if [ "${DIFF_SIMDATA}" -ne 0 ]
@@ -160,11 +166,12 @@ then
 fi
 if [ "${DIFF_RESTARTFILE}" -ne 0 ]
 then 
- echo "Running at once is different from continuing in restart files."
- exit 1
+  echo "Running at once is different from continuing in restart files."
+  exit 1
 fi
 
 
-# 4. Clean up.
+# 4. Clean up. 
+# :NOTE: This won't work if a preceding test fails. 
 cd ..
 rm -rf testtmp
