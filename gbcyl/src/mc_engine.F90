@@ -276,8 +276,8 @@ module mc_engine
     implicit none
     integer :: i
     call write_restart
-    do i = 1, n_equilibration_sweeps_ + n_production_sweeps_
-      i_sweep_ = i
+    do while (i_sweep_ < n_equilibration_sweeps_ + n_production_sweeps_)
+      i_sweep_ = i_sweep_ + 1 
       call sweep(particles_, n_particles_)
       if (i_sweep_ .le. n_equilibration_sweeps_) then
         call run_equilibration_tasks
