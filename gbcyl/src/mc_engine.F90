@@ -274,7 +274,6 @@ module mc_engine
   !! 
   subroutine run
     implicit none
-    integer :: i
     call write_restart
     do while (i_sweep_ < n_equilibration_sweeps_ + n_production_sweeps_)
       i_sweep_ = i_sweep_ + 1 
