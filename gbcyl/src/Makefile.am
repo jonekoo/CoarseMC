@@ -6,6 +6,10 @@ gbcyl_SOURCES = nrtype.f90 nrutil.f90 nr.f90 attwall.f90 repwall.f90\
   nr.f90 nrtype.f90 rd_s.f90 rd_v.f90 rf_s.f90 rf_v.f90 mc_engine.f90\
   gbcyl.f90
 
+TESTS = TestRunner restartTest.sh
+check_PROGRAMS = TestRunner
+TestRunner_SOURCES = nrtype.f90 gayberne.f90 gayberne_fun.f90 TestRunner.f90
+
 MODEXT = @MODEXT@
 
 mostlyclean-local :
