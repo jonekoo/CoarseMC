@@ -1,33 +1,30 @@
 module utils
 use nrtype
 
+
+
   contains 
 
-  SUBROUTINE XVEC2(X,Y,Z,NX,NY,NZ,PHI,XP,YP,ZP)
+
+
+  SUBROUTINE XVEC2(X, Y, Z, NX, NY, NZ, PHI, XP, YP, ZP)
   !
   ! rotates the vector (X,Y,Z) into (XP,YP,ZP) around axis
   ! (NX,NY,NZ) [unit vector of the direction] through angle PHI
   ! Goldstein: Classical Mechanics 2nd ed., p. 165
   !
-  IMPLICIT NONE
-  !
-  REAL(DP) X,Y,Z,NX,NY,NZ,PHI,XP,YP,ZP,DP,CP,SP
-  !
-  ! called functions
-  !
-  !REAL(DP) DOTP
-  !
-  DP = dot_product((/NX, NY, NZ/), (/X, Y, Z/))
-  CP = COS(PHI)
-  SP = SIN(PHI)
-   
-  CALL CROSSP(X,Y,Z,NX,NY,NZ,XP,YP,ZP)
-  XP = X * CP + NX * DP * (1.0 - CP) + XP * SP
-  YP = Y * CP + NY * DP * (1.0 - CP) + YP * SP
-  ZP = Z * CP + NZ * DP * (1.0 - CP) + ZP * SP
-!
-!  RETURN
-END SUBROUTINE XVEC2
+    IMPLICIT NONE
+    REAL(DP), intent(in) :: X, Y, Z
+    real(dp), intent(in) :: NX, NY, NZ 
+    real(dp), intent(in) :: PHI
+    real(dp), intent(out) :: XP, YP, ZP
+    REAL(DP) :: DOTP
+    DOTP = dot_product((/NX, NY, NZ/), (/X, Y, Z/))
+    CALL CROSSP(X, Y, Z, NX, NY, NZ, XP, YP, ZP)
+    XP = X * COS(PHI) + NX * DOTP * (1.0 - COS(PHI)) + XP * SIN(PHI)
+    YP = Y * COS(PHI) + NY * DOTP * (1.0 - COS(PHI)) + YP * SIN(PHI)
+    ZP = Z * COS(PHI) + NZ * DOTP * (1.0 - COS(PHI)) + ZP * SIN(PHI)
+  END SUBROUTINE XVEC2
 
 
 
