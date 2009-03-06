@@ -20,6 +20,6 @@ AC_SUBST(MODEXT, [$ax_f90_modext])
 AC_CONFIG_FILES([
 Makefile
 src/Makefile
+data/Makefile
 ])
-AC_CONFIG_SUBDIRS([src])
 AC_OUTPUT
