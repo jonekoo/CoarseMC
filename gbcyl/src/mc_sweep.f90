@@ -24,21 +24,24 @@ module mc_sweep
   integer, save :: volume_change_type_ 
   real(dp), save :: temperature_
   real(dp), save :: pressure_
+  integer, save :: adjust_type_
   namelist /mcsweep_nml/ temperature_, pressure_, n_accepted_moves_, &
-    & n_accepted_scalings_, max_scaling_, volume_change_type_
+    & n_accepted_scalings_, max_scaling_, volume_change_type_, adjust_type_
  
 
 
   contains
 
-  subroutine init(volume_change_type, temperature, pressure)
+  subroutine init(volume_change_type, temperature, pressure, adjust_type)
     implicit none
     integer, intent(in) :: volume_change_type
     real(dp), intent(in) :: temperature
     real(dp), intent(in) :: pressure
+    integer, intent(in) :: adjust_type
     volume_change_type_ = volume_change_type
     temperature_ = temperature
     pressure_ = pressure 
+    adjust_type_ = adjust_type
     max_scaling_ = 0.1
     n_accepted_moves_ = 0
     n_accepted_scalings_ = 0
@@ -164,6 +167,9 @@ module mc_sweep
     real(dp) :: olddximax, olddthetamax
     real(dp) :: newdximax, newdthetamax
     integer, intent(in) :: Nparticles, period
+    real, save :: last_mratio = 0.0
+    real, save :: d_macceptance = 0.0
+    real :: d_transrot
     call ratios(Nparticles, period, mratio, vratio)      
     !! Jos tilavuuden muutoksista on hyväksytty yli 25%,
     !! kasvatetaan säteen maksimimuutosarvoa. Vastaavasti
@@ -173,8 +179,22 @@ module mc_sweep
     n_accepted_moves_ = 0
     max_scaling_ = newmaxvalue(vratio > 0.25, max_scaling_)
     call getmaxmoves(olddximax, olddthetamax)
-    newdthetamax = newmaxvalue(mratio > 0.33, olddthetamax)
-    newdximax = newmaxvalue(mratio > 0.33, olddximax)
+    if(adjust_type_ == 1 .or. adjust_type_ == 2) then
+      newdthetamax = newmaxvalue(mratio > 0.33, olddthetamax)
+      newdximax = newmaxvalue(mratio > 0.33, olddximax)
+    end if
+    if (adjust_type_ == 2) then
+      !! adjust ratio maxtranslation/maxrotation
+      d_macceptance = mratio - last_mratio
+      if (d_macceptance*d_transrot > 0) then
+        newdximax = 1.05*newdximax
+        d_transrot = 1.0
+      else
+        newdximax = newdximax/1.05
+        d_transrot = -1.0
+      end if
+      last_mratio = mratio
+    end if
     call setmaxmoves(newdximax, newdthetamax)
   end subroutine updatemaxvalues
   

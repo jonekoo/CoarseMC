@@ -181,14 +181,14 @@ module io
   !Aliohjelma parameterien lukemiseen tiedostosta paramsfile.
   !Tekij�: Juho Lintuvuori
   !muutokset: Jouni Karjalainen
-  subroutine ReadParams(file,Nrelax,Nprod,Nratio,T,pres,anchor,voltyp,&
-                        Kw,seed,epses,eps0,rsphere,spmyy,epsphere,sigma0,&
-                        siges,allign,debug)
+  subroutine ReadParams(file, Nrelax, Nprod, Nratio, T, pres, anchor, voltyp,&
+                        Kw, seed, epses, eps0, rsphere, spmyy, epsphere, &
+                        sigma0, siges, allign, debug, adjusttype)
     implicit none
     ! Alkuperäinen aliohjelma Antti Kurosen käsialaa; kurssilta johdatus
     ! atomistisiin simulaatioihin
 
-    integer,intent(out) :: Nrelax,Nprod,Nratio,anchor,seed
+    integer,intent(out) :: Nrelax,Nprod,Nratio,anchor,seed, adjusttype
     integer,intent(out) :: allign,debug,voltyp
     real(dp),intent(out) :: T,pres,epses,eps0,rsphere,spmyy,epsphere 
     real(dp),intent(out) :: sigma0,siges,Kw
@@ -271,6 +271,8 @@ module io
          siges=x;
        else if(string=='$Kw')then
          Kw=x;
+       else if(string=='$adjusttype')then
+         adjusttype=int(x+0.5);
        else
          print '(A,A)','Unknown parameter',string
          stop 'Parameter read in error'

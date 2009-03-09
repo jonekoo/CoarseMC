@@ -9,6 +9,12 @@ $Nrelax		25              	Stabilisointi iteraatioiden lkm.
 $Nprod		25        		Tuotantoajon iteraatioiden lkm.
 $Nratio		5         		Perioidisten tapahtumien teko väli
 
+$adjusttype     1			1 = adjust rotation and translation 
+					  together
+					2 = 1 and adjust ratio of 
+					  maxrotation/maxtranslation
+					3 = adjust rotation and translation 
+					  separately
 $T		2.0			Simulointi lämpötila, redusoiduissa 
 					yksiköissä
 $pres           2.0         		Paine, redusoiduissa yksiköissä

@@ -79,6 +79,7 @@ module mc_engine
     integer :: debug 
     real(dp) :: radius
     real(dp) :: height
+    integer :: adjusttype
     real(dp), parameter :: maxtrans = 0.156
     real(dp), parameter :: maxangle = 0.170
     real(dp), parameter :: kappa_sigma = 4.4
@@ -95,7 +96,7 @@ module mc_engine
       & production_period_, temperature, pressure, anchor, & 
       & volume_scaling_type, Kw, seed, kappa_epsilon_sgb, epsilon_0_sgb, & 
       & r_sphere, spmyy, epsilon_ss, sigma_0_sgb, kappa_sigma_sgb, allign, & 
-      & debug)
+      & debug, adjusttype)
     call readstate(statefile, particles_, n_particles_, radius, height); 
     !! Initialize modules. 
     call initptwall(anchor, Kw)
@@ -103,7 +104,7 @@ module mc_engine
     call gayberne_init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
     call init_io
     call initcylinder(radius, height)
-    call mc_sweep_init(volume_scaling_type, temperature, pressure)
+    call mc_sweep_init(volume_scaling_type, temperature, pressure, adjusttype)
     call initvlist(particles_, n_particles_)
     call initParticle(maxtrans, maxangle)
     i_sweep_ = 0
