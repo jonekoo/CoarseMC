@@ -80,8 +80,10 @@ module mc_engine
     real(dp) :: radius
     real(dp) :: height
     integer :: adjusttype
-    real(dp), parameter :: maxtrans = 0.156
-    real(dp), parameter :: maxangle = 0.170
+    real(dp) :: move_ratio
+    real(dp) :: scaling_ratio
+    real(dp) :: max_translation
+    real(dp) :: max_rotation
     real(dp), parameter :: kappa_sigma = 4.4
     real(dp), parameter :: kappa_epsilon = 20.0
     real(dp), parameter :: mu = 1.0
@@ -96,7 +98,8 @@ module mc_engine
       & production_period_, temperature, pressure, anchor, & 
       & volume_scaling_type, Kw, seed, kappa_epsilon_sgb, epsilon_0_sgb, & 
       & r_sphere, spmyy, epsilon_ss, sigma_0_sgb, kappa_sigma_sgb, allign, & 
-      & debug, adjusttype)
+      & debug, adjusttype, move_ratio, scaling_ratio, max_translation, &
+      & max_rotation)
     call readstate(statefile, particles_, n_particles_, radius, height); 
     !! Initialize modules. 
     call initptwall(anchor, Kw)
@@ -104,9 +107,10 @@ module mc_engine
     call gayberne_init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
     call init_io
     call initcylinder(radius, height)
-    call mc_sweep_init(volume_scaling_type, temperature, pressure, adjusttype)
+    call mc_sweep_init(volume_scaling_type, temperature, pressure, adjusttype,&
+      move_ratio, scaling_ratio)
     call initvlist(particles_, n_particles_)
-    call initParticle(maxtrans, maxangle)
+    call initParticle(max_translation, max_rotation)
     i_sweep_ = 0
     restart_period_ = 1000
     adjusting_period_ = 20

@@ -25,23 +25,31 @@ module mc_sweep
   real(dp), save :: temperature_
   real(dp), save :: pressure_
   integer, save :: adjust_type_
+  real(dp), save :: move_ratio_
+  real(dp), save :: scaling_ratio_
   namelist /mcsweep_nml/ temperature_, pressure_, n_accepted_moves_, &
-    & n_accepted_scalings_, max_scaling_, volume_change_type_, adjust_type_
+    & n_accepted_scalings_, max_scaling_, volume_change_type_, adjust_type_, &
+    & move_ratio_, scaling_ratio_
  
 
 
   contains
 
-  subroutine init(volume_change_type, temperature, pressure, adjust_type)
+  subroutine init(volume_change_type, temperature, pressure, adjust_type, &
+    move_ratio, scaling_ratio)
     implicit none
     integer, intent(in) :: volume_change_type
     real(dp), intent(in) :: temperature
     real(dp), intent(in) :: pressure
     integer, intent(in) :: adjust_type
+    real(dp), intent(in) :: move_ratio
+    real(dp), intent(in) :: scaling_ratio
     volume_change_type_ = volume_change_type
     temperature_ = temperature
     pressure_ = pressure 
     adjust_type_ = adjust_type
+    move_ratio_ = move_ratio
+    scaling_ratio_ = scaling_ratio
     max_scaling_ = 0.1
     n_accepted_moves_ = 0
     n_accepted_scalings_ = 0
@@ -177,11 +185,11 @@ module mc_sweep
     !! Nollataan hyväksyntälaskurit
     n_accepted_scalings_ = 0
     n_accepted_moves_ = 0
-    max_scaling_ = newmaxvalue(vratio > 0.25, max_scaling_)
+    max_scaling_ = newmaxvalue(vratio > scaling_ratio_, max_scaling_)
     call getmaxmoves(olddximax, olddthetamax)
     if(adjust_type_ == 1 .or. adjust_type_ == 2) then
-      newdthetamax = newmaxvalue(mratio > 0.33, olddthetamax)
-      newdximax = newmaxvalue(mratio > 0.33, olddximax)
+      newdthetamax = newmaxvalue(mratio > move_ratio_, olddthetamax)
+      newdximax = newmaxvalue(mratio > move_ratio_, olddximax)
     end if
     if (adjust_type_ == 2) then
       !! adjust ratio maxtranslation/maxrotation

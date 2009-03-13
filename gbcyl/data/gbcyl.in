@@ -13,8 +13,14 @@ $adjusttype     1			1 = adjust rotation and translation
 					  together
 					2 = 1 and adjust ratio of 
 					  maxrotation/maxtranslation
-					3 = adjust rotation and translation 
-					  separately
+$moveratio	0.33                    The desired ratio with which particle 
+    					moves are accepted.
+$scalingratio   0.25			The desired ratio with which volume 
+					moves are accepted.
+$maxtranslation	0.156			Initial maximum translation for a
+					particle (reduced units).
+$maxrotation	0.170			Initial maximum rotation angle for a 
+					particle (radians). 
 $T		2.0			Simulointi lämpötila, redusoiduissa 
 					yksiköissä
 $pres           2.0         		Paine, redusoiduissa yksiköissä

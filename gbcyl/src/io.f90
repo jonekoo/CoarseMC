@@ -183,7 +183,8 @@ module io
   !muutokset: Jouni Karjalainen
   subroutine ReadParams(file, Nrelax, Nprod, Nratio, T, pres, anchor, voltyp,&
                         Kw, seed, epses, eps0, rsphere, spmyy, epsphere, &
-                        sigma0, siges, allign, debug, adjusttype)
+                        sigma0, siges, allign, debug, adjusttype, moveratio,&
+                        scalingratio, maxtranslation, maxrotation)
     implicit none
     ! Alkuperäinen aliohjelma Antti Kurosen käsialaa; kurssilta johdatus
     ! atomistisiin simulaatioihin
@@ -192,6 +193,8 @@ module io
     integer,intent(out) :: allign,debug,voltyp
     real(dp),intent(out) :: T,pres,epses,eps0,rsphere,spmyy,epsphere 
     real(dp),intent(out) :: sigma0,siges,Kw
+    real(dp), intent(out) :: moveratio, scalingratio 
+    real(dp), intent(out) :: maxtranslation, maxrotation
     character(len=*), parameter :: paramsfile='gbcyl.in'
     integer, parameter :: input=20
     character(len = 78), intent(out) :: file  
@@ -273,6 +276,14 @@ module io
          Kw=x;
        else if(string=='$adjusttype')then
          adjusttype=int(x+0.5);
+       else if(string=='$moveratio')then
+         moveratio=x;
+       else if(string=='$scalingratio')then
+         scalingratio=x;
+       else if(string=='$maxtranslation')then
+         maxtranslation=x;
+       else if(string=='$maxrotation') then
+         maxrotation=x;
        else
          print '(A,A)','Unknown parameter',string
          stop 'Parameter read in error'
