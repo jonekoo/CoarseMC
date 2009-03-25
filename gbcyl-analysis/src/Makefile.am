@@ -1,7 +1,12 @@
 bin_PROGRAMS = orientation_parameter \
                cylindrical_orientation \
                tau1 \
-               radial_distribution
+               radial_distribution \
+               density 
+
+dist_bin_SCRIPTS = rdf_average.sh \
+                   loop-script-over-args.sh \
+                   remove-non-numeric-lines.sh
 
 orientation_parameter_SOURCES = nrtype.f90 utils.f90 particle.f90 \
 state_reader.f90 orientational_ordering.f90 orientation_parameter_wrapper.f90 \
@@ -23,6 +28,12 @@ radial_distribution_SOURCES = nrtype.f90 \
                               radial_distribution_wrapper.f90 \
                               radial_distribution.f90 \
                               gr3d.f90
+
+density_SOURCES = nrtype.f90 \
+                  utils.f90 \
+                  particle.f90 \
+                  state_reader.f90 \
+                  density.f90
 
 MODEXT = @MODEXT@
 

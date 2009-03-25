@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(gbcyl-analysis, 1.1, jounik@mail.student.oulu.fi)
+AC_INIT(gbcyl-analysis, 1.4, jounik@mail.student.oulu.fi)
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_PROG_FC
 
