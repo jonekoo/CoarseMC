@@ -2,7 +2,8 @@ bin_PROGRAMS = orientation_parameter \
                cylindrical_orientation \
                tau1 \
                radial_distribution \
-               density 
+               density \
+               psi6
 
 dist_bin_SCRIPTS = rdf_average.sh \
                    loop-script-over-args.sh \
@@ -37,6 +38,16 @@ density_SOURCES = nrtype.f90 \
                   particle.f90 \
                   state_reader.f90 \
                   density.f90
+
+psi6_SOURCES = nrtype.f90 \
+               utils.f90 \
+               particle.f90 \
+               state_reader.f90 \
+               cylinder.f90 \
+               geometry.f90 \
+               psi6_module.f90 \
+               orientational_ordering.f90 \
+               psi6.f90
 
 MODEXT = @MODEXT@
 
