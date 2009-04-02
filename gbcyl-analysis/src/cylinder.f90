@@ -133,15 +133,14 @@ module cylinder
 
 
 
-  function minimum_image(ri, rj, Lx, Ly, Lz) result(rij)
+  function minimum_image(position, Lx, Ly, Lz)
     use nrtype, only: dp
     implicit none
-    real(dp), dimension(3) :: rij
-    real(dp), dimension(3), intent(in) :: ri
-    real(dp), dimension(3), intent(in) :: rj
+    real(dp), dimension(3) :: minimum_image
+    real(dp), dimension(3), intent(in) :: position
     real(dp), intent(in) :: Lx, Ly, Lz
-    rij = rj - ri
-    rij(3) = rij(3) - nint(rij(3)/Lz)*rij(3)
+    minimum_image = position
+    minimum_image(3) = minimum_image(3) - nint(minimum_image(3)/Lz)*Lz
   end function
 
 
