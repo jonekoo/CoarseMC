@@ -10,7 +10,8 @@ dist_bin_SCRIPTS = rdf_average.sh \
                    remove-non-numeric-lines.sh \
                    density_cyl.awk \
                    show-non-numeric-lines.sh \
-                   select.awk
+                   select.awk \
+                   periodic_select.awk
 
 orientation_parameter_SOURCES = nrtype.f90 utils.f90 particle.f90 \
 state_reader.f90 orientational_ordering.f90 orientation_parameter_wrapper.f90 \
