@@ -16,13 +16,13 @@ program analysis
   integer :: io_status
   integer :: n_particles
   real(dp), dimension(3) :: director
-  real(dp) :: P2
+  real(dp) :: value
   do  
     call read_configuration(particles, n_particles, radius, height, io_status)
     if (io_status < 0) then
       exit
     else
-      call orientation_parameter(particles, n_particles, P2, director)
+      call orientation_parameter(particles, n_particles, value, director)
       write(*,*) psi6_bulk(particles, n_particles, 2*radius, 2*radius, height,&
         director) 
     end if

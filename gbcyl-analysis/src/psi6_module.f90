@@ -1,6 +1,6 @@
 module psi6_module
 use particle, only: particledat
-use nrtype, only: dp
+use nrtype, only: dp, dpc
 use geometry, only: minimum_image
 implicit none
 
@@ -23,28 +23,27 @@ contains
 !
 function psi6_bulk(particles, n_particles, Lx, Ly, Lz, lvec) 
   implicit none 
-  double precision :: psi6_bulk
+  real(dp) :: psi6_bulk
   integer, intent(in) :: n_particles
-  type(particledat), dimension(n_particles), target, intent(in) :: particles
-  double precision, intent(in) :: Lx, Ly, Lz
-  double precision, dimension(3), intent(in) :: lvec
-
+  type(particledat), dimension(:), target, intent(in) :: particles
+  real(dp), intent(in) :: Lx, Ly, Lz
+  real(dp), dimension(3), intent(in) :: lvec
   integer :: i
-  integer :: nrod
-  complex :: psi6_bulkr
   type(particledat), pointer :: particlei
+  integer :: nrod
+  complex(dpc) :: psi6_bulkr
 
-  psi6_bulk = 0.0
   psi6_bulkr = 0.0
   do i = 1, n_particles
     if (particles(i)%rod) then
-      particlei => particles(i)
-      psi6_bulkr = psi6_bulkr + psi6(particlei, particles, n_particles, lvec, Lx, Ly, Lz)
+      particlei=>particles(i)
+      psi6_bulkr = psi6_bulkr + psi6(particlei, particles, n_particles, Lx, Ly, Lz,&
+        lvec)
     end if 
   end do
   nrod = count(particles(1:n_particles)%rod)
   psi6_bulkr = psi6_bulkr / nrod
-  psi6_bulk = real(psi6_bulkr)
+  psi6_bulk = abs(psi6_bulkr)
 end function psi6_bulk
 
 
@@ -60,37 +59,34 @@ end function psi6_bulk
 ! @p Ly system size in y-direction
 ! @p Lz system size in z-direction
 !
-function psi6(particlei, particles, n_particles, lvec, Lx, Ly, Lz)
+function psi6(particlei, particles, n_particles, Lx, Ly, Lz, lvec)
   implicit none
-  real(dp) :: psi6
-  integer, intent(in) :: n_particles
+  complex(dpc) :: psi6
   type(particledat), pointer :: particlei
-  type(particledat), dimension(n_particles), target, intent(in) :: particles
-  double precision, intent(in) :: Lx, Ly, Lz
-  double precision, dimension(3), intent(in) :: lvec
-  !type(geometrytype), intent(in) :: geom
-
-  double precision :: theta
-  double precision :: r 
-  double precision :: pi
-  complex :: arg
-  double precision :: wij, sumwij
+  type(particledat), dimension(:), target, intent(in) :: particles
+  integer, intent(in) :: n_particles
+  real(dp), intent(in) :: Lx, Ly, Lz
+  real(dp), dimension(3), intent(in) :: lvec
+  real(dp) :: theta
+  real(dp) :: r 
+  real(dp) :: pi
+  complex(dpc) :: arg
+  real(dp) :: wij, sumwij
   integer :: j
-  double precision, dimension(3) :: rij, u
+  real(dp), dimension(3) :: rij, u
   complex, parameter :: ii = (0.0, 1.0)
-
   pi = 4.0*atan(1.0)
   sumwij = 0.0
   wij = 0.0
   psi6 = 0.0
   arg = 0.0
   do j = 1, n_particles
-    if(associated(particlei, target=particles(j))) cycle 
+    if(associated(particlei, particles(j))) cycle
     if(.not.(particles(j)%rod)) cycle
-
-    rij = minimum_image((/ particlei%x, particlei%y, particlei%z /), &
-            (/ particles(j)%x, particles(j)%y, particles(j)%z /), &
-            Lx, Ly, Lz)        
+    rij(1) = particlei%x - particles(j)%x
+    rij(2) = particlei%y - particles(j)%y
+    rij(3) = particlei%z - particles(j)%z
+    rij = minimum_image(rij, Lx, Ly, Lz)       
     r = sqrt(dot_product(rij, rij))
     !! Bates and Luckhurst weighting
     ! wij = 1 if r < 1.4 
@@ -121,9 +117,10 @@ function psi6(particlei, particles, n_particles, lvec, Lx, Ly, Lz)
     arg = arg + wij * exp(ii * 6.0 * theta)
   end do
   if(sumwij > 0.0) then
-    psi6 = arg/sumwij
+    psi6 = arg / sumwij
   end if
 end function psi6
+
 
 
 end module psi6_module
