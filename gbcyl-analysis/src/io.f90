@@ -1,8 +1,31 @@
 module io
   use nrtype
-  use particle
+  use particle, only : particledat
+
+  integer, parameter :: outunit = 19
 
   contains
+
+  
+
+  subroutine initOutput()
+    intrinsic trim,adjustl
+    character(len=31), parameter :: outfile = "simdata.out"
+    !!outfile=trim(adjustl(filename(R, T, P, GB, Xe, index)) )
+    !!outfile=trim(outfile)
+    open(outunit, file=outfile, status='replace', position='append',&
+         form='formatted', iostat=ios) 
+    if (ios/=0) then
+      write (*,*) 'writestate: tiedostoa ',outfile,'ei voitu avata.'
+      stop;
+    end if
+  end subroutine initOutput
+
+
+
+  subroutine finalizeOutput()
+    close(outunit) 
+  end subroutine finalizeOutput
 
   !Aliohjelma, joka kirjoittaa partikkelien tiedot tiedostoon 
   !Tekijä: Jouni Karjalainen 
@@ -35,15 +58,13 @@ module io
 
   !Kirjoittaa tilan eli sylinterin säteen, korkeuden ja partikkelitaulukon
   !tiedostoon  
-  subroutine writestate(T,P,R,Lz,particlearray,index)
+  subroutine writestate(R, Lz, particlearray)
     implicit none
-    intrinsic trim,adjustl
-    real(dp), intent(in) :: T,P,R,Lz
-    integer, intent(in) :: index
+    real(dp), intent(in) :: R, Lz
     type(particledat),dimension(:),pointer :: particlearray
-    character(len=30) :: outfile
-    integer :: GB=0,Xe=0,ios,N,astat,i
-    integer, parameter :: outunit=19
+    
+    integer :: GB=0, Xe=0, N, astat, i
+    
     integer, dimension(:), allocatable :: help
 
     N=size(particlearray)
@@ -63,14 +84,6 @@ module io
         help(i)=0
       end if
     end do 
-    outfile=trim(adjustl(filename(R,T,P,GB,Xe,index)) )
-    outfile=trim(outfile)
-    open(outunit,file=outfile,status='replace',position='append',&
-         form='formatted',iostat=ios) 
-    if (ios/=0) then
-      write (*,*) 'writestate: tiedostoa ',outfile,'ei voitu avata.'
-      stop;
-    end if
     write(outunit,*) '$R:',R,'$Lz:',Lz
     write(outunit,*) '$N:',N,'$GB:',GB,'$Xe:',Xe
     write(outunit,*) '$x:'
@@ -87,16 +100,15 @@ module io
     write(outunit,'(E12.6E1)') particlearray%uy
     write(outunit,*) '$uz:'
     write(outunit,'(E12.6E1)') particlearray%uz
-    close(outunit) 
     deallocate(help)
   end subroutine writestate
 
 
 
-  subroutine readstate(filename,array0,R,Lz)
+  subroutine readstate(filename, particleArray, R, Lz)
     implicit none
     character(len=*), intent(in) :: filename
-    type(particledat), dimension(:), pointer :: array0
+    type(particledat), dimension(:), pointer :: particleArray
     real(dp), intent(out) :: R,Lz
     integer,parameter :: readunit=17   
     integer :: ios, N,astat,i
@@ -119,34 +131,31 @@ module io
     read(readunit,*) charvar,N
     read(readunit,*) charvar
     !Varaa muistin taulukolle
-    allocate(array0(N),help(N),stat=astat)
+    allocate(particleArray(N),help(N),stat=astat)
     if (astat/=0) then
-      write(*,*) 'readstate:Virhe varattaessa muistia: array0,help'
+      write(*,*) 'readstate:Virhe varattaessa muistia: particleArray,help'
       stop;
-    end if
-   
+    end if   
     !Luetaan  hiukkasten x-koordinaatit
-    read(readunit,*) array0(1:N)%x
+    read(readunit,*) particleArray(1:N)%x
     read(readunit,*) charvar
     !Luetaan y-koordinaatit
-    read(readunit,*) array0(1:N)%y
-   
-    read(readunit,*) charvar,array0(1:N)%z
+    read(readunit,*) particleArray(1:N)%y
+    read(readunit,*) charvar,particleArray(1:N)%z
     !Luetaan rod-tieto
     read(readunit,*) charvar
     read(readunit,*) help(1:N)
     !Luetaan orientaatiovektoreiden komponentit
     read(readunit,*) charvar
-    read(readunit,*) array0(1:N)%ux
-    read(readunit,*) charvar,array0(1:N)%uy
-    read(readunit,*) charvar,array0(1:N)%uz
+    read(readunit,*) particleArray(1:N)%ux
+    read(readunit,*) charvar,particleArray(1:N)%uy
+    read(readunit,*) charvar,particleArray(1:N)%uz
     close(readunit) 
-   
     do i=1,N
       if(help(i)==1) then
-        array0(i)%rod=.true.
+        particleArray(i)%rod=.true.
       else
-        array0(i)%rod=.false.
+        particleArray(i)%rod=.false.
       end if
     end do
   end subroutine readstate
@@ -165,27 +174,26 @@ module io
   function filename(R,T,P,GB,Xe,index) result(name)
     implicit none
     intrinsic anint
-    character(len=26) :: name
+    character(len=27) :: name
     real(dp),intent(in) :: T,P,R
     integer, intent(in) :: GB,Xe,index
     integer :: Tint,Pint,Rint
-    character(len=2) :: Tchar,Pchar
+    character(len=3) :: Tchar
     character(len=3) :: Rchar
     character(len=7) :: GBchar
     character(len=5) :: Xechar
     character(len=6) :: indexchar
     integer,parameter :: mykind=selected_int_kind(8)
   
-    Tint=anint(10*T,mykind)
+    Tint=anint(100*T,mykind)
     Pint=anint(10*P,mykind)
     Rint=anint(R,mykind)
-    write (Tchar,'(I2.2)') Tint
-    write (Pchar,'(I2.2)') Pint
+    write (Tchar,'(I3.3)') Tint
+
     write (GBchar,'(I7.7)') GB
     write (Xechar,'(I5.5)') Xe
     write (indexchar,'(I6.6)') index
     write (Rchar,'(I3.3)') Rint
-
     name='R'//Rchar//'T'//Tchar//'.'//trim(adjustl(indexchar))
   end function filename
 
@@ -194,10 +202,11 @@ module io
   !Aliohjelma, joka tuottaa POV-Ray -syöttötiedoston partikkelitaulukosta
   !Tekijä: Jouni Karjalainen
   !R ja Lz määräävät kameran ja valonlähteen koordinaatit. 
-  subroutine povout(particlearray,R,Lz)
+  subroutine povout(particlearray, R, Lz)
     implicit none
-    type(particledat), dimension(:),pointer :: particlearray
-    real(dp), intent(in) :: R,Lz
+
+    type(particledat), dimension(:), pointer :: particlearray
+    real(dp), intent(in) :: R, Lz
     integer, parameter :: povunit=18
     character(len=*),parameter :: povfile='povout.pov'
     integer :: opened,N,i
@@ -307,17 +316,17 @@ module io
        ! Look for variable-defining strings
 
        if (string=='$Nrelax') then
-	 Nrelax=int(x+0.5)
+         Nrelax=int(x+0.5)
        else if (string=='$Nprod') then
-	 Nprod=int(x+0.5);
+         Nprod=int(x+0.5);
        else if (string=='$Nratio') then
-	 Nratio=int(x+0.5);
+         Nratio=int(x+0.5);
        else if (string=='$T') then
-	 T=x 
+         T=x 
        else if (string=='$pres') then
-	 pres=x
+         pres=x
        else if (string=='$anchor') then
-	 anchor=int(x+0.5)
+         anchor=int(x+0.5)
        else if (string=='$voltyp') then
          voltyp=int(x+0.5)
        else if (string=='$seed') then
@@ -344,7 +353,7 @@ module io
          Kw=x;
        else
          print '(A,A)','Unknown parameter',string
-	 stop 'Parameter read in error'
+         stop 'Parameter read in error'
        endif
      end if
        print '(A,A16,A,G13.6)','Read in parameter ',string,' value',x
