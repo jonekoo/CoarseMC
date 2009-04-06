@@ -19,6 +19,7 @@ module mc_engine
   use verlet, only: initvlist, freevlist, &
     verlet_save_state => save_state, &
     verlet_load_state => load_state
+  use energy, only: total_energy
   implicit none
 
 
@@ -33,7 +34,6 @@ module mc_engine
   public :: production_sweeps  
 
 
-
   private
   
   integer, save :: n_particles_
@@ -45,7 +45,9 @@ module mc_engine
   integer, save :: i_sweep_
   integer, save :: restart_period_
   integer, parameter :: restart_unit_ = 13
+  integer, parameter :: energy_unit_ = 14
   character(len=*), parameter :: restart_file_ = "restart.gbcyl"
+  character(len=*), parameter :: energy_file_ = 'energy_vs_sweep.dat'
   namelist /mc_engine_nml/ n_particles_, n_equilibration_sweeps_, &
     n_production_sweeps_, production_period_, i_sweep_, restart_period_, &
     adjusting_period_ 
@@ -114,6 +116,7 @@ module mc_engine
     i_sweep_ = 0
     restart_period_ = 1000
     adjusting_period_ = 20
+    call open_energyfile
   end subroutine init
 
 
@@ -130,6 +133,7 @@ module mc_engine
     call freevlist()
     if (associated(particles_)) deallocate(particles_)
     write (*, *) 'End of program gbcyl.'
+    close(energy_unit_)
   end subroutine finalize
 
 
@@ -300,6 +304,7 @@ module mc_engine
     if (mod(i_sweep_, adjusting_period_) == 0) then
       call updateMaxValues(n_particles_, adjusting_period_)
     end if
+    if (mod(i_sweep_, production_period_) == 0) call write_energy
   end subroutine run_equilibration_tasks
 
 
@@ -312,9 +317,30 @@ module mc_engine
       radius = getRadius()
       height = getHeight()
       call writestate(particles_, n_particles_, radius, height)
+      call write_energy
     end if
   end subroutine run_production_tasks
 
 
+  
+  subroutine write_energy
+    implicit none
+    real(dp) :: e_tot
+    logical :: overlap
+    call total_energy(particles_, n_particles_, overlap, e_tot)
+    write(energy_unit_, *) i_sweep_, e_tot 
+  end subroutine write_energy
+
+
+
+  subroutine open_energyfile
+    implicit none
+    integer :: file_status
+    open(unit = energy_unit_, file = energy_file_, action = 'WRITE', &
+     & status = 'REPLACE', delim='QUOTE', iostat = file_status)
+    if (file_status /= 0) then
+      stop 'Could not open energy file for writing! Stopping.'
+    end if
+  end subroutine open_energyfile
 
 end module mc_engine
