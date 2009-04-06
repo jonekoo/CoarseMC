@@ -6,7 +6,8 @@ module io
 
   character(len = 15), private, save :: molecule_data_file_
   integer, private, save :: molecule_data_unit_
-  namelist /io_nml/ molecule_data_file_, molecule_data_unit_
+  logical, private, save :: debug_ = .false. 
+  namelist /io_nml/ molecule_data_file_, molecule_data_unit_, debug_
   private :: io_nml
 
 
@@ -289,7 +290,7 @@ module io
          stop 'Parameter read in error'
        endif
      end if
-       print '(A,A16,A,G13.6)','Read in parameter ',string,' value',x
+     if(debug_) print '(A,A16,A,G13.6)','Read in parameter ',string,' value',x
     enddo
     close(input)
   end subroutine ReadParams
