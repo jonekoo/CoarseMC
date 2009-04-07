@@ -13,7 +13,8 @@ dist_bin_SCRIPTS = rdf_average.sh \
                    show-non-numeric-lines.sh \
                    select.awk \
                    periodic_select.awk \
-                   volume_cyl.awk
+                   volume_cyl.awk \
+                   find_closest.awk
 
 orientation_parameter_SOURCES = nrtype.f90 utils.f90 particle.f90 \
 state_reader.f90 orientational_ordering.f90 orientation_parameter_wrapper.f90 \
