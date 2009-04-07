@@ -3,7 +3,8 @@ bin_PROGRAMS = orientation_parameter \
                tau1 \
                radial_distribution \
                density \
-               psi6
+               psi6 \
+               povmaker
 
 dist_bin_SCRIPTS = rdf_average.sh \
                    loop-script-over-args.sh \
@@ -50,6 +51,13 @@ psi6_SOURCES = nrtype.f90 \
                psi6_module.f90 \
                orientational_ordering.f90 \
                psi6.f90
+
+povmaker_SOURCES = nrtype.f90 \
+                   utils.f90 \
+                   particle.f90 \
+                   io.f90 \
+                   povize.f90 
+                   
 
 MODEXT = @MODEXT@
 
