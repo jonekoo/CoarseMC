@@ -13,7 +13,7 @@ module mc_sweep
   public :: save_state
   public :: load_state
   public :: updatemaxvalues
-
+  public :: pressure
 
 
   private 
@@ -252,5 +252,11 @@ module mc_sweep
   end subroutine changeLz
 
 
+
+  function pressure()
+    implicit none
+    real(dp) :: pressure
+    pressure = pressure_
+  end function pressure
 
 end module mc_sweep

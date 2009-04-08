@@ -12,10 +12,10 @@ module mc_engine
     particle_load_state => load_state
   use cylinder, only: initcylinder, getHeight, getRadius, &
     cylinder_save_state => save_state, &
-    cylinder_load_state => load_state
+    cylinder_load_state => load_state, volume
   use mc_sweep, only: mc_sweep_init => init, updatemaxvalues, sweep, &
     mc_sweep_save_state => save_state, &
-    mc_sweep_load_state => load_state
+    mc_sweep_load_state => load_state, pressure
   use verlet, only: initvlist, freevlist, &
     verlet_save_state => save_state, &
     verlet_load_state => load_state
@@ -304,7 +304,7 @@ module mc_engine
     if (mod(i_sweep_, adjusting_period_) == 0) then
       call updateMaxValues(n_particles_, adjusting_period_)
     end if
-    if (mod(i_sweep_, production_period_) == 0) call write_energy
+    if (mod(i_sweep_, production_period_) == 0) call write_thermodynamics
   end subroutine run_equilibration_tasks
 
 
@@ -317,19 +317,20 @@ module mc_engine
       radius = getRadius()
       height = getHeight()
       call writestate(particles_, n_particles_, radius, height)
-      call write_energy
+      call write_thermodynamics
     end if
   end subroutine run_production_tasks
 
 
   
-  subroutine write_energy
+  subroutine write_thermodynamics
     implicit none
     real(dp) :: e_tot
     logical :: overlap
     call total_energy(particles_, n_particles_, overlap, e_tot)
-    write(energy_unit_, *) i_sweep_, e_tot 
-  end subroutine write_energy
+    write(energy_unit_, *) i_sweep_, e_tot, volume(), &
+      e_tot + pressure()*volume() 
+  end subroutine write_thermodynamics
 
 
 
