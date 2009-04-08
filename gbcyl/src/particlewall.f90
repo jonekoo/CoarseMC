@@ -1,6 +1,6 @@
-!Jatkuvasti ja tasaisesti jakautuneista LJ-partikkeleista
-!koostuvan seinän ja LJ-partikkelin väliseen vuorovaikutukseen
-!liittyviä parametreja ja aliohjelmia.  
+!! Jatkuvasti ja tasaisesti jakautuneista LJ-partikkeleista
+!! koostuvan seinän ja LJ-partikkelin väliseen vuorovaikutukseen
+!! liittyviä parametreja ja aliohjelmia.  
 
 module particlewall
   use cylinder,only : getRadius
@@ -50,6 +50,37 @@ module particlewall
   
 
 contains 
+
+
+
+  !! Alustaa modulin arvolla i:
+  !! 1=random planar
+  !! 2=uniform alignment
+  !! 3=weak homeotropic
+  subroutine initptwall(i, strength)
+    implicit none
+    integer, intent(in) :: i
+    real(dp) :: strength
+    K_w_ = strength
+    select case(i)
+    case(1)
+      ua = .false.
+      alpha_A_ = 1.0
+      alpha_B_ = 1.0
+    case(2)
+      ua = .true.
+      alpha_A_ = 1.0
+      alpha_B_ = 1.0
+    case(3)
+      ua = .false.
+      alpha_A_ = 1.0
+      alpha_B_ = 0.0
+      K_w_ = 2*K_w_      
+    case default 
+      write (*,*) 'Virhe alustettaessa modulia particlewall.'
+      write (*,*) 'initialize(i) , i /= {1, 2, 3}'
+    end select    
+  end subroutine initptwall
 
 
 
@@ -142,34 +173,6 @@ contains
   end subroutine rArB
 
 
-  !Alustaa modulin arvolla i:
-  !1=random planar
-  !2=uniform alignment
-  !3=weak homeotropic
-  subroutine initptwall(i,strength)
-    implicit none
-    integer,intent(in) :: i
-    real(dp) :: strength
-    K_w_=strength
-    select case(i)
-    case(1)
-      ua=.false.
-      alpha_A_=1.0
-      alpha_B_=1.0
-    case(2)
-      ua=.true.
-      alpha_A_=1.0
-      alpha_B_=1.0
-    case(3)
-      ua=.false.
-      alpha_A_=1.0
-      alpha_B_=0.0
-      K_w_=2*K_w_      
-    case default 
-      write (*,*) 'Virhe alustettaessa modulia particlewall.'
-      write (*,*) 'initialize(i) , i/={1,2,3}'
-    end select    
-  end subroutine initptwall
 
   real(dp) function angular(particle)
     implicit none
