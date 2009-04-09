@@ -47,7 +47,7 @@ module mc_engine
   integer, parameter :: restart_unit_ = 13
   integer, parameter :: energy_unit_ = 14
   character(len=*), parameter :: restart_file_ = "restart.gbcyl"
-  character(len=*), parameter :: energy_file_ = 'energy_vs_sweep.dat'
+  character(len=*), parameter :: energy_file_ = 'thermodynamics.dat'
   namelist /mc_engine_nml/ n_particles_, n_equilibration_sweeps_, &
     n_production_sweeps_, production_period_, i_sweep_, restart_period_, &
     adjusting_period_ 
