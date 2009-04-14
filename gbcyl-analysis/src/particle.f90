@@ -16,7 +16,17 @@ module particle
   contains
   
 
+  !! Returns the position vector of the @p particle in cartesian coordinates  
+  !!
+  function posvector(p)
+  implicit none
+  real(dp), dimension(3) :: posvector
+  type(particledat), intent(in) :: p
+    posvector = (/p%x, p%y, p%z/)  
+  end function posvector
     
+
+
   !! Gives the components of the orientation vector in cylindrical coordinates
   !!
   !! :NOTE: It is not possible to call this routine with 
