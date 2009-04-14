@@ -3,6 +3,15 @@ module orientational_ordering
   use particle, only: particledat
   implicit none
 
+  public :: eigens
+  public :: orientation_parameter
+  public :: resulttype
+  public :: to_string
+
+  type resulttype
+    real(dp) :: p2
+    real(dp), dimension(3) :: director  
+  end type resulttype
   
   PRIVATE
 
@@ -10,11 +19,42 @@ module orientational_ordering
     module procedure eigens_dv
   end interface eigens
 
-  public :: eigens
-  public :: orientation_parameter
+  interface orientation_parameter
+    module procedure orientation_parameter, orientation_parameter_f
+  end interface orientation_parameter
+  
   
 
   contains 
+
+
+
+  function to_string(res)
+  implicit none
+  character(len=500) :: to_string 
+  type(resulttype), intent(in) :: res
+    write(to_string, *) res%p2, res%director
+  end function
+
+
+
+  function orientation_parameter_f(particles, n_particles)
+  implicit none
+  type(resulttype) :: orientation_parameter_f
+    intrinsic maxloc
+    intrinsic maxval
+    type(particledat), dimension(:), intent(in) :: particles
+    integer, intent(in) :: n_particles
+    integer, dimension(1) :: max_value_position
+    integer, parameter :: n_dimensions = 3
+    real(dp), dimension(3) :: values
+    real(dp), dimension(3, 3) :: vectors
+    call eigens_dv(particles, n_particles, values, vectors)
+    orientation_parameter_f%p2 = maxval(values)
+    max_value_position = maxloc(values)
+    orientation_parameter_f%director(1:3) = &
+      vectors(1:n_dimensions, max_value_position(1))
+  end function orientation_parameter_f
 
 
 
