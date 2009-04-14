@@ -2,81 +2,92 @@ module state_reader
   use nrtype, only: dp
   use particle, only: particledat
 
-  integer, parameter :: readunit = 5   
-
 
    
   contains
 
 
 
-  subroutine openFile(fileName)
+  subroutine open_read_unit(fileName, read_unit)
     implicit none
     character(len = *), intent(in) :: filename
+    integer, intent(in) :: read_unit
     integer :: ios
-    !! Koittaa avata annetun tiedoston
-    open(readunit, file = filename, status = 'old', iostat = ios)
+    open(read_unit, file = filename, status = 'old', iostat = ios)
     if (ios /= 0) then
-      write(*, *) 'Tiedoston ',filename,' avaaminen epäonnistui.'
-      write(*, *) 'Ohjelman suoritus keskeytyy.'
-      stop;
+      stop 'Opening of file failed.'
     end if
-  end subroutine openFile
+  end subroutine open_read_unit
 
 
+!!  subroutine read_configuration(particles, n_particles, radius, height, & 
+!!    iostatus)
+!  implicit none
+!  type(particledat), dimension(:), pointer :: particles
+!  integer, intent(out) :: n_particles
+!  real(dp), intent(out) :: radius, height
+!  integer, intent(out) :: iostatus
+!  integer :: read_unit = 5
+!    call read_configuration(particles, n_particles, radus, height, iostatus, &
+!      read_unit)
+!  end subroutine read_configuration
 
-  subroutine close_file
-    implicit none
-    close(readunit)
-  end subroutine close_file
 
-
-
-  subroutine read_configuration(particleArray, nParticles, R, Lz, iostatus)
-    implicit none
-    type(particledat), dimension(:), pointer :: particleArray
-    real(dp), intent(out) :: R, Lz
-    integer, intent(out) :: iostatus
-    integer, intent(out) :: nParticles
-    integer :: particleArraystat, helpStat, i
+  subroutine read_configuration(particles, n_particles, radius, height, &
+    iostatus, runit)
+  implicit none
+  type(particledat), dimension(:), pointer :: particles
+  integer, intent(out) :: n_particles
+  real(dp), intent(out) :: radius, height
+  integer, intent(out) :: iostatus
+  integer, intent(in), optional :: runit 
+    integer :: particlesstat, helpStat, i
     character(len = 3) :: charvar
     integer, dimension(:), allocatable :: help
     logical :: readOpened
-    R = 0.0
-    Lz = 0.0 
+    integer :: read_unit
+    if(PRESENT(runit)) then
+      read_unit = runit
+    else 
+      read_unit = 5
+    end if
+    radius = 0.0
+    height = 0.0 
     iostatus = 0
-    inquire(UNIT = readunit, OPENED = readOpened)
-    if (.not. readOpened) stop 'readunit not open'
-    read(readunit, *, IOSTAT = iostatus) charvar, R, charvar, Lz
-    read(readunit, *, IOSTAT = iostatus) charvar, nParticles
-    read(readunit, *, IOSTAT = iostatus) charvar
-    particleArraystat = 0
-    if (size(particleArray) /= nParticles) then
-      if (associated(particleArray)) deallocate(particleArray)
-      allocate(particleArray(nParticles), stat = particleArraystat)
+    inquire(UNIT = read_unit, OPENED = readOpened)
+    if (.not. readOpened) stop 'read_unit not open'
+    read(read_unit, *, IOSTAT = iostatus) charvar, radius, charvar, height
+    read(read_unit, *, IOSTAT = iostatus) charvar, n_particles
+    read(read_unit, *, IOSTAT = iostatus) charvar
+    particlesstat = 0
+    if (size(particles) /= n_particles) then
+      if (associated(particles)) deallocate(particles)
+      allocate(particles(n_particles), stat = particlesstat)
     end if
     helpStat = 0
-    allocate(help(nParticles), stat = helpStat)
-    if (particleArraystat /= 0 .or. helpStat /= 0 ) then
-      write(*, *) 'readstate: particleArray, help'
+    allocate(help(n_particles), stat = helpStat)
+    if (particlesstat /= 0 .or. helpStat /= 0 ) then
+      write(*, *) 'readstate: particles, help'
       stop;
     end if
-    read(readunit, *, IOSTAT = iostatus) particleArray(1:nParticles)%x
-    read(readunit, *, IOSTAT = iostatus) charvar
-    read(readunit, *, IOSTAT = iostatus) particleArray(1:nParticles)%y
-    read(readunit, *, IOSTAT = iostatus) charvar, particleArray(1:nParticles)%z
-    read(readunit, *, IOSTAT = iostatus) charvar
-    read(readunit, *, IOSTAT = iostatus) help(1:nParticles)
-    read(readunit, *, IOSTAT = iostatus) charvar
-    read(readunit, *, IOSTAT = iostatus) particleArray(1:nParticles)%ux
-    read(readunit, *, IOSTAT = iostatus) charvar, particleArray(1:nParticles)%uy
-    read(readunit, *, IOSTAT = iostatus) charvar, particleArray(1:nParticles)%uz
- 
-    do i=1,nParticles
+    read(read_unit, *, IOSTAT = iostatus) particles(1:n_particles)%x
+    read(read_unit, *, IOSTAT = iostatus) charvar
+    read(read_unit, *, IOSTAT = iostatus) particles(1:n_particles)%y
+    read(read_unit, *, IOSTAT = iostatus) charvar, &
+      particles(1:n_particles)%z
+    read(read_unit, *, IOSTAT = iostatus) charvar
+    read(read_unit, *, IOSTAT = iostatus) help(1:n_particles)
+    read(read_unit, *, IOSTAT = iostatus) charvar
+    read(read_unit, *, IOSTAT = iostatus) particles(1:n_particles)%ux
+    read(read_unit, *, IOSTAT = iostatus) charvar, &
+      particles(1:n_particles)%uy
+    read(read_unit, *, IOSTAT = iostatus) charvar, &
+      particles(1:n_particles)%uz
+    do i=1,n_particles
       if(help(i)==1) then
-        particleArray(i)%rod=.true.
+        particles(i)%rod=.true.
       else
-        particleArray(i)%rod=.false.
+        particles(i)%rod=.false.
       end if
     end do
     deallocate(help)
