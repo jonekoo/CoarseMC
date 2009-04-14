@@ -4,7 +4,8 @@ bin_PROGRAMS = orientation_parameter \
                radial_distribution \
                density \
                psi6 \
-               povmaker
+               povmaker \
+               particlehistogram
 
 dist_bin_SCRIPTS = rdf_average.sh \
                    loop-script-over-args.sh \
@@ -58,8 +59,20 @@ povmaker_SOURCES = nrtype.f90 \
                    utils.f90 \
                    particle.f90 \
                    io.f90 \
+                   state_reader.f90 \
                    povize.f90 
                    
+particlehistogram_SOURCES = nrtype.f90 \
+                            utils.f90 \
+                            particle.f90 \
+                            state_reader.f90 \
+                            histogram.f90 \
+                            orientational_ordering.f90 \
+                            particlehistogram.f90 \
+                            make_bin.f90 \
+                            bin_indices.f90 \
+                            rho.f90
+
 
 MODEXT = @MODEXT@
 

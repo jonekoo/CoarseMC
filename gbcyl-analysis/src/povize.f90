@@ -1,20 +1,14 @@
 program povize
-use io, only : readstate, povout
+use io, only : povout
+use state_reader
 use nrtype
 use particle, only : particledat
 implicit none
-character(len=50) :: buf
-character(len=40) :: file
-integer :: div
-real(dp) :: Rc,Lz
-type(particledat), dimension(:),pointer :: parray
-real(dp), dimension(3,3) :: vectors
-real(dp), dimension(3) :: diagonal
-
-  if (iargc()/= 1) stop 'Program needs argument [particlefile]'
-  call getarg(1,buf)
-  read(unit=buf, fmt=*) file
-  call readstate(file,parray,Rc,Lz) 
-  call povout(parray,Rc,Lz)
-  if(associated(parray)) deallocate(parray)
+real(dp) :: radius, height
+type(particledat), dimension(:), pointer :: particles
+  integer :: n_particles
+  integer :: iostat
+  call read_configuration(particles, n_particles, radius, height, iostat)
+  call povout(particles, radius, height)
+  if(associated(particles)) deallocate(particles)
 end program povize
