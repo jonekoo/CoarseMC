@@ -5,7 +5,7 @@ bin_PROGRAMS = orientation_parameter \
                density \
                psi6 \
                povmaker \
-               particlehistogram
+               particlehistogram 
 
 dist_bin_SCRIPTS = rdf_average.sh \
                    loop-script-over-args.sh \
@@ -16,7 +16,8 @@ dist_bin_SCRIPTS = rdf_average.sh \
                    periodic_select.awk \
                    volume_cyl.awk \
                    find_closest.awk \
-                   dots2commas.sh
+                   dots2commas.sh \
+                   block-by-column.sh
 
 orientation_parameter_SOURCES = nrtype.f90 utils.f90 particle.f90 \
 state_reader.f90 orientational_ordering.f90 orientation_parameter_wrapper.f90 \
