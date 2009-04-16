@@ -17,7 +17,8 @@ dist_bin_SCRIPTS = rdf_average.sh \
                    volume_cyl.awk \
                    find_closest.awk \
                    dots2commas.sh \
-                   block-by-column.sh
+                   every-xth-field.awk \
+                   pipe-columns.awk 
 
 orientation_parameter_SOURCES = nrtype.f90 utils.f90 particle.f90 \
 state_reader.f90 orientational_ordering.f90 orientation_parameter_wrapper.f90 \
