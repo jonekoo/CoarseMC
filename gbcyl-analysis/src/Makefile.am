@@ -29,9 +29,19 @@ state_reader.f90 orientational_ordering.f90 \
 cylindrical_orientation.f90 cylindrical_orientation_wrapper.f90 \
 cylindrical_orientation_tensor.f90
 
-tau1_SOURCES = nrtype.f90 nrutil.f90 mnbrak.f90 brent.f90 nr.f90 \
-orientational_ordering.f90 tau1.f90 tau1_module.f90 state_reader.f90 \
-tau1_program.f90 
+tau1_SOURCES = nrtype.f90 \
+               nrutil.f90 \
+               mnbrak.f90 \
+               brent.f90 \
+               nr.f90 \
+               orientational_ordering.f90 \
+               tau1.f90 \
+               tau1_negative.f90 \
+               utils.f90 \
+               particle.f90 \
+               tau1_module.f90 \
+               state_reader.f90 \
+               tau1_program.f90 
 
 radial_distribution_SOURCES = nrtype.f90 \
                               utils.f90 \
@@ -70,10 +80,16 @@ particlehistogram_SOURCES = nrtype.f90 \
                             state_reader.f90 \
                             histogram.f90 \
                             orientational_ordering.f90 \
+                            nr.f90 \
+                            tau1.f90 \
+                            tau1_negative.f90 \
+                            tau1_module.f90 \
+                            xfunc_module.f90 \
                             particlehistogram.f90 \
-                            make_bin.f90 \
-                            bin_indices.f90 \
-                            rho.f90
+                            nrutil.f90 \
+                            mnbrak.f90 \
+                            brent.f90 
+
 
 
 MODEXT = @MODEXT@
