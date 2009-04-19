@@ -7,6 +7,7 @@ module orientational_ordering
   public :: orientation_parameter
   public :: resulttype
   public :: to_string
+  public :: director
 
   type resulttype
     real(dp) :: p2
@@ -27,6 +28,13 @@ module orientational_ordering
 
   contains 
 
+
+  function director(orientation)
+  implicit none
+  real(dp), dimension(3) :: director
+  type(resulttype) :: orientation
+    director = orientation%director
+  end function director
 
 
   function to_string(res)
