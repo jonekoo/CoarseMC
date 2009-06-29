@@ -1,21 +1,33 @@
 
 # makefile to compile TestRunner.f90
 #
-# funit generated this file on Wed Feb 11 16:42:55 +0200 2009.
+# funit generated this file on Mon Jun 29 17:36:11 +0300 2009.
 
-OBJ=nrtype.o gayberne.o gayberne_fun.o TestRunner.o
+OBJ=nrtype.o pt.o particle.o box.o mtfort90.o gayberne.o cylinder.o utils.o pt_fun.o TestRunner.o
 
 all:testrunner
 
 testrunner: $(OBJ)
-	gfortran -Wall -std=f95 -pedantic -o TestRunner $(OBJ)
+	openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter -o TestRunner $(OBJ)
 
 gayberne.o: gayberne.f90 nrtype.o
-	(cd .; gfortran -Wall -std=f95 -pedantic  -c gayberne.f90)
-gayberne_fun.o: gayberne_fun.f90 gayberne.o nrtype.o
-	(cd .; gfortran -Wall -std=f95 -pedantic  -c gayberne_fun.f90)
+	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c gayberne.f90)
+pt_fun.o: pt_fun.f90 pt.o particle.o box.o nrtype.o mtfort90.o
+	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c pt_fun.f90)
+mtfort90.o: mtfort90.f90 
+	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c mtfort90.f90)
 nrtype.o: nrtype.f90 
-	(cd .; gfortran -Wall -std=f95 -pedantic  -c nrtype.f90)
-TestRunner.o: TestRunner.f90 gayberne_fun.o
-	(cd .; gfortran -Wall -std=f95 -pedantic  -c TestRunner.f90)
+	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c nrtype.f90)
+particle.o: particle.f90 nrtype.o gayberne.o mtfort90.o cylinder.o utils.o
+	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c particle.f90)
+utils.o: utils.f90 nrtype.o
+	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c utils.f90)
+cylinder.o: cylinder.f90 nrtype.o
+	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c cylinder.f90)
+box.o: box.f90 nrtype.o
+	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c box.f90)
+pt.o: pt.f90 nrtype.o particle.o box.o
+	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c pt.f90)
+TestRunner.o: TestRunner.f90 pt_fun.o
+	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c TestRunner.f90)
   

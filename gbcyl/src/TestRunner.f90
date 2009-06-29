@@ -1,19 +1,19 @@
 
 ! TestRunner.f90 - runs fUnit test suites
 !
-! funit generated this file on Wed Feb 11 16:42:55 +0200 2009.
+! funit generated this file on Mon Jun 29 17:36:11 +0300 2009.
 
 program TestRunner
 
-    use gayberne_fun
+    use pt_fun
   
   implicit none
 
   integer, dimension(1) :: numTests, numAsserts, numAssertsTested, numFailures
 
     write(*,*)
-  write(*,*) "gayberne test suite:"
-  call test_gayberne &
+  write(*,*) "pt test suite:"
+  call test_pt &
     ( numTests(1), numAsserts(1), numAssertsTested(1), numFailures(1) )
   write(*,*) "Passed", numAssertsTested(1), "of", numAsserts(1), &
              "possible asserts comprising", numTests(1)-numFailures(1), &
@@ -21,7 +21,7 @@ program TestRunner
   
   write(*,*)
   write(*,'(a)') "==========[ SUMMARY ]=========="
-      write(*,'(a10)',advance="no") " gayberne:"
+      write(*,'(a4)',advance="no") " pt:"
   if ( numFailures(1) == 0 ) then
     write(*,*) " passed"
   else
