@@ -5,6 +5,8 @@ module gayberne
   public :: init
   public :: potential
   public :: sigma
+  public :: sigma_0
+  public :: kappa_sigma
   public :: epsilon
   public :: save_state
   public :: load_state
@@ -24,17 +26,10 @@ module gayberne
   real(dp), save :: chi_epsilon_
   real(dp), save :: chi_sigma_
   real(dp), save :: chi_sigma_squared_
-  
-  real(dp), save :: overlap_cutoff_
 
   namelist /gbgb_nml/ kappa_sigma_, kappa_epsilon_, mu_, nu_, sigma_0_, &
-    epsilon_0_, chi_epsilon_, chi_sigma_, chi_sigma_squared_, &
-    overlap_cutoff_
+    & epsilon_0_, chi_epsilon_, chi_sigma_, chi_sigma_squared_
  
-  interface potential
-    module procedure potential
-    module procedure potential_wt_overlap
-  end interface
 
 
   contains
@@ -55,11 +50,10 @@ module gayberne
     nu_ = nu
     sigma_0_ = sigma_0
     epsilon_0_ = epsilon_0
-    overlap_cutoff_ = 0.6
     chi_epsilon_ = &
-      & (kappa_epsilon_**(1.0/mu_) - 1.0)/(kappa_epsilon_**(1.0/mu_) + 1.0)
+      & (kappa_epsilon_**(1.0_dp/mu_) - 1.0_dp)/(kappa_epsilon_**(1.0_dp/mu_) + 1.0_dp)
     chi_sigma_ = &
-      & (kappa_sigma_*kappa_sigma_ - 1.0)/(kappa_sigma_*kappa_sigma_ + 1.0)
+      & (kappa_sigma_*kappa_sigma_ - 1.0_dp)/(kappa_sigma_*kappa_sigma_ + 1.0_dp)
     chi_sigma_squared_ = chi_sigma_**2
   end subroutine init
 
@@ -81,40 +75,48 @@ module gayberne
 
 
 
-  !! Calculates the Gay-Berne potential for two particles 
-  !! particlei and particlej. If r_gb=rij-sig+sig0<=0.6 
-  !! routine returns with ovrlp=.true. 
-  !!
-  function potential_wt_overlap(ui, uj, rij, overlap) result(V)
-    implicit none
-    real(dp), dimension(3), intent(in) :: ui
-    real(dp), dimension(3), intent(in) :: uj
-    real(dp), dimension(3), intent(in) :: rij
-    logical, intent(out) :: overlap
-    real(dp) :: V 
-    if(separation(ui, uj, rij) < overlap_cutoff_) then
-      overlap = .true.
-      V = 0.0
-    else
-      V = potential(ui, uj, rij) 
-    end if    
-  end function potential_wt_overlap
-
-
-
   real(dp) function potential(ui, uj, rij)
     implicit none
     real(dp), dimension(3), intent(in) :: ui
     real(dp), dimension(3), intent(in) :: uj
     real(dp), dimension(3), intent(in) :: rij
     real(dp) :: r_gb, gb6
-    real(dp), dimension(3) :: urij
+    real(sp) :: single_precision
     r_gb = separation(ui, uj, rij)
-    gb6 = r_gb**(-6)
-    potential = gb6*(gb6-1.0)
-    urij = rij/sqrt(dot_product(rij, rij))
-    potential = 4*epsilon(ui, uj, urij)*potential
+    if(r_gb <= 1.0e-6_dp*tiny(single_precision)) then
+      potential = 0.5_dp*huge(potential)
+    else
+      gb6 = r_gb**(-6)
+      potential = gb6*(gb6-1.0_dp)
+      potential = 4.0_dp*epsilon(ui, uj, rij)*potential
+    end if
   end function
+
+
+
+  !! Calculates the Gay-Berne potential for two particles 
+  !! particlei and particlej. If r_gb=rij-sig+sig0<=0.6 
+  !! routine returns with ovrlp=.true. 
+  !!
+  !! :TODO: check if ovrlp is really needed and in which conditions.
+  !!
+  subroutine gbgbV(rij, ui, uj, gbV, ovrlp)
+    implicit none
+    real(dp), dimension(3), intent(in) :: rij, ui, uj
+    real(dp), intent(out) :: gbV
+    logical, intent(out) :: ovrlp
+    real(dp) :: r_gb, gb6
+    real(sp) :: single_precision
+    r_gb = separation(ui, uj, rij)
+    if(r_gb <= 1.0e-6_dp*tiny(single_precision)) then
+      ovrlp = .true.
+      gbV = 0.5_dp*huge(gbV)
+    else
+      gb6 = r_gb**(-6)
+      gbV = gb6*(gb6-1.0_dp)
+      gbV = 4.0_dp*epsilon(ui, uj, rij)*gbV
+    end if
+  end subroutine gbgbV
 
 
 
@@ -157,8 +159,8 @@ module gayberne
     idssq = ids*ids
     jdssq = jds*jds
     idjsq = idj*idj
-    sigma_help = 1-chi_sigma_*(idssq+jdssq-2*chi_sigma_*ids*jds*idj)/ &
-      & (1-chi_sigma_squared_ * idjsq)
+    sigma_help = 1.0_dp-chi_sigma_*(idssq+jdssq-2.0_dp*chi_sigma_*ids*jds*idj)/ &
+      & (1.0_dp-chi_sigma_squared_ * idjsq)
     sigma_help = sigma_0_/sqrt(sigma_help)
   end function sigma_help
 
@@ -185,7 +187,7 @@ module gayberne
     implicit none
     intrinsic sqrt
     real(dp), intent(in) :: idj
-    ep = 1.0/sqrt(1-chi_sigma_squared_*idj**2);
+    ep = 1.0_dp/sqrt(1.0_dp-chi_sigma_squared_*idj**2);
   end function ep
 
 
@@ -199,5 +201,17 @@ module gayberne
   end function epp
 
 
-      
+
+  function sigma_0()
+    real(dp) :: sigma_0
+    sigma_0 = sigma_0_
+  end function sigma_0
+  
+
+
+  function kappa_sigma()
+    real(dp) :: kappa_sigma
+    kappa_sigma = kappa_sigma_
+  end function kappa_sigma    
+
 end module gayberne
