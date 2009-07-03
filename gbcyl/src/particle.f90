@@ -66,6 +66,7 @@ module particle
   end subroutine write_module_state
 
 
+
   !! :TODO: put this somewhere else. Problem is that you need to initialize the potential module to use this. 
   !! 
   subroutine pairV(particlei, particlej, potE, overlap)
@@ -73,7 +74,7 @@ module particle
     type(particledat), intent(in) :: particlei, particlej
     real(dp), intent(out) :: potE
     logical, intent(out) :: overlap
-    real(dp),dimension(3) :: rij,ui,uj
+    real(dp),dimension(3) :: rij, ui, uj
     potE = 0.0_dp
     !if(.not. (particlei%rod .and. particlej%rod)) return;
     call differences(particlei, particlej, rij(1), rij(2), rij(3))
