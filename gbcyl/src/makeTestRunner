@@ -1,9 +1,9 @@
 
 # makefile to compile TestRunner.f90
 #
-# funit generated this file on Mon Jun 29 17:36:11 +0300 2009.
+# funit generated this file on Fri Jul 03 16:13:49 +0300 2009.
 
-OBJ=nrtype.o pt.o particle.o box.o mtfort90.o gayberne.o cylinder.o utils.o pt_fun.o TestRunner.o
+OBJ=nrtype.o gayberne.o pt.o particle.o box.o mtfort90.o mpi.o cylinder.o utils.o gayberne_fun.o pt_fun.o TestRunner.o
 
 all:testrunner
 
@@ -12,7 +12,9 @@ testrunner: $(OBJ)
 
 gayberne.o: gayberne.f90 nrtype.o
 	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c gayberne.f90)
-pt_fun.o: pt_fun.f90 pt.o particle.o box.o nrtype.o mtfort90.o
+gayberne_fun.o: gayberne_fun.f90 gayberne.o nrtype.o
+	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c gayberne_fun.f90)
+pt_fun.o: pt_fun.f90 pt.o particle.o box.o nrtype.o mtfort90.o mpi.o gayberne.o
 	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c pt_fun.f90)
 mtfort90.o: mtfort90.f90 
 	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c mtfort90.f90)
@@ -26,8 +28,10 @@ cylinder.o: cylinder.f90 nrtype.o
 	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c cylinder.f90)
 box.o: box.f90 nrtype.o
 	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c box.f90)
-pt.o: pt.f90 nrtype.o particle.o box.o
+pt.o: pt.f90 nrtype.o mpi.o particle.o box.o mtfort90.o
 	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c pt.f90)
-TestRunner.o: TestRunner.f90 pt_fun.o
+mpi.o: mpi.f90 
+	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c mpi.f90)
+TestRunner.o: TestRunner.f90 gayberne_fun.o pt_fun.o
 	(cd .; openmpif90 -Wall -std=f95 -pedantic -Wconversion -Wunused-parameter  -c TestRunner.f90)
   
