@@ -38,12 +38,13 @@ module particle
 
   function new_particle()
     type(particledat) :: new_particle
-    new_particle%x = 0.0_dp
-    new_particle%y = 0.0_dp
-    new_particle%z = 0.0_dp
-    new_particle%ux = 0.0_dp
-    new_particle%uy = 0.0_dp
-    new_particle%uz = 0.0_dp
+    new_particle%x = 0._dp
+    new_particle%y = 0._dp
+    new_particle%z = 0._dp
+    new_particle%ux = 0._dp
+    new_particle%uy = 0._dp
+    new_particle%uz = 1._dp
+    new_particle%rod = .true.
   end function new_particle
 
 
@@ -65,7 +66,8 @@ module particle
   end subroutine write_module_state
 
 
-
+  !! :TODO: put this somewhere else. Problem is that you need to initialize the potential module to use this. 
+  !! 
   subroutine pairV(particlei, particlej, potE, overlap)
     implicit none
     type(particledat), intent(in) :: particlei, particlej
@@ -259,8 +261,36 @@ module particle
 
 
 
-  include 'make_tconf.f90'
-  include 'make_sidebyside.f90'
+  !! Makes a t-configuration of particles.
+  !! Comment: Let's not make box here because we may want different kind of
+  !! boxes with the t-configuration inside. 
+  !! 
+  subroutine make_tconf(particles, n_particles)
+  implicit none
+  type(particledat), dimension(:), intent(inout) :: particles
+  integer, intent(inout) :: n_particles
+    !! Put one particle on the center of the box, parallel to z-axis
+    particles(1) = new_particle()
+    particles(2) = new_particle()
+    !! Put other particle above that so that they form a t-configuration
+    particles(2)%z = kappa_sigma()/2.0_dp + sigma_0()/2.0_dp
+    particles(2)%ux = 1.0_dp
+    particles(2)%uz = 0.0_dp
+    n_particles = 2
+  end subroutine
+  
+
+
+  subroutine make_sidebyside(particles, n_particles)
+  implicit none
+  type(particledat), dimension(:), intent(inout) :: particles
+  integer, intent(inout) :: n_particles
+    particles(1) = new_particle()
+    particles(2) = new_particle()
+    particles(1)%x = -0.5_dp*sigma_0()
+    particles(2)%x = 0.5_dp*sigma_0()
+    n_particles = 2
+  end subroutine make_sidebyside
   
 end module particle
 
