@@ -3,38 +3,63 @@
 
 module particle
   use nrtype
-  use gayberne, gb_save_state => save_state, gb_load_state => load_state
-  use mtmod, only: grnd
+  use mtmod
+  use utils
+  use class_parameterizer
+  use class_parameter_writer
   implicit none
+  private
+
+  public :: particledat
+  public :: initparticle
+  public :: new_particle
+  public :: create_particle
+  public :: write_particle
+  public :: position
+  public :: orientation
+  public :: particle_write_parameters
+  public :: getmaxmoves
+  public :: move
+  public :: setmaxmoves
+  public :: set_position
   
   type particledat
      real(dp) :: x, y, z, ux, uy, uz
      logical :: rod
   end type particledat
 
-  real(dp), private, save :: dthetamax, maxdr
-  namelist /particle_nml/ dthetamax, maxdr
-  private :: particle_nml
+  real(dp), save :: dthetamax = -1._dp
+  real(dp), save :: maxdr = -1._dp
+  character(len = *), parameter :: type_id_ = 'gb'
 
-
+  interface initparticle
+    module procedure init_particle_old, init_particle_parameterizer
+  end interface
 
   contains
 
-  subroutine save_state(write_unit)
+  subroutine init_particle_parameterizer(reader)
+    type(parameterizer), intent(in) :: reader
+    call get_parameter(reader, 'max_translation', maxdr)
+    call get_parameter(reader, 'max_rotation', dthetamax)
+    if(maxdr < 0._dp) stop 'No max_translation given. Stopping.'
+    if(dthetamax < 0._dp) stop 'No max_rotation given. Stopping.'
+  end subroutine
+
+  subroutine init_particle_old(maxTranslation, maxRotation)
     implicit none
-    integer, intent(in) :: write_unit
-    write(write_unit, NML = particle_nml)
-  end subroutine save_state
-  
+    real(dp), intent(in) :: maxTranslation 
+    real(dp), intent(in) :: maxRotation
+    dthetamax = maxRotation
+    maxdr = maxTranslation
+  end subroutine
 
-
-  subroutine load_state(read_unit)
-    implicit none
-    integer, intent(in) :: read_unit
-    read(read_unit, NML = particle_nml)
-  end subroutine load_state
-
-
+  subroutine particle_write_parameters(writer)
+    type(parameter_writer), intent(in) :: writer
+    call write_comment(writer, 'Particle parameters')
+    call write_parameter(writer, 'max_translation', maxdr)
+    call write_parameter(writer, 'max_rotation', dthetamax)    
+  end subroutine
 
   function new_particle()
     type(particledat) :: new_particle
@@ -45,52 +70,51 @@ module particle
     new_particle%uy = 0._dp
     new_particle%uz = 1._dp
     new_particle%rod = .true.
-  end function new_particle
+  end function
 
+  function create_particle(particle_string) result(pp)
+    type(particledat) :: pp
+    character(len = *), intent(in) :: particle_string
+    character(len = 3) :: type_id
+    read(particle_string, *) type_id
+    if ('gb' == type_id) then
+      read(particle_string, *) type_id, pp%x, pp%y, pp%z, pp%ux, pp%uy, pp%uz
+      pp%rod = .true.
+    else
+      stop 'Error: Could not read particle from string. Stopping.'
+    end if
+  end function
 
+  subroutine write_particle(write_unit, a_particle)
+    integer, intent(in) :: write_unit
+    type(particledat), intent(in) :: a_particle
+    write(*,*) '5' // fmt_char_dp()
+    write(write_unit, '(A, 6' // fmt_char_dp() // ')', advance='no') type_id_, a_particle%x, &
+      a_particle%y, a_particle%z, a_particle%ux, a_particle%uy, a_particle%uz 
+  end subroutine
 
-  subroutine initParticle(maxTranslation, maxRotation)
-    implicit none
-    real(dp), intent(in) :: maxTranslation 
-    real(dp), intent(in) :: maxRotation
-    dthetamax = maxRotation
-    maxdr = maxTranslation
-  end subroutine initParticle
-
-
-
-  subroutine write_module_state(unit)
-    implicit none    
-    integer, intent(in) :: unit
-    write(unit, *) maxdr, dthetamax
-  end subroutine write_module_state
-
-
-
-  !! :TODO: put this somewhere else. Problem is that you need to initialize the potential module to use this. 
-  !! 
-  subroutine pairV(particlei, particlej, potE, overlap)
-    implicit none
-    type(particledat), intent(in) :: particlei, particlej
-    real(dp), intent(out) :: potE
-    logical, intent(out) :: overlap
-    real(dp),dimension(3) :: rij, ui, uj
-    potE = 0.0_dp
-    !if(.not. (particlei%rod .and. particlej%rod)) return;
-    call differences(particlei, particlej, rij(1), rij(2), rij(3))
-    ui(1)=particlei%ux
-    ui(2)=particlei%uy
-    ui(3)=particlei%uz
-    uj(1)=particlej%ux
-    uj(2)=particlej%uy
-    uj(3)=particlej%uz
-    potE = potential(ui, uj, rij)
-    overlap = .false. 
-  end subroutine pairV
-
-
+  function position(a_particle)
+    real(dp), dimension(3) :: position
+    type(particledat), intent(in) :: a_particle
+    position = (/a_particle%x, a_particle%y, a_particle%z/)
+  end function
   
-  subroutine move(oldp,newp)
+  function orientation(a_particle) 
+    real(dp), dimension(3) :: orientation
+    type(particledat), intent(in) :: a_particle
+    orientation = (/a_particle%ux, a_particle%uy, a_particle%uz/)
+  end function 
+
+  subroutine set_position(a_particle, vec)
+    implicit none
+    type(particledat), intent(inout) :: a_particle
+    real(dp), dimension(3), intent(in) :: vec
+    a_particle%x = vec(1)
+    a_particle%y = vec(2)
+    a_particle%z = vec(3)
+  end subroutine
+
+  subroutine move(oldp, newp)
     implicit none
     type(particledat), intent(in) :: oldp
     type(particledat), intent(out) :: newp
@@ -99,199 +123,59 @@ module particle
     if (oldp%rod) then
       call rotate(oldp%ux,oldp%uy,oldp%uz,newp%ux,newp%uy,newp%uz)
     end if
-  end subroutine move
+  end subroutine
   
-
- 
-  subroutine transmove(xo,yo,zo,xn,yn,zn)
-    use cylinder, only : getHeight
+  subroutine transmove(xo, yo, zo, xn, yn, zn)
     implicit none
     real(dp), intent(in) :: xo,yo,zo
     real(dp), intent(out) :: xn,yn,zn
-    real(dp) :: Lz
-    xn = xo + (2.0_dp*grnd()-1.0_dp)*maxdr;
-    yn = yo + (2.0_dp*grnd()-1.0_dp)*maxdr;
-    zn = zo + (2.0_dp*grnd()-1.0_dp)*maxdr;
-    Lz=getHeight()
-    zn = zn - anint(zn/Lz)*Lz;
-  end subroutine transmove
+    real(dp) :: max_1d 
+    max_1d = maxdr/sqrt(3._dp)
+    xn = xo + (2.0_dp*grnd()-1.0_dp)*max_1d
+    yn = yo + (2.0_dp*grnd()-1.0_dp)*max_1d
+    zn = zo + (2.0_dp*grnd()-1.0_dp)*max_1d
+  end subroutine
 
-
-
-    pure subroutine differences(particlei,particlej,dx,dy,dz)
-      use cylinder
-      implicit none
-      type(particledat),intent(in) :: particlei, particlej
-      real(dp), intent(out):: dx, dy, dz
-      real(dp) :: Lz
-      !Juho Lintuvuori:
-      !Kahden partikkelin koordinaattien erotukset
-      dx = particlei%x - particlej%x;
-      dy = particlei%y - particlej%y;
-      dz = particlei%z - particlej%z;
-      Lz = getHeight()
-      !Perioidiset reunaehdot
-      dz = dz - anint(dz/Lz)*Lz;
-    end subroutine differences
-
-
-
-    !Funktio, joka laskee kahden partikkelin etäisyyden
-    !toisistaan
-    pure function rij(particlei,particlej)
-      implicit none
-      type(particledat), intent(in) :: particlei,particlej
-      real(dp) :: rij
-      real(dp) :: dx,dy,dz,rijsq
-      call differences(particlei,particlej,dx,dy,dz)      
-      rijsq=dx*dx+dy*dy+dz*dz;
-      rij=sqrt(rijsq) 
-    end function rij
-
-
-
-    !Funktio joka laskee partikkelien orientaatiovektorien
-    !pistetulon
-    real(dp) pure function idotj(particlei, particlej)
-      implicit none
-      type(particledat), pointer :: particlei,particlej
-      idotj = particlei%ux*particlej%ux + particlei%uy*particlej%uy + &
-            & particlei%uz*particlej%uz
-    end function idotj
-  
-
-
-  !yksikkövektorin välisen pistetulon
-  subroutine idotsjdots(particlei, particlej, idots, jdots)
-    implicit none
-    type(particledat),intent(in) :: particlei,particlej
-    real(dp) :: dx,dy,dz,r,sx,sy,sz,idots,jdots
-    call differences(particlei,particlej,dx,dy,dz)
-    r = sqrt(dx*dx+dy*dy+dz*dz)
-    sx = dx/r;
-    sy = dy/r;
-    sz = dz/r;
-    idots = particlei%ux*sx + particlei%uy*sy + particlei%uz*sz;
-    jdots = particlej%ux*sx + particlej%uy*sy + particlej%uz*sz;
-  end subroutine idotsjdots
-
-
-
-    !Palauttaa partikkelin orientaatiovektorin komponentit
-    !sylinterikoordinaatistossa. 
-    subroutine unitvec(particle, uro, utheta, uz)
-      use utils
-      implicit none
-      intrinsic atan2
-      type(particledat), intent(in) :: particle
-      real(dp), intent(out) :: uro,utheta,uz
-      real(dp) :: nx,ny,nz,uxn,uyn,uzn,theta
-      theta = -atan2(particle%y, particle%x)
-      nx=0.0_dp
-      ny=0.0_dp
-      nz=1.0_dp
-      call xvec2(particle%ux, particle%uy, particle%uz, nx, ny, nz, &
-               & theta, uxn, uyn, uzn)
-      uro=uxn
-      utheta=uyn
-      uz=uzn
-    end subroutine unitvec
-
-
+  !Palauttaa partikkelin orientaatiovektorin komponentit
+  !sylinterikoordinaatistossa. 
+  subroutine unitvec(particle, uro, utheta, uz)
+    intrinsic atan2
+    type(particledat), intent(in) :: particle
+    real(dp), intent(out) :: uro,utheta,uz
+    real(dp) :: nx, ny, nz, uxn, uyn, uzn, theta
+    theta = -atan2(particle%y, particle%x)
+    nx = 0.0_dp
+    ny = 0.0_dp
+    nz = 1.0_dp
+    call xvec2(particle%ux, particle%uy, particle%uz, nx, ny, nz, theta, &
+      uxn, uyn, uzn)
+    uro = uxn
+    utheta = uyn
+    uz = uzn
+  end subroutine
     
-  !Kierto:
   subroutine rotate(uxo, uyo, uzo, uxn, uyn, uzn)
-    use utils, only : xvec2
-    implicit none
     real(dp) :: uxo,uyo,uzo
     real(dp) :: uxn,uyn,uzn
-    real(dp) :: theta,nx,ny,nz
-    call nvec(nx,ny,nz);
-    call rotangle(dthetamax,theta);
-    call XVEC2(uxo,uyo,uzo,nx,ny,nz,theta,uxn,uyn,uzn)
-  end subroutine rotate    
-
-
-
-  subroutine rotangle(dthetamax,theta)
-    implicit none
-    double precision,intent(in) :: dthetamax
-    double precision,intent(out) :: theta
-    theta=(2.0_dp*grnd()-1.0_dp)*dthetamax;
-  end subroutine rotangle
-
-
-
-  subroutine nvec(nx,ny,nz)
-    ! Aliohjelma satunnaisen yksikkÃ¶vektorin muodostamista varten
-    ! Understanding Mol. Sim. 2nd Ed.  Frenkel, Smit
-    ! s.  578
-    implicit none
-    double precision, intent(out) :: nx, ny, nz
-    double precision :: l, u1, u2, s
-    l=0.0_dp;
-    do
-       u1 = 1.0_dp-2.0_dp*grnd();
-       u2 = 1.0_dp-2.0_dp*grnd();
-       l = u1*u1+u2*u2;
-       if(l <= 1.0_dp) exit;
-    end do
-    s = 2.0_dp*sqrt(1.0_dp-l);
-    nx = u1*s;
-    ny = u2*s;
-    nz = 1.0_dp-2.0_dp*l;
-  end subroutine nvec
-
-
+    real(dp) :: theta, nx, ny, nz
+    call nvec(nx, ny, nz)
+    theta = (2._dp * grnd() - 1._dp) * dthetamax
+    call XVEC2(uxo, uyo, uzo, nx, ny, nz, theta, uxn, uyn, uzn)
+  end subroutine
 
   subroutine setmaxmoves(distance, angle)
     implicit none
-    real(dp) :: distance,angle
-    maxdr = distance
+    real(dp) :: distance, angle
+    maxdr = distance/sqrt(3._dp)
     dthetamax = angle
-  end subroutine setmaxmoves
+  end subroutine
 
-
-
-  subroutine getMaxMoves(distance, angle)
+  subroutine getmaxmoves(distance, angle)
     implicit none
-    real(dp), intent(out) :: distance,angle
+    real(dp), intent(out) :: distance, angle
     distance = maxdr
     angle = dthetamax
-  end subroutine getMaxMoves
-
-
-
-  !! Makes a t-configuration of particles.
-  !! Comment: Let's not make box here because we may want different kind of
-  !! boxes with the t-configuration inside. 
-  !! 
-  subroutine make_tconf(particles, n_particles)
-  implicit none
-  type(particledat), dimension(:), intent(inout) :: particles
-  integer, intent(inout) :: n_particles
-    !! Put one particle on the center of the box, parallel to z-axis
-    particles(1) = new_particle()
-    particles(2) = new_particle()
-    !! Put other particle above that so that they form a t-configuration
-    particles(2)%z = kappa_sigma()/2.0_dp + sigma_0()/2.0_dp
-    particles(2)%ux = 1.0_dp
-    particles(2)%uz = 0.0_dp
-    n_particles = 2
-  end subroutine
-  
-
-
-  subroutine make_sidebyside(particles, n_particles)
-  implicit none
-  type(particledat), dimension(:), intent(inout) :: particles
-  integer, intent(inout) :: n_particles
-    particles(1) = new_particle()
-    particles(2) = new_particle()
-    particles(1)%x = -0.5_dp*sigma_0()
-    particles(2)%x = 0.5_dp*sigma_0()
-    n_particles = 2
-  end subroutine make_sidebyside
+  end subroutine 
   
 end module particle
 
