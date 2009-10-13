@@ -88,7 +88,6 @@ module particle
   subroutine write_particle(write_unit, a_particle)
     integer, intent(in) :: write_unit
     type(particledat), intent(in) :: a_particle
-    write(*,*) '5' // fmt_char_dp()
     write(write_unit, '(A, 6' // fmt_char_dp() // ')', advance='no') type_id_, a_particle%x, &
       a_particle%y, a_particle%z, a_particle%ux, a_particle%uy, a_particle%uz 
   end subroutine
