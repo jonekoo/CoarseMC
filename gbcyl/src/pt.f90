@@ -5,14 +5,13 @@ module pt
   use class_poly_box
   use mtmod
   implicit none
+  private
 
   public :: pt_init
   public :: pt_exchange
   public :: pt_move
   public :: pt_finalize
   public :: pt_temperature
-
-  private
 
   integer, save :: dp_type
   integer, save :: particletype
