@@ -1,7 +1,7 @@
 ! gayberne_fun.f90 - a unit test suite for gayberne.f90
 !
 ! funit generated this file from gayberne.fun
-! at Wed Feb 11 16:42:55 +0200 2009
+! at Tue Sep 22 18:04:03 +0300 2009
 
 module gayberne_fun
 
@@ -29,37 +29,40 @@ module gayberne_fun
  subroutine zero_at_cross_contact
 
   use nrtype, only: dp
-  real(dp) :: kappa_sigma = 4.4
-  real(dp) :: kappa_epsilon = 20.0
-  real(dp) :: mu = 1.235
-  real(dp) :: nu = 1.6546
-  real(dp) :: sigma_0 = 1.234
-  real(dp) :: epsilon_0 = 1.2798
-  real(dp), dimension(3) :: ui = (/1.0_dp, 0.0_dp, 0.0_dp/)
-  real(dp), dimension(3) :: uj = (/0.0_dp, 1.0_dp, 0.0_dp/)
+  real(dp) :: kappa_sigma = 4.4_dp
+  real(dp) :: kappa_epsilon = 20._dp
+  real(dp) :: mu = 1.235_dp
+  real(dp) :: nu = 1.6546_dp
+  real(dp) :: sigma_0 = 1.234_dp
+  real(dp) :: epsilon_0 = 1.2798_dp
+  real(dp), dimension(3) :: ui = (/1._dp, 0._dp, 0._dp/)
+  real(dp), dimension(3) :: uj = (/0._dp, 1._dp, 0._dp/)
   real(dp), dimension(3) :: rij
+  real(dp) :: e_gb
+  logical :: overlap
   rij = (/0.0_dp, 0.0_dp, sigma_0/)
   call init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
+  call potential(ui, uj, rij, e_gb, overlap)
   ! Assert_Real_Equal assertion
   numAsserts = numAsserts + 1
   if (noAssertFailed) then
-    if (.not.( (0.0_dp &
-        +2*spacing(real(0.0_dp)) ) &
+    if (.not.( (0._dp &
+        +2*spacing(real(0._dp)) ) &
         .ge. &
-        (potential(ui, uj, rij)) &
+        (e_gb) &
             .and. &
-     (0.0_dp &
-      -2*spacing(real(0.0_dp)) ) &
+     (0._dp &
+      -2*spacing(real(0._dp)) ) &
       .le. &
-       (potential(ui, uj, rij)) )) then
+       (e_gb) )) then
       print *, " *Assert_Real_Equal failed* in test zero_at_cross_contact &
-              &[gayberne.fun:18]"
-      print *, "  ", "potential(ui, uj, rij) (", &
- potential(ui, uj, rij), &
+              &[gayberne.fun:21]"
+      print *, "  ", "e_gb (", &
+ e_gb, &
   ") is not", &
- 0.0_dp,&
+ 0._dp,&
  "within", &
-  2*spacing(real(0.0_dp))
+  2*spacing(real(0._dp))
       print *, ""
       noAssertFailed = .false.
       numFailures    = numFailures + 1
@@ -67,6 +70,21 @@ module gayberne_fun
       numAssertsTested = numAssertsTested + 1
     endif
   endif
+  ! Assert_False assertion
+  numAsserts = numAsserts + 1
+  if (noAssertFailed) then
+    if (overlap) then
+      print *, " *Assert_False failed* in test zero_at_cross_contact &
+              &[gayberne.fun:22]"
+      print *, "  ", "overlap is not false"
+      print *, ""
+      noAssertFailed = .false.
+      numFailures    = numFailures + 1
+    else
+      numAssertsTested = numAssertsTested + 1
+    endif
+  endif
+!  assert_real_equal(0._dp, potential(ui, uj, rij))
 
   numTests = numTests + 1
 
@@ -78,16 +96,16 @@ module gayberne_fun
  subroutine kappa_sigma_defined
 
   use nrtype, only: dp
-  real(dp) :: kappa_sigma = 4.4
-  real(dp) :: kappa_epsilon = 20.0
-  real(dp) :: mu = 5.235
-  real(dp) :: nu = 3.6546
-  real(dp) :: sigma_0 = 1.234
-  real(dp) :: epsilon_0 = 1.2798
-  real(dp), dimension(3) :: ui = (/1.0_dp, 0.0_dp, 0.0_dp/)
+  real(dp) :: kappa_sigma = 4.4_dp
+  real(dp) :: kappa_epsilon = 20._dp
+  real(dp) :: mu = 5.235_dp
+  real(dp) :: nu = 3.6546_dp
+  real(dp) :: sigma_0 = 1.234_dp
+  real(dp) :: epsilon_0 = 1.2798_dp
+  real(dp), dimension(3) :: ui = (/1._dp, 0._dp, 0._dp/)
   real(dp), dimension(3) :: uj 
   real(dp), dimension(3) :: urij_ee
-  real(dp), dimension(3) :: urij_ss = (/0.0_dp, 1.0_dp, 0.0_dp/) 
+  real(dp), dimension(3) :: urij_ss = (/0._dp, 1._dp, 0._dp/) 
   uj = ui 
   urij_ee = ui
   call init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
@@ -104,7 +122,7 @@ module gayberne_fun
       .le. &
        (sigma(ui, uj, urij_ee)/sigma(ui, uj, urij_ss)) )) then
       print *, " *Assert_Real_Equal failed* in test kappa_sigma_defined &
-              &[gayberne.fun:38]"
+              &[gayberne.fun:43]"
       print *, "  ", "sigma(ui, uj, urij_ee)/sigma(ui, uj, urij_ss) (", &
  sigma(ui, uj, urij_ee)/sigma(ui, uj, urij_ss), &
   ") is not", &
@@ -129,16 +147,16 @@ module gayberne_fun
  subroutine kappa_epsilon_defined
 
   use nrtype, only: dp
-  real(dp) :: kappa_sigma = 4.4
-  real(dp) :: kappa_epsilon = 20.0
-  real(dp) :: mu = 6.235
-  real(dp) :: nu = 23.6546
-  real(dp) :: sigma_0 = 1.234
-  real(dp) :: epsilon_0 = 1.2798
-  real(dp), dimension(3) :: ui = (/1.0_dp, 0.0_dp, 0.0_dp/)
+  real(dp) :: kappa_sigma = 4.4_dp
+  real(dp) :: kappa_epsilon = 20._dp
+  real(dp) :: mu = 6.235_dp
+  real(dp) :: nu = 23.6546_dp
+  real(dp) :: sigma_0 = 1.234_dp
+  real(dp) :: epsilon_0 = 1.2798_dp
+  real(dp), dimension(3) :: ui = (/1._dp, 0._dp, 0._dp/)
   real(dp), dimension(3) :: uj 
   real(dp), dimension(3) :: urij_ee
-  real(dp), dimension(3) :: urij_ss = (/0.0_dp, 1.0_dp, 0.0_dp/) 
+  real(dp), dimension(3) :: urij_ss = (/0._dp, 1._dp, 0._dp/) 
   uj = ui 
   urij_ee = ui
   call init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
@@ -155,7 +173,7 @@ module gayberne_fun
       .le. &
        (epsilon(ui, uj, urij_ss)/epsilon(ui, uj, urij_ee)) )) then
       print *, " *Assert_Real_Equal failed* in test kappa_epsilon_defined &
-              &[gayberne.fun:58]"
+              &[gayberne.fun:63]"
       print *, "  ", "epsilon(ui, uj, urij_ss)/epsilon(ui, uj, urij_ee) (", &
  epsilon(ui, uj, urij_ss)/epsilon(ui, uj, urij_ee), &
   ") is not", &
@@ -185,34 +203,51 @@ module gayberne_fun
   real(dp) :: lj_potential
   real(dp) :: lj_6
   real(dp), dimension(3) :: rij 
-  real(dp), dimension(3) :: ui = (/1.0, 0.0, 0.0/)
-  real(dp), dimension(3) :: uj = (/0.0, 1.0, 0.0/)
+  real(dp), dimension(3) :: ui = (/1._dp, 0._dp, 0._dp/)
+  real(dp), dimension(3) :: uj = (/0._dp, 1._dp, 0._dp/)
   real(dp) :: r_absolute
-  r_absolute = sigma_0 + 1.0
-  rij = (/-r_absolute, 0.0_dp, 0.0_dp/)
-  lj_6 = (sigma_0/r_absolute)**(6)
-  lj_potential = 4*epsilon_0*lj_6*(lj_6-1.0)
-  call init(1.0_dp, 1.0_dp, 6.234_dp, 2.84687_dp, sigma_0, epsilon_0)
+  real(dp) :: e_gb
+  logical :: overlap
+  r_absolute = sigma_0 + 1._dp
+  rij = (/-r_absolute, 0._dp, 0._dp/)
+  lj_6 = (sigma_0 / r_absolute)**6
+  lj_potential = 4._dp * epsilon_0 * lj_6 * (lj_6 - 1._dp)
+  call init(1._dp, 1._dp, 6.234_dp, 2.84687_dp, sigma_0, epsilon_0)
+  call potential(ui, uj, rij, e_gb, overlap)
   ! Assert_Real_Equal assertion
   numAsserts = numAsserts + 1
   if (noAssertFailed) then
     if (.not.( (lj_potential &
         +2*spacing(real(lj_potential)) ) &
         .ge. &
-        (potential(ui, uj, rij)) &
+        (e_gb) &
             .and. &
      (lj_potential &
       -2*spacing(real(lj_potential)) ) &
       .le. &
-       (potential(ui, uj, rij)) )) then
+       (e_gb) )) then
       print *, " *Assert_Real_Equal failed* in test reduces_to_lennard_jones &
-              &[gayberne.fun:78]"
-      print *, "  ", "potential(ui, uj, rij) (", &
- potential(ui, uj, rij), &
+              &[gayberne.fun:86]"
+      print *, "  ", "e_gb (", &
+ e_gb, &
   ") is not", &
  lj_potential,&
  "within", &
   2*spacing(real(lj_potential))
+      print *, ""
+      noAssertFailed = .false.
+      numFailures    = numFailures + 1
+    else
+      numAssertsTested = numAssertsTested + 1
+    endif
+  endif
+  ! Assert_False assertion
+  numAsserts = numAsserts + 1
+  if (noAssertFailed) then
+    if (overlap) then
+      print *, " *Assert_False failed* in test reduces_to_lennard_jones &
+              &[gayberne.fun:87]"
+      print *, "  ", "overlap is not false"
       print *, ""
       noAssertFailed = .false.
       numFailures    = numFailures + 1
@@ -234,41 +269,32 @@ module gayberne_fun
   intrinsic huge
   intrinsic tiny
   real(dp) :: kappa_sigma = 4.4
-  real(dp) :: kappa_epsilon = 20.0
-  real(dp) :: mu = 1.0
-  real(dp) :: nu = 1.0
-  real(dp) :: sigma_0 = 1.0
-  real(dp) :: epsilon_0 = 1.0
+  real(dp) :: kappa_epsilon = 20._dp
+  real(dp) :: mu = 1._dp
+  real(dp) :: nu = 1._dp
+  real(dp) :: sigma_0 = 1._dp
+  real(dp) :: epsilon_0 = 1._dp
   real(dp), dimension(3) :: rij 
   real(dp), dimension(3) :: ui = (/1.0, 0.0, 0.0/)
   real(dp), dimension(3) :: uj
   real(dp) :: r_absolute
-  real(sp) :: single_precision_number
-  r_absolute = 1e-6*tiny(single_precision_number)
+  real(dp) :: e_gb
+  logical :: overlap
+  real(dp) :: small_number
+  real(dp) :: hard_core = 0.6_dp
+  small_number = 1.e-9_dp
+  r_absolute = hard_core - small_number
   call init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
   uj = ui
-  rij = (/r_absolute, 0.0_dp, 0.0_dp/)
+  rij = (/0.0_dp, r_absolute, 0.0_dp/)
+  call potential(ui, uj, rij, e_gb, overlap)
   ! Assert_True assertion
   numAsserts = numAsserts + 1
   if (noAssertFailed) then
-    if (.not.(huge(r_absolute) > potential(ui, uj, rij))) then
+    if (.not.(overlap)) then
       print *, " *Assert_True failed* in test small_separation &
-              &[gayberne.fun:102]"
-      print *, "  ", "huge(r_absolute) > potential(ui, uj, rij) is not true"
-      print *, ""
-      noAssertFailed = .false.
-      numFailures    = numFailures + 1
-    else
-      numAssertsTested = numAssertsTested + 1
-    endif
-  endif
-  ! Assert_True assertion
-  numAsserts = numAsserts + 1
-  if (noAssertFailed) then
-    if (.not.(sqrt(dot_product(rij, rij)) > tiny(r_absolute))) then
-      print *, " *Assert_True failed* in test small_separation &
-              &[gayberne.fun:103]"
-      print *, "  ", "sqrt(dot_product(rij, rij)) > tiny(r_absolute) is not true"
+              &[gayberne.fun:116]"
+      print *, "  ", "overlap is not true"
       print *, ""
       noAssertFailed = .false.
       numFailures    = numFailures + 1

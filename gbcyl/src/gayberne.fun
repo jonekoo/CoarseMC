@@ -4,34 +4,39 @@ test_suite gayberne
 
 test zero_at_cross_contact
   use nrtype, only: dp
-  real(dp) :: kappa_sigma = 4.4
-  real(dp) :: kappa_epsilon = 20.0
-  real(dp) :: mu = 1.235
-  real(dp) :: nu = 1.6546
-  real(dp) :: sigma_0 = 1.234
-  real(dp) :: epsilon_0 = 1.2798
-  real(dp), dimension(3) :: ui = (/1.0_dp, 0.0_dp, 0.0_dp/)
-  real(dp), dimension(3) :: uj = (/0.0_dp, 1.0_dp, 0.0_dp/)
+  real(dp) :: kappa_sigma = 4.4_dp
+  real(dp) :: kappa_epsilon = 20._dp
+  real(dp) :: mu = 1.235_dp
+  real(dp) :: nu = 1.6546_dp
+  real(dp) :: sigma_0 = 1.234_dp
+  real(dp) :: epsilon_0 = 1.2798_dp
+  real(dp), dimension(3) :: ui = (/1._dp, 0._dp, 0._dp/)
+  real(dp), dimension(3) :: uj = (/0._dp, 1._dp, 0._dp/)
   real(dp), dimension(3) :: rij
+  real(dp) :: e_gb
+  logical :: overlap
   rij = (/0.0_dp, 0.0_dp, sigma_0/)
   call init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
-  assert_real_equal(0.0_dp, potential(ui, uj, rij))
+  call potential(ui, uj, rij, e_gb, overlap)
+  assert_real_equal(0._dp, e_gb)
+  assert_false(overlap)
+!  assert_real_equal(0._dp, potential(ui, uj, rij))
 end test
 
 
 
 test kappa_sigma_defined
   use nrtype, only: dp
-  real(dp) :: kappa_sigma = 4.4
-  real(dp) :: kappa_epsilon = 20.0
-  real(dp) :: mu = 5.235
-  real(dp) :: nu = 3.6546
-  real(dp) :: sigma_0 = 1.234
-  real(dp) :: epsilon_0 = 1.2798
-  real(dp), dimension(3) :: ui = (/1.0_dp, 0.0_dp, 0.0_dp/)
+  real(dp) :: kappa_sigma = 4.4_dp
+  real(dp) :: kappa_epsilon = 20._dp
+  real(dp) :: mu = 5.235_dp
+  real(dp) :: nu = 3.6546_dp
+  real(dp) :: sigma_0 = 1.234_dp
+  real(dp) :: epsilon_0 = 1.2798_dp
+  real(dp), dimension(3) :: ui = (/1._dp, 0._dp, 0._dp/)
   real(dp), dimension(3) :: uj 
   real(dp), dimension(3) :: urij_ee
-  real(dp), dimension(3) :: urij_ss = (/0.0_dp, 1.0_dp, 0.0_dp/) 
+  real(dp), dimension(3) :: urij_ss = (/0._dp, 1._dp, 0._dp/) 
   uj = ui 
   urij_ee = ui
   call init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
@@ -42,16 +47,16 @@ end test
 
 test kappa_epsilon_defined
   use nrtype, only: dp
-  real(dp) :: kappa_sigma = 4.4
-  real(dp) :: kappa_epsilon = 20.0
-  real(dp) :: mu = 6.235
-  real(dp) :: nu = 23.6546
-  real(dp) :: sigma_0 = 1.234
-  real(dp) :: epsilon_0 = 1.2798
-  real(dp), dimension(3) :: ui = (/1.0_dp, 0.0_dp, 0.0_dp/)
+  real(dp) :: kappa_sigma = 4.4_dp
+  real(dp) :: kappa_epsilon = 20._dp
+  real(dp) :: mu = 6.235_dp
+  real(dp) :: nu = 23.6546_dp
+  real(dp) :: sigma_0 = 1.234_dp
+  real(dp) :: epsilon_0 = 1.2798_dp
+  real(dp), dimension(3) :: ui = (/1._dp, 0._dp, 0._dp/)
   real(dp), dimension(3) :: uj 
   real(dp), dimension(3) :: urij_ee
-  real(dp), dimension(3) :: urij_ss = (/0.0_dp, 1.0_dp, 0.0_dp/) 
+  real(dp), dimension(3) :: urij_ss = (/0._dp, 1._dp, 0._dp/) 
   uj = ui 
   urij_ee = ui
   call init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
@@ -67,15 +72,19 @@ test reduces_to_lennard_jones
   real(dp) :: lj_potential
   real(dp) :: lj_6
   real(dp), dimension(3) :: rij 
-  real(dp), dimension(3) :: ui = (/1.0, 0.0, 0.0/)
-  real(dp), dimension(3) :: uj = (/0.0, 1.0, 0.0/)
+  real(dp), dimension(3) :: ui = (/1._dp, 0._dp, 0._dp/)
+  real(dp), dimension(3) :: uj = (/0._dp, 1._dp, 0._dp/)
   real(dp) :: r_absolute
-  r_absolute = sigma_0 + 1.0
-  rij = (/-r_absolute, 0.0_dp, 0.0_dp/)
-  lj_6 = (sigma_0/r_absolute)**(6)
-  lj_potential = 4*epsilon_0*lj_6*(lj_6-1.0)
-  call init(1.0_dp, 1.0_dp, 6.234_dp, 2.84687_dp, sigma_0, epsilon_0)
-  assert_real_equal(lj_potential, potential(ui, uj, rij))
+  real(dp) :: e_gb
+  logical :: overlap
+  r_absolute = sigma_0 + 1._dp
+  rij = (/-r_absolute, 0._dp, 0._dp/)
+  lj_6 = (sigma_0 / r_absolute)**6
+  lj_potential = 4._dp * epsilon_0 * lj_6 * (lj_6 - 1._dp)
+  call init(1._dp, 1._dp, 6.234_dp, 2.84687_dp, sigma_0, epsilon_0)
+  call potential(ui, uj, rij, e_gb, overlap)
+  assert_real_equal(lj_potential, e_gb)
+  assert_false(overlap)
 end test
 
 
@@ -85,22 +94,26 @@ test small_separation
   intrinsic huge
   intrinsic tiny
   real(dp) :: kappa_sigma = 4.4
-  real(dp) :: kappa_epsilon = 20.0
-  real(dp) :: mu = 1.0
-  real(dp) :: nu = 1.0
-  real(dp) :: sigma_0 = 1.0
-  real(dp) :: epsilon_0 = 1.0
+  real(dp) :: kappa_epsilon = 20._dp
+  real(dp) :: mu = 1._dp
+  real(dp) :: nu = 1._dp
+  real(dp) :: sigma_0 = 1._dp
+  real(dp) :: epsilon_0 = 1._dp
   real(dp), dimension(3) :: rij 
   real(dp), dimension(3) :: ui = (/1.0, 0.0, 0.0/)
   real(dp), dimension(3) :: uj
   real(dp) :: r_absolute
-  real(sp) :: single_precision_number
-  r_absolute = 1e-6*tiny(single_precision_number)
+  real(dp) :: e_gb
+  logical :: overlap
+  real(dp) :: small_number
+  real(dp) :: hard_core = 0.6_dp
+  small_number = 1.e-9_dp
+  r_absolute = hard_core - small_number
   call init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
   uj = ui
-  rij = (/r_absolute, 0.0_dp, 0.0_dp/)
-  assert_true(huge(r_absolute) > potential(ui, uj, rij))
-  assert_true(sqrt(dot_product(rij, rij)) > tiny(r_absolute))
+  rij = (/0.0_dp, r_absolute, 0.0_dp/)
+  call potential(ui, uj, rij, e_gb, overlap)
+  assert_true(overlap)
 end test
 
 
