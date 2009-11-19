@@ -6,10 +6,12 @@ test exchange
 use pt
 use particle
 use box
+use class_poly_box
 use nrtype
 use mtmod
 use mpi
 use gayberne
+use configurations
 real(dp) :: beta_0 = 0.0_dp
 real(dp) :: beta_1 = 1.0_dp
 real(dp) :: beta
@@ -18,7 +20,7 @@ type(particledat), dimension(2) :: tconf
 type(particledat), dimension(2) :: sidebyside
 type(particledat), dimension(2) :: particles
 integer :: n_particles
-type(boxdat) :: a_box
+type(poly_box) :: a_box
 type(boxdat) :: large_box
 type(boxdat) :: small_box
 real(dp) :: small_box_side = 10.0_dp
@@ -27,7 +29,6 @@ integer :: seed = 123456
 integer :: ntasks
 integer :: id
 integer :: rc
-logical :: overlap
 integer :: dest_id
 real(dp) :: rand
 real(dp) :: rand_0
@@ -35,6 +36,7 @@ real(dp) :: rand_1
 real(dp) :: E_ss
 real(dp) :: E_particles
 real(dp) :: E_t
+logical :: overlap
   !! Initialize Gay-Berne potential to get the particle configurations right.
   call init(4.4_dp, 20._dp, 1._dp, 1._dp, 1._dp, 1._dp)
   !! 1. seed rng
@@ -54,9 +56,9 @@ real(dp) :: E_t
   !! Make side by side configuration
   call make_sidebyside(sidebyside, n_particles) 
   !! 3.1. Make small box
-  small_box = make_box(small_box_side)
+  call make_box(small_box, small_box_side)
   !! Make large box
-  large_box = make_box(large_box_side)
+  call make_box(large_box, large_box_side)
   !! 3.2. task 0: put T-configuration inside a small box
   if (id == 0) then
     a_box = small_box
@@ -73,11 +75,10 @@ real(dp) :: E_t
   dest_id = mod(id + 1, 2)
   
   !! Calculate and set potential energy
-  E_particles = potential((/particles(1)%ux, particles(1)%uy, &
+  call potential((/particles(1)%ux, particles(1)%uy, &
     particles(1)%uz /), (/ particles(2)%ux, particles(2)%uy, &
     particles(2)%uz /), (/particles(1)%x - particles(2)%x, particles(1)%y &
-    - particles(2)%y, particles(1)%z - particles(2)%z/))
-  energy = E_particles 
+    - particles(2)%y, particles(1)%z - particles(2)%z/), energy, overlap)
 
   !! 5. make pt exchange
   call pt_exchange(dest_id, beta, energy, particles, n_particles, a_box, rand)
@@ -87,9 +88,9 @@ real(dp) :: E_t
   !! Check that energies have been swapped correctly
   if (id == 0) then
     !! check that box is now large
-    assert_real_equal(large_box_side, box_x(a_box))
-    assert_real_equal(large_box_side, box_y(a_box))
-    assert_real_equal(large_box_side, box_z(a_box))
+    assert_real_equal(large_box_side, get_x(a_box))
+    assert_real_equal(large_box_side, get_y(a_box))
+    assert_real_equal(large_box_side, get_z(a_box))
     !! We don't test periodicity, cause it is not sent over to the other 
     !! process.
     !! check that configuration is a side by side configuration
@@ -109,14 +110,14 @@ real(dp) :: E_t
     assert_true(particles(2)%rod)
 
     !! check that energy is preserved in the transfer
-    E_ss = potential((/sidebyside(1)%ux, sidebyside(1)%uy, sidebyside(1)%uz &
+    call potential((/sidebyside(1)%ux, sidebyside(1)%uy, sidebyside(1)%uz &
       /), (/ sidebyside(2)%ux, sidebyside(2)%uy, sidebyside(2)%uz /), &
       (/sidebyside(1)%x - sidebyside(2)%x, sidebyside(1)%y - sidebyside(2)%y,&
-       sidebyside(1)%z - sidebyside(2)%z/))
-    E_particles = potential((/particles(1)%ux, particles(1)%uy, &
+       sidebyside(1)%z - sidebyside(2)%z/), E_ss, overlap)
+    call potential((/particles(1)%ux, particles(1)%uy, &
       particles(1)%uz /), (/ particles(2)%ux, particles(2)%uy, &
       particles(2)%uz /), (/particles(1)%x - particles(2)%x, particles(1)%y &
-      - particles(2)%y, particles(1)%z - particles(2)%z/))
+      - particles(2)%y, particles(1)%z - particles(2)%z/), E_particles, overlap)
     assert_real_equal(E_ss, E_particles)
     
     !! Check that beta has been exchanged although it is not needed to be 
@@ -133,9 +134,9 @@ real(dp) :: E_t
     call mpi_barrier(MPI_COMM_WORLD, rc) !! Makes printing sequential
 
     !! check that box is now small 
-    assert_real_equal(small_box_side, box_x(a_box))
-    assert_real_equal(small_box_side, box_y(a_box))
-    assert_real_equal(small_box_side, box_z(a_box))
+    assert_real_equal(small_box_side, get_x(a_box))
+    assert_real_equal(small_box_side, get_y(a_box))
+    assert_real_equal(small_box_side, get_z(a_box))
     !! We don't test periodicity, cause it is not sent over to the other 
     !! process
 
@@ -156,14 +157,14 @@ real(dp) :: E_t
     assert_true(particles(2)%rod)
 
     !! check that energy is preserved in the exchange
-    E_t = potential((/tconf(1)%ux, tconf(1)%uy, tconf(1)%uz &
+    call potential((/tconf(1)%ux, tconf(1)%uy, tconf(1)%uz &
       /), (/ tconf(2)%ux, tconf(2)%uy, tconf(2)%uz /), &
       (/tconf(1)%x - tconf(2)%x, tconf(1)%y - tconf(2)%y,&
-       tconf(1)%z - tconf(2)%z/))
-    E_particles = potential((/particles(1)%ux, particles(1)%uy, &
+       tconf(1)%z - tconf(2)%z/), E_t, overlap)
+    call potential((/particles(1)%ux, particles(1)%uy, &
       particles(1)%uz /), (/ particles(2)%ux, particles(2)%uy, &
       particles(2)%uz /), (/particles(1)%x - particles(2)%x, particles(1)%y &
-      - particles(2)%y, particles(1)%z - particles(2)%z/))
+      - particles(2)%y, particles(1)%z - particles(2)%z/), E_particles, overlap)
     assert_real_equal(E_t, E_particles)
 
     !! Check that energy has been exchanged
@@ -180,7 +181,5 @@ real(dp) :: E_t
   call pt_finalize()
   call MPI_FINALIZE(rc)
 end test exchange
-
-
 
 end test_suite pt
