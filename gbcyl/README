@@ -1,20 +1,29 @@
-This is gbcyl-0.1. A Metropolis Monte Carlo simulation program for a Gay-Berne
-(4.4, 20.0, 1, 1) model liquid crystal in a cylindrical nanocavity.
+This is gbcyl-2.0 A Parallel-tempering constant NPT Metropolis Monte Carlo 
+simulation program for a Gay-Berne(4.4, 20.0, 1, 1) model liquid crystal in a 
+cylindrical mesocavity.
 
 
 Compiling
 ---------
 
-In the top level directory gbcyl, give commands
-./configure
-./make 
+This example is assuming that a bourne shell eg. bash is used. mpi_lib_path
+should be the stuff after -L when giving the command mpif90 -show. Here we 
+assume that the name of the fortran compiler wrapper including the mpi 
+directories is mpif90. LD_LIBRARY_PATH needs to be set to pass the compiler
+tests made by the configure script. 
 
-The binary executable should now be seen in the src folder as the file named
-gbcyl.
+Give the following commands in the shell. To see more options use command
+./configure --help
 
-To change the compiler or compiling/linking options see ./configure --help for
-available options. 
+FC=mpif90
+LD_LIBRARY_PATH=mpi_lib_path:$LD_LIBRARY_PATH
+./configure --prefix=yourinstallationpath 
+make 
+make install
 
+The executable should be now installed to yourinstallationpath/bin/
+Example parameter file gbcyl.in and example starting configurations have been 
+installed to yourinstallationpath/share/
 
 
 Usage
@@ -24,33 +33,26 @@ Usage
 A new simulation:
 
 You need the following files:
-1. program binary: eg. gbcyl
+1. program binary: ptgbcyl
 2. parameter file: gbcyl.in
-3. file to read the starting configuration from: eg. R9_GB1290.crystal
+3. file to read the starting configuration from: eg. r9-n1290-cr.gb
 
 Starting configuration file must be the same as set in the parameter file. So 
 you may need to edit the parameter file. 
 
-Run with:
-./gbcyl
+Copy parameter file and starting configuration to the directory where you want 
+to run the program and have the program output files.
 
 
-Restarting a simulation: 
-
-You need the following files:
-1. program binary: eg. gbcyl
-2. restart file: restart.out
-
-Run with:
-./gbcyl restart [n_equilibration_sweeps n_production_sweeps]
+Running with 8 cores:
+mpirun -np 8 ./ptgbcyl
 
 
-After:
+If your simulation gets interrupted you may want to restart it. To restart in
+the same directory where the simulation was run set variable is_restart to 
+true in gbcyl.in by: 
+$is_restart T
 
-You should have 
-1. A new restart file written in place of restart.out. This is updated 
-   periodically 
-2. simdata.out where the positions and orientations of the molecule and the 
-   cylinder dimensions have been written during the simulation.
-
-
+Now the parameters will be read from files parameters.out.* written by the last
+run. Running the restarted simulation can now be done exactly like a normal 
+simulation. 
