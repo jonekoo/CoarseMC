@@ -1,58 +1,44 @@
 module mc_engine
-  use nrtype, only: dp
-  use io, only: ReadParams, readstate, writestate, init_io => init, &
-    finalizeOutput, io_save_state => save_state, io_load_state => load_state
-  use particlewall, only: initptwall, particlewall_save_state => save_state, &
-    particlewall_load_state => load_state
-  use gayberne, only: gayberne_init => init, &
-    gayberne_save_state => save_state, gayberne_load_state => load_state
+  use nrtype
+  use utils
+  use io, only: readstate, writestate, init_io => init, finalizeOutput, &
+    io_write_parameters
+  use particlewall, only: initptwall, particlewall_write_parameters
+  use gayberne, only: gayberne_init => init, gb_write_parameters
   use mtmod, only: sgrnd, mtsave, mtget
-  use particle, only: particledat, initParticle, &
-    particle_save_state => save_state, &
-    particle_load_state => load_state
-  use cylinder, only: initcylinder, getHeight, getRadius, &
-    cylinder_save_state => save_state, &
-    cylinder_load_state => load_state, volume
-  use mc_sweep, only: mc_sweep_init => init, updatemaxvalues, sweep, &
-    mc_sweep_save_state => save_state, &
-    mc_sweep_load_state => load_state, pressure
-  use verlet, only: initvlist, freevlist, &
-    verlet_save_state => save_state, &
-    verlet_load_state => load_state
+  use particle, only: particledat, initParticle, particle_write_parameters
+  use class_poly_box
+  use cylinder, only: new_cylinder
+  use mc_sweep, only: mc_sweep_init => init, updatemaxvalues, sweep, pressure, &
+    mc_sweep_write_parameters
+  use verlet, only: initvlist, freevlist, verlet_write_parameters
   use energy, only: total_energy
+  use pt
+  use mpi
+  use class_parameterizer
+  use class_parameter_writer
   implicit none
-
 
   public :: init
   public :: run
   public :: finalize
   public :: write_restart
-  public :: read_restart
-  public :: write_restart_to 
-  public :: read_restart_from
-  public :: equilibration_sweeps
-  public :: production_sweeps  
-
 
   private
   
   integer, save :: n_particles_
   type(particledat), dimension(:), pointer, save :: particles_
-  integer, save :: n_equilibration_sweeps_
-  integer, save :: n_production_sweeps_
-  integer, save :: production_period_
-  integer, save :: adjusting_period_
-  integer, save :: i_sweep_
-  integer, save :: restart_period_
-  integer, parameter :: restart_unit_ = 13
-  integer, parameter :: energy_unit_ = 14
-  character(len=*), parameter :: restart_file_ = "restart.gbcyl"
-  character(len=*), parameter :: energy_file_ = 'thermodynamics.dat'
-  namelist /mc_engine_nml/ n_particles_, n_equilibration_sweeps_, &
-    n_production_sweeps_, production_period_, i_sweep_, restart_period_, &
-    adjusting_period_ 
-
-  
+  type(poly_box), save :: simbox_
+  integer, save :: n_equilibration_sweeps_ = 0
+  integer, save :: n_production_sweeps_ = 0
+  integer, save :: production_period_ = 1
+  integer, save :: adjusting_period_ = 1
+  integer, save :: i_sweep_ = 0
+  integer, save :: restart_period_ = 1
+  integer, parameter :: energy_unit_ = 15
+  integer, parameter :: rng_unit_ = 10
+  character(len = *), parameter :: rng_file_ = 'mt-restart.dat'
+  character(len = 9), save :: id_char_
 
   contains
 
@@ -63,63 +49,116 @@ module mc_engine
   !! 
   subroutine init
     implicit none
-    character(len = 78) :: statefile 
-    real(dp) :: temperature
-    real(dp) :: pressure
-    integer :: anchor
-    integer :: volume_scaling_type
-    real(dp) :: Kw
-    integer :: seed
-    real(dp) :: kappa_epsilon_sgb
-    real(dp) :: epsilon_0_sgb
-    real(dp) :: r_sphere
-    real(dp) :: spmyy
-    real(dp) :: epsilon_ss
-    real(dp) :: sigma_0_sgb
-    real(dp) :: kappa_sigma_sgb
-    integer :: allign
-    integer :: debug 
+    logical :: is_restart 
+    character(len = 50) :: statefile 
     real(dp) :: radius
     real(dp) :: height
-    integer :: adjusttype
-    real(dp) :: move_ratio
-    real(dp) :: scaling_ratio
-    real(dp) :: max_translation
-    real(dp) :: max_rotation
-    real(dp), parameter :: kappa_sigma = 4.4
-    real(dp), parameter :: kappa_epsilon = 20.0
-    real(dp), parameter :: mu = 1.0
-    real(dp), parameter :: nu = 1.0
-    real(dp), parameter :: sigma_0 = 1.0
-    real(dp), parameter :: epsilon_0 = 1.0
-    real(dp), dimension(3), parameter :: magnetic_field_direction = &
-      & (/0.0, 0.0, 1.0/)
-    real(dp), parameter :: magnetic_field_teslas = 11.74
-    logical, parameter :: is_magnet_on = .false.
-    call ReadParams(statefile, n_equilibration_sweeps_, n_production_sweeps_, &
-      & production_period_, temperature, pressure, anchor, & 
-      & volume_scaling_type, Kw, seed, kappa_epsilon_sgb, epsilon_0_sgb, & 
-      & r_sphere, spmyy, epsilon_ss, sigma_0_sgb, kappa_sigma_sgb, allign, & 
-      & debug, adjusttype, move_ratio, scaling_ratio, max_translation, &
-      & max_rotation)
-    call readstate(statefile, particles_, n_particles_, radius, height); 
+    logical :: overlap
+    real(dp) :: e_tot
+    integer :: id 
+    integer :: rc
+    integer :: n_tasks
+    integer :: i
+    integer :: seed
+    type(parameterizer) :: parameter_reader
+    integer :: ios
+    call MPI_COMM_RANK(MPI_COMM_WORLD, id, rc)
+    call MPI_COMM_SIZE(MPI_COMM_WORLD, n_tasks, rc)
+    write(id_char_, '(I9)') id 
+    id_char_ = trim(adjustl(id_char_))
+    is_restart = .false.
+    do i = 0, n_tasks - 1
+      if ( i == id) then
+        parameter_reader = new_parameterizer('fin-kgb.' // trim(adjustl(id_char_)) // '.pms')
+        open(unit = rng_unit_, file = rng_file_, action = 'READ', &
+        status = 'OLD', form = 'FORMATTED', iostat = ios)
+        if(0 /= ios) then
+          write(*, *) 'Warning: Could not open rng file for reading!'
+          call get_parameter(parameter_reader, 'seed', seed)
+          call sgrnd(seed)
+        else
+          call mtget(rng_unit_, 'f')
+          close(rng_unit_)
+        end if
+        !call get_parameter(parameter_reader, 'initstate', statefile)  
+        statefile = 'fin-kgb.' // trim(adjustl(id_char_)) // '.mol'
+        call get_parameter(parameter_reader, 'n_equilibration_sweeps', n_equilibration_sweeps_)
+        call get_parameter(parameter_reader, 'n_production_sweeps', n_production_sweeps_)
+        call get_parameter(parameter_reader, 'production_period', production_period_)
+        call get_parameter(parameter_reader, 'i_sweep', i_sweep_)
+        call readstate(statefile, particles_, n_particles_, radius, height)
+        !! Initialize modules. 
+        call initptwall(parameter_reader)
+        call gayberne_init(parameter_reader)
+        call init_io(statefile)
+        simbox_ = new_cylinder(2._dp * radius, height)
+        call mc_sweep_init(parameter_reader)
+        call initvlist(particles_, n_particles_, simbox_, parameter_reader)
+        call initparticle(parameter_reader)
+        restart_period_ = 1000
+        adjusting_period_ = 20
+        call open_energyfile
+        call pt_init()
+        call total_energy(particles_, n_particles_, simbox_, e_tot, overlap)
+        if (overlap) then
+          stop 'Overlap found in starting configuration. Simulation will stop.'
+        else
+          write(*,*) 'Total energy of initial configuration is ', e_tot
+        end if
+        call MPI_BARRIER(MPI_COMM_WORLD, rc)
+        call delete(parameter_reader)
+      end if
+    end do
+  end subroutine 
+
+  subroutine open_energyfile
+    implicit none
+    integer :: file_status
+    character(len = 30) :: energy_file
+    energy_file = 'thermodynamics.dat.' // trim(adjustl(id_char_))
+    open(unit = energy_unit_, file = energy_file, action = 'WRITE', &
+     & status = 'REPLACE', delim='QUOTE', iostat = file_status)
+    if (file_status /= 0) then
+      stop 'Could not open energy file for writing! Stopping.'
+    end if
+  end subroutine 
+
+  subroutine write_restart
+    type(parameter_writer) :: writer
+    integer, parameter :: pw_unit = 11
+    character(len = 80) :: parameter_filename
+    integer :: ios
+    parameter_filename = 'parameters.out.' // id_char_
+    open(UNIT = pw_unit, FILE = parameter_filename, action = 'WRITE', & 
+    status = 'REPLACE', IOSTAT = ios) 
+    writer = new_parameter_writer(pw_unit)
+    call write_comment(writer, 'mc engine parameters')
+    call write_parameter(writer, 'is_restart', .true.)
+    call write_parameter(writer, 'initstate', '\"simdata.out.' // id_char_ //'\"')  
+    call write_parameter(writer, 'n_equilibration_sweeps', n_equilibration_sweeps_)
+    call write_parameter(writer, 'n_production_sweeps', n_production_sweeps_)
+    call write_parameter(writer, 'i_sweep', i_sweep_)
+    call write_parameter(writer, 'production_period', production_period_)
+!    call write_state(state_writer, particles_, n_particles_, simbox_)
+    open(unit = rng_unit_, file = rng_file_, action = 'WRITE', &
+    status = 'REPLACE', form = 'FORMATTED', iostat = ios)
+    if(0 /= ios) then
+      write(*, *) 'Warning: Could not open rng file for writing!'
+    else
+      call mtsave(rng_unit_, 'f')
+    end if
     !! Initialize modules. 
-    call initptwall(anchor, Kw)
-    call sgrnd(seed)  
-    call gayberne_init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
-    call init_io
-    call initcylinder(radius, height)
-    call mc_sweep_init(volume_scaling_type, temperature, pressure, adjusttype,&
-      move_ratio, scaling_ratio)
-    call initvlist(particles_, n_particles_)
-    call initParticle(max_translation, max_rotation)
-    i_sweep_ = 0
-    restart_period_ = 1000
-    adjusting_period_ = 20
-    call open_energyfile
-  end subroutine init
-
-
+    call particlewall_write_parameters(writer)
+    call gb_write_parameters(writer)
+    !call write_io How to write io state?
+    !simbox_ = new_cylinder(2._dp * radius, height) How to handle this when 
+    ! writing? How about making a new geometry type independent coordinate file?
+    call mc_sweep_write_parameters(writer)
+    call verlet_write_parameters(writer)
+    call particle_write_parameters(writer)
+    call delete(writer)
+    close(rng_unit_)
+  end subroutine
 
   !! Finalizes the simulation.
   !!
@@ -128,165 +167,26 @@ module mc_engine
   !!                  2. program ends.
   !!
   subroutine finalize()
-    implicit none
+    integer :: my_id, rc
     call finalizeOutput
     call freevlist()
     if (associated(particles_)) deallocate(particles_)
-    write (*, *) 'End of program gbcyl.'
+    call MPI_COMM_RANK(MPI_COMM_WORLD, my_id, rc)
+    if (my_id == 0) write (*, *) 'End of program gbcyl.'
     close(energy_unit_)
-  end subroutine finalize
-
-
+    call pt_finalize()
+    !close(molecule_unit_)
+  end subroutine 
   
-  subroutine equilibration_sweeps(n_equilibration_sweeps)
-    implicit none
-    integer, intent(in) :: n_equilibration_sweeps
-    n_equilibration_sweeps_ = n_equilibration_sweeps
-  end subroutine equilibration_sweeps
-
-
-
-  subroutine production_sweeps(n_production_sweeps)
-    implicit none
-    integer, intent(in) :: n_production_sweeps
-    n_production_sweeps_ = n_production_sweeps
-  end subroutine production_sweeps
-
-
-
-  !! Writes the state of the simulation to the restart_file_. 
-  !! 
-  !! :NOTE: This operation has to be symmetric with the operation 
-  !! read_restart, so that the modules are saved in the same order as they 
-  !! are loaded.  
-  !!
-  !! pre-conditions: 1. simulation must be initialized.
-  !!                 2. restart_file_ must not be in use. 
-  !! 
-  subroutine write_restart
-    implicit none
-    integer :: file_status
-    open(unit = restart_unit_, file = restart_file_, action = 'WRITE', &
-     & status = 'REPLACE', delim='QUOTE', iostat = file_status)
-    if (file_status /= 0) then
-      stop 'Could not open restart file for writing! Stopping.'
-    end if
-    call write_restart_to(restart_unit_)
-    close(restart_unit_)
-  end subroutine write_restart
-
-
-
-  !! Writes the state of the simulation to the @p write_unit. 
-  !! 
-  !! :NOTE: This operation has to be symmetric with the operation load_state, 
-  !! so that the modules are saved in the same order as they are loaded.
-  !!
-  !! pre-conditions: 1. @p write_unit must be ready for writing.
-  !!                 2. state of simulation must be initialized.
-  !!
-  !! @param write_unit the writing unit where the state will be saved.
-  !!
-  subroutine write_restart_to(write_unit)
-    implicit none
-    integer, intent(in) :: write_unit
-    call io_save_state(write_unit)
-    call mc_sweep_save_state(write_unit)
-    call mtsave(write_unit, '')
-    call cylinder_save_state(write_unit)
-    call particlewall_save_state(write_unit)
-    call gayberne_save_state(write_unit)
-    call particle_save_state(write_unit)
-    call save_state(write_unit)
-    call verlet_save_state(write_unit)
-  end subroutine write_restart_to
-
-
-
-  !! Reads The state of the simulation from the restart_file_.
-  !! 
-  !! pre-condition: 1. restart_file_ must not be in use.
-  !!                2. simulation state must not be initialized.
-  !! 
-  !! @see read_restart_from(read_unit)
-  !!
-  subroutine read_restart
-    implicit none
-    integer :: file_status
-    open(unit = restart_unit_, file = restart_file_, action = 'READ', &
-      & status = 'OLD', iostat = file_status)
-    if (file_status /= 0) then
-      stop 'Could not open restart file for reading! Stopping.'
-    end if
-    call read_restart_from(restart_unit_)
-    close(restart_unit_)
-  end subroutine read_restart
-
-  
-
-  !! Reads The state of the simulation from @p read_unit.
-  !!
-  !! :NOTE: This operation has to be symmetric with the operation 
-  !! write_restart_to, so that the state of the modules is loaded in the same 
-  !! order as saved.
-  !!
-  !! pre-condition: @p read_unit must be ready for reading.
-  !!
-  !! @p read_unit the reading unit where the state is read from.
-  !!
-  subroutine read_restart_from(read_unit)
-    implicit none
-    integer, intent(in) :: read_unit
-    call io_load_state(read_unit)
-    call mc_sweep_load_state(read_unit)
-    call mtget(read_unit, '')
-    call cylinder_load_state(read_unit)
-    call particlewall_load_state(read_unit)
-    call gayberne_load_state(read_unit)
-    call particle_load_state(read_unit)
-    call load_state(read_unit)
-    call verlet_load_state(read_unit)
-  end subroutine read_restart_from
-
-
-
-  !! Saves the state of this module to @p write_unit
-  !! 
-  !! @param write_unit the unit to write the state to.
-  !!
-  subroutine save_state(write_unit)
-    implicit none
-    integer, intent(in) :: write_unit
-    write(write_unit, NML = mc_engine_nml) 
-    write(write_unit, *) particles_(1:n_particles_) 
-  end subroutine save_state
-
-
-
-  !! Loads the state of this module from @p read_unit.
-  !!
-  !! @param read_unit the unit to read the state from.
-  !!
-  subroutine load_state(read_unit)
-    implicit none
-    integer, intent(in) :: read_unit
-    read(read_unit, NML = mc_engine_nml)
-    if(.not. associated(particles_)) allocate(particles_(n_particles_))
-    read(read_unit, *) particles_(1:n_particles_)
-  end subroutine load_state
-
-
-
   !! Runs the simulation. 
   !! 
   !! pre-condition: simulation state has to be initialized. 
   !! 
   subroutine run
-    implicit none
     call write_restart
     do while (i_sweep_ < n_equilibration_sweeps_ + n_production_sweeps_)
       i_sweep_ = i_sweep_ + 1 
-      call sweep(particles_, n_particles_)
+      call sweep(particles_, n_particles_, simbox_)
       if (i_sweep_ .le. n_equilibration_sweeps_) then
         call run_equilibration_tasks
       else 
@@ -295,53 +195,37 @@ module mc_engine
       if (mod(i_sweep_, restart_period_) == 0) call write_restart
     end do
     call write_restart
-  end subroutine run
-
-
+  end subroutine 
   
   subroutine run_equilibration_tasks
-    implicit none 
     if (mod(i_sweep_, adjusting_period_) == 0) then
       call updateMaxValues(n_particles_, adjusting_period_)
     end if
     if (mod(i_sweep_, production_period_) == 0) call write_thermodynamics
-  end subroutine run_equilibration_tasks
-
-
+  end subroutine 
 
   subroutine run_production_tasks
-    implicit none
-    real(dp) :: radius
-    real(dp) :: height
     if (mod(i_sweep_, production_period_) == 0) then
-      radius = getRadius()
-      height = getHeight()
-      call writestate(particles_, n_particles_, radius, height)
+      call writestate(particles_, n_particles_, get_x(simbox_)/2._dp, & ! :TODO: Make i/o compatible to poly_box 
+        get_z(simbox_))
       call write_thermodynamics
     end if
-  end subroutine run_production_tasks
-
-
+  end subroutine 
   
   subroutine write_thermodynamics
-    implicit none
     real(dp) :: e_tot
     logical :: overlap
-    call total_energy(particles_, n_particles_, overlap, e_tot)
-    write(energy_unit_, *) i_sweep_, e_tot, volume(), &
-      e_tot + pressure()*volume() 
-  end subroutine write_thermodynamics
-
-
-
-  subroutine open_energyfile
-    implicit none
-    integer :: file_status
-    open(unit = energy_unit_, file = energy_file_, action = 'WRITE', &
-     & status = 'REPLACE', delim='QUOTE', iostat = file_status)
-    if (file_status /= 0) then
-      stop 'Could not open energy file for writing! Stopping.'
+    call total_energy(particles_, n_particles_, simbox_, e_tot, overlap)
+    if (overlap) then
+      stop 'Writing statistics with an overlapping configuration!'
     end if
-  end subroutine open_energyfile
+    write(energy_unit_, '(' // fmt_char_int() // ', 3' // fmt_char_dp() // ')') i_sweep_, e_tot, volume(simbox_), &
+      e_tot + pressure() * volume(simbox_) 
+    write(*, '(' // fmt_char_int() // ', 3' // fmt_char_dp() // ')') i_sweep_, e_tot, volume(simbox_), &
+      e_tot + pressure() * volume(simbox_) 
+    !write(*, '(' // fmt_char_dp() // ')') i_sweep_, e_tot, volume(simbox_), &
+    !  e_tot + pressure() * volume(simbox_) 
+  end subroutine 
+
 
 end module mc_engine
