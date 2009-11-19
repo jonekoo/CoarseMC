@@ -1,64 +1,85 @@
-Input tiedosto gbcyl ohjelmalle.
-Rivej� jotka eiv�t ala tunnisteella $ ei huomioida parametreja luettaessa.
+This is a parameter file for program gbcyl/ptgbcyl. Parameter lines start with
+a $ followed by the parameter name or 'key'. The value of the  parameter must
+be separated from the key by whitespace. Parameter lines may be 80 characters
+long. Lines not starting with $ can be used for comments. Comments may also be
+placed after a parameter value by adding some whitespace after the value.  
 
-Tunniste     	| Arvo
+Tunniste     	 Arvo
 
-$initstate	"r9-n1290-cr.gb"	Tiedosto, josta luetaan alkutila.
+$is_restart F
+$initstate	"r9-n1290-isotropic.gb" Tiedosto, josta luetaan alkutila.
 
-$Nrelax		25              	Stabilisointi iteraatioiden lkm.
-$Nprod		25        		Tuotantoajon iteraatioiden lkm.
-$Nratio		5         		Perioidisten tapahtumien teko väli
+$n_equilibration_sweeps		50              	Stabilisointi iteraatioiden lkm.
+$n_production_sweeps		50        		Tuotantoajon iteraatioiden lkm.
+$production_period		5         		Perioidisten tapahtumien teko väli
 
-$adjusttype     1			1 = adjust rotation and translation 
-					  together
-					2 = 1 and adjust ratio of 
-					  maxrotation/maxtranslation
-$moveratio	0.33                    The desired ratio with which particle 
+$move_ratio	0.33                    The desired ratio with which particle 
     					moves are accepted.
-$scalingratio   0.25			The desired ratio with which volume 
+$scaling_ratio   0.25			The desired ratio with which volume 
 					moves are accepted.
-$maxtranslation	0.156			Initial maximum translation for a
+$max_translation	0.156		Initial maximum translation for a
 					particle (reduced units).
-$maxrotation	0.170			Initial maximum rotation angle for a 
+$max_rotation		0.170		Initial maximum rotation angle for a 
 					particle (radians). 
-$T		2.0			Simulointi lämpötila, redusoiduissa 
-					yksiköissä
-$pres           2.0         		Paine, redusoiduissa yksiköissä
+$pressure           2.0         		Paine, redusoiduissa yksiköissä
 
-$anchor		1			Ankkuroinnin tyyppi
-					1 = random planar
-					2 = uniform alignment
-					3 = weak homeotropic
-
-$voltyp         2               	Tilavuuden muutoksen tyyppi
+$anchoring		random_planar			Ankkuroinnin tyyppi
+					random_planar
+					uniform_alignment
+					weak_homeotropic
+$max_scaling		0.1
+$volume_change_type         2               	Tilavuuden muutoksen tyyppi
                                		1=s�teen suunnassa
                               		2=sylinterin akselin suunnassa
 
 $seed		432512 			Satunnaislukugeneraattorin siemenluku
 
-$epses		0.16			Pallon ja GB-partikkelin välisen 
+
+Parallel-tempering parameters
+$pt_low		   0.80   !! Temperature of the lowest rank
+$pt_high	   0.82   !! Temperature of the highest rank
+$pt_ratio          10    !! Number of particle moves / pt_move
+
+Gay-Berne -potential parameters:
+
+$gb_kappa_sigma		4.4		
+$gb_kappa_epsilon		20.0		
+$gb_mu			1.0
+$gb_nu			1.0
+$gb_sigma_0		1.0
+$gb_epsilon_0		1.0
+
+Verlet list and pair potential parameters
+$r_list  6.8
+$r_cutoff  5.5
+! Should be smaller than (r_list - r_cutoff) / 2 otherwise neighbour list 
+! updating may happen after every move and become very expensive.
+$largest_translation 0.6 
+
+
+!$epses		0.16			Pallon ja GB-partikkelin välisen 
 					energian suhde end to end ja side by 
 					side tilanteessa
-$eps0    	0.67		Pallon ja GB-partikkelin välisen energian
+!$eps0    	0.67		Pallon ja GB-partikkelin välisen energian
 				epsilon 0 redusoiduissa yksiköissä
-$spmyy		0.35		Pallo-GB potentiaalin eksponentti
+!$spmyy		0.35		Pallo-GB potentiaalin eksponentti
 
-$sigma0		0.8		Pallo-GB potentiaalin sigma_0
+!$sigma0		0.8		Pallo-GB potentiaalin sigma_0
 				redusoiduissa yksiköissä
 
-$siges		3.32 		Pallo-GB potentiaalin kosketusetäisyyksien
+!$siges		3.32 		Pallo-GB potentiaalin kosketusetäisyyksien
 				sigma_e/sigma_s suhde
 
-$rsphere	0.48		Pallon säde
+!$rsphere	0.48		Pallon säde
 
-$epsphere	0.155		Pallon LJ-epsilon
+!$epsphere	0.155		Pallon LJ-epsilon
 
-$allign		0		allign = 1, GB-partikkelin energiaan 
+!$allign		0		allign = 1, GB-partikkelin energiaan 
 				lisätään termi u dot z
-$debug		0		debug = 1, kirjoitetaan ruudulle dataa 
+!$debug		0		debug = 1, kirjoitetaan ruudulle dataa 
 				simuloinnin edetessö
 
-$Kw		2.2		Vuorovaikutuskeskus-sein� -vuorovaikutuksen 
+$Kw		8.0		Vuorovaikutuskeskus-sein� -vuorovaikutuksen 
 				voimakkuus. Arvo Kw=8 ~ GB-GB -vuorovaikutuksen
 				maksimi (minimi�)
 
