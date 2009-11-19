@@ -1,57 +1,52 @@
 module energy
-  use nrtype, only: sp, dp
-  use particle, only: particledat, rij, pairV
-  use particlewall, only: prtclwallV
-  use verlet, only: totpairV, singleparticleV
+  use nrtype, only: dp
+  use particle, only: particledat
+  use particlewall
+  use verlet
+  use class_poly_box
   implicit none
+  private
  
-
-
   public :: total_energy
   public :: potential_energy
-
-
-
-  private
 
   contains
  
   !! Palauttaa kokonaisenergian
-  subroutine total_energy(particles, n_particles, ovrlp, Etot)
-    implicit none
-    type(particledat), dimension(:), pointer :: particles
-    integer, intent(in) :: n_particles
-    real(dp), intent(out) :: Etot
-    logical, intent(out) :: ovrlp
-    real(dp) :: Vpairtot = 0.0
-    real(dp) :: Vwalltot = 0.0
-    Etot = 0.0
-    ovrlp = .false.
-    call totpairV(particles, n_particles, Vpairtot, ovrlp)
-    if (.not. ovrlp) call totwallprtclV(particles, n_particles, Vwalltot,ovrlp)
-    if (.not. ovrlp) then
-      Etot = Vpairtot + Vwalltot
-    end if
-    !! write(*,*) 'Etot = ', Etot
-  end subroutine total_energy
-     
-
-     
-  !! Palauttaa hiukkasten ja seinän välisen vuorovaikutuksen
-  !! kokonaisenergian 
-  subroutine totwallprtclV(particles, n_particles, Eptwlltot, ovrlp)
-    implicit none
+  subroutine total_energy(particles, n_particles, simbox, Etot, overlap)
     type(particledat), dimension(:), intent(in) :: particles
     integer, intent(in) :: n_particles
+    type(poly_box), intent(in) :: simbox
+    real(dp), intent(out) :: Etot
+    logical, intent(out) :: overlap
+    real(dp) :: Vpairtot
+    real(dp) :: Vwalltot
+    Etot = 0._dp
+    overlap = .false.
+    call pair_interactions(particles, n_particles, simbox, Vpairtot, overlap)
+    if (.not. overlap) then
+      call totwallprtclV(particles, n_particles, simbox, Vwalltot, overlap)
+    end if  
+    if (.not. overlap) then
+      Etot = Vpairtot + Vwalltot
+    end if
+  end subroutine total_energy
+          
+  !! Palauttaa hiukkasten ja seinän välisen vuorovaikutuksen
+  !! kokonaisenergian 
+  subroutine totwallprtclV(particles, n_particles, simbox, Eptwlltot, overlap)
+    type(particledat), dimension(:), intent(in) :: particles
+    integer, intent(in) :: n_particles
+    type(poly_box), intent(in) :: simbox
     real(dp), intent(out) :: Eptwlltot
-    logical, intent(out) :: ovrlp 
+    logical, intent(out) :: overlap 
     integer :: i
-    real(dp) :: oneprtclV = 0.0
-    Eptwlltot = 0.0
-    ovrlp = .false.
+    real(dp) :: oneprtclV 
+    Eptwlltot = 0._dp
+    overlap = .false.
     do i = 1, n_particles
-      call prtclwallV(particles(i), oneprtclV, ovrlp)
-      if (ovrlp) then 
+      call particlewall_potential(particles(i), simbox, oneprtclV, overlap)
+      if (overlap) then 
         return;
       else
         Eptwlltot = Eptwlltot + oneprtclV
@@ -59,35 +54,31 @@ module energy
     end do
   end subroutine totwallprtclV
 
-
-
   !! Palauttaa yhden hiukkasen kokonaisenergian, eli
   !! vuorovaikutusenergian seinän ja muiden hiukkasten 
   !! kanssa. 
-  subroutine potential_energy(particles, n_particles, particlei, i, Vitot, &
-    ovrlp)
-    implicit none
+  subroutine potential_energy(particles, n_particles, particlei, i, simbox, &
+    Vitot, overlap)
     type(particledat), dimension(:), intent(in) :: particles
     integer, intent(in) :: n_particles
-    logical, intent(out) :: ovrlp
-    real(dp), intent(out) :: Vitot
-    integer, intent(in) :: i
-    real(dp) :: Vipair = 0.0
-    real(dp) :: Viwall = 0.0   
     type(particledat), intent(in) :: particlei
-    ovrlp = .false.
-    Vitot = 0.0
-    call prtclwallV(particlei,Viwall,ovrlp)
-    if (.not. ovrlp) then
-      call singleparticleV(particles, n_particles, particlei, i, Vipair, ovrlp)
+    integer, intent(in) :: i
+    type(poly_box), intent(in) :: simbox
+    real(dp), intent(out) :: Vitot
+    logical, intent(out) :: overlap
+    real(dp) :: Vipair = 0._dp
+    real(dp) :: Viwall = 0._dp 
+    Vitot = 0._dp
+    overlap = .false.
+    call particlewall_potential(particlei, simbox, Viwall, overlap)
+    if (.not. overlap) then
+      call pair_interactions(particles, n_particles, simbox, particlei, i, &
+        Vipair, overlap)
     end if
-    if (.not. ovrlp) then 
+    if (.not. overlap) then 
       Vitot = Vipair + Viwall
     end if
   end subroutine potential_energy
 
-
-
 end module energy
-
 
