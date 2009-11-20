@@ -113,15 +113,11 @@ contains
     r_b=sqrt(x_b**2 + y_b**2)
   end subroutine
 
-
-
   real(dp) function angular(particle)
     implicit none
     type(particledat), intent(in) :: particle
     angular=(particle%uz)**2
   end function angular
-
-
 
 !! Calculates the absolute value of the repulsive part of the interaction
 !! between a smooth infinitely thick cylinder shape wall and a Lennard-Jones

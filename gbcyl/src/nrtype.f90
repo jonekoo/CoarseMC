@@ -13,6 +13,9 @@ module nrtype
   integer, parameter :: dpc=selected_real_kind(12)
   
   integer, parameter :: lgt=kind(.true.)
+
+  
+
 end module nrtype
 
 
