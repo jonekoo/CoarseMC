@@ -1,7 +1,7 @@
 ! particle_fun.f90 - a unit test suite for particle.f90
 !
 ! funit generated this file from particle.fun
-! at Tue Oct 13 23:34:10 +0300 2009
+! at Mon Oct 19 15:46:13 +0300 2009
 
 module particle_fun
 
@@ -240,6 +240,60 @@ read_position = position(particle_read)
  written_position(1),&
  "within", &
   2*spacing(real(written_position(1)))
+      print *, ""
+      noAssertFailed = .false.
+      numFailures    = numFailures + 1
+    else
+      numAssertsTested = numAssertsTested + 1
+    endif
+  endif
+  ! Assert_Real_Equal assertion
+  numAsserts = numAsserts + 1
+  if (noAssertFailed) then
+    if (.not.( (written_position(2) &
+        +2*spacing(real(written_position(2))) ) &
+        .ge. &
+        (read_position(2)) &
+            .and. &
+     (written_position(2) &
+      -2*spacing(real(written_position(2))) ) &
+      .le. &
+       (read_position(2)) )) then
+      print *, " *Assert_Real_Equal failed* in test write &
+              &[particle.fun:38]"
+      print *, "  ", "read_position(2) (", &
+ read_position(2), &
+  ") is not", &
+ written_position(2),&
+ "within", &
+  2*spacing(real(written_position(2)))
+      print *, ""
+      noAssertFailed = .false.
+      numFailures    = numFailures + 1
+    else
+      numAssertsTested = numAssertsTested + 1
+    endif
+  endif
+  ! Assert_Real_Equal assertion
+  numAsserts = numAsserts + 1
+  if (noAssertFailed) then
+    if (.not.( (written_position(3) &
+        +2*spacing(real(written_position(3))) ) &
+        .ge. &
+        (read_position(3)) &
+            .and. &
+     (written_position(3) &
+      -2*spacing(real(written_position(3))) ) &
+      .le. &
+       (read_position(3)) )) then
+      print *, " *Assert_Real_Equal failed* in test write &
+              &[particle.fun:39]"
+      print *, "  ", "read_position(3) (", &
+ read_position(3), &
+  ") is not", &
+ written_position(3),&
+ "within", &
+  2*spacing(real(written_position(3)))
       print *, ""
       noAssertFailed = .false.
       numFailures    = numFailures + 1
