@@ -1,7 +1,7 @@
 ! verlet_fun.f90 - a unit test suite for verlet.f90
 !
 ! funit generated this file from verlet.fun
-! at Tue Sep 22 18:00:41 +0300 2009
+! at Tue Nov 17 19:02:31 +0200 2009
 
 module verlet_fun
 
@@ -27,7 +27,6 @@ module verlet_fun
  subroutine total_pair_e
 
   use particle, only: particledat
-!  use verlet, only: initvlist, pair_interactions
   use gayberne, only: init
   use nrtype, only: dp
   use box
@@ -62,7 +61,7 @@ module verlet_fun
       .le. &
        (pair_energy) )) then
       print *, " *Assert_Real_Equal failed* in test total_pair_e &
-              &[verlet.fun:27]"
+              &[verlet.fun:26]"
       print *, "  ", "pair_energy (", &
  pair_energy, &
   ") is not", &
@@ -81,7 +80,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (overlap) then
       print *, " *Assert_False failed* in test total_pair_e &
-              &[verlet.fun:28]"
+              &[verlet.fun:27]"
       print *, "  ", "overlap is not false"
       print *, ""
       noAssertFailed = .false.
@@ -107,7 +106,7 @@ module verlet_fun
       .le. &
        (pair_energy) )) then
       print *, " *Assert_Real_Equal failed* in test total_pair_e &
-              &[verlet.fun:33]"
+              &[verlet.fun:32]"
       print *, "  ", "pair_energy (", &
  pair_energy, &
   ") is not", &
@@ -126,7 +125,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (overlap) then
       print *, " *Assert_False failed* in test total_pair_e &
-              &[verlet.fun:34]"
+              &[verlet.fun:33]"
       print *, "  ", "overlap is not false"
       print *, ""
       noAssertFailed = .false.
@@ -171,7 +170,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (overlap) then
       print *, " *Assert_False failed* in test min_image &
-              &[verlet.fun:61]"
+              &[verlet.fun:60]"
       print *, "  ", "overlap is not false"
       print *, ""
       noAssertFailed = .false.
@@ -197,7 +196,7 @@ module verlet_fun
       .le. &
        (pair_energy) )) then
       print *, " *Assert_Real_Equal failed* in test min_image &
-              &[verlet.fun:66]"
+              &[verlet.fun:65]"
       print *, "  ", "pair_energy (", &
  pair_energy, &
   ") is not", &
@@ -216,7 +215,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (overlap) then
       print *, " *Assert_False failed* in test min_image &
-              &[verlet.fun:67]"
+              &[verlet.fun:66]"
       print *, "  ", "overlap is not false"
       print *, ""
       noAssertFailed = .false.
@@ -247,7 +246,7 @@ module verlet_fun
       .le. &
        (pair_energy) )) then
       print *, " *Assert_Real_Equal failed* in test min_image &
-              &[verlet.fun:77]"
+              &[verlet.fun:76]"
       print *, "  ", "pair_energy (", &
  pair_energy, &
   ") is not", &
@@ -266,7 +265,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (overlap) then
       print *, " *Assert_False failed* in test min_image &
-              &[verlet.fun:78]"
+              &[verlet.fun:77]"
       print *, "  ", "overlap is not false"
       print *, ""
       noAssertFailed = .false.
@@ -292,7 +291,7 @@ module verlet_fun
       .le. &
        (pair_energy) )) then
       print *, " *Assert_Real_Equal failed* in test min_image &
-              &[verlet.fun:83]"
+              &[verlet.fun:82]"
       print *, "  ", "pair_energy (", &
  pair_energy, &
   ") is not", &
@@ -311,7 +310,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (overlap) then
       print *, " *Assert_False failed* in test min_image &
-              &[verlet.fun:84]"
+              &[verlet.fun:83]"
       print *, "  ", "overlap is not false"
       print *, ""
       noAssertFailed = .false.
@@ -339,7 +338,7 @@ module verlet_fun
       .le. &
        (pair_energy) )) then
       print *, " *Assert_Real_Equal failed* in test min_image &
-              &[verlet.fun:91]"
+              &[verlet.fun:90]"
       print *, "  ", "pair_energy (", &
  pair_energy, &
   ") is not", &
@@ -358,7 +357,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (overlap) then
       print *, " *Assert_False failed* in test min_image &
-              &[verlet.fun:92]"
+              &[verlet.fun:91]"
       print *, "  ", "overlap is not false"
       print *, ""
       noAssertFailed = .false.
@@ -411,7 +410,7 @@ module verlet_fun
       .le. &
        (pair_energy) )) then
       print *, " *Assert_Real_Equal failed* in test overlapping &
-              &[verlet.fun:119]"
+              &[verlet.fun:118]"
       print *, "  ", "pair_energy (", &
  pair_energy, &
   ") is not", &
@@ -430,7 +429,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (.not.(overlap)) then
       print *, " *Assert_True failed* in test overlapping &
-              &[verlet.fun:120]"
+              &[verlet.fun:119]"
       print *, "  ", "overlap is not true"
       print *, ""
       noAssertFailed = .false.
@@ -456,7 +455,7 @@ module verlet_fun
       .le. &
        (pair_energy) )) then
       print *, " *Assert_Real_Equal failed* in test overlapping &
-              &[verlet.fun:125]"
+              &[verlet.fun:124]"
       print *, "  ", "pair_energy (", &
  pair_energy, &
   ") is not", &
@@ -475,7 +474,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (.not.(overlap)) then
       print *, " *Assert_True failed* in test overlapping &
-              &[verlet.fun:126]"
+              &[verlet.fun:125]"
       print *, "  ", "overlap is not true"
       print *, ""
       noAssertFailed = .false.
@@ -567,7 +566,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (.not.(0.0_dp > e_pair)) then
       print *, " *Assert_True failed* in test auto_update &
-              &[verlet.fun:200]"
+              &[verlet.fun:199]"
       print *, "  ", "0.0_dp > e_pair is not true"
       print *, ""
       noAssertFailed = .false.
@@ -594,7 +593,7 @@ module verlet_fun
       .le. &
        (e_single) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:206]"
+              &[verlet.fun:205]"
       print *, "  ", "e_single (", &
  e_single, &
   ") is not", &
@@ -628,7 +627,7 @@ module verlet_fun
       .le. &
        (e_pair) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:214]"
+              &[verlet.fun:213]"
       print *, "  ", "e_pair (", &
  e_pair, &
   ") is not", &
@@ -660,7 +659,7 @@ module verlet_fun
       .le. &
        (e_single) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:220]"
+              &[verlet.fun:219]"
       print *, "  ", "e_single (", &
  e_single, &
   ") is not", &
@@ -686,7 +685,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (.not.(0.0_dp > e_pair)) then
       print *, " *Assert_True failed* in test auto_update &
-              &[verlet.fun:228]"
+              &[verlet.fun:227]"
       print *, "  ", "0.0_dp > e_pair is not true"
       print *, ""
       noAssertFailed = .false.
@@ -713,7 +712,7 @@ module verlet_fun
       .le. &
        (e_single) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:234]"
+              &[verlet.fun:233]"
       print *, "  ", "e_single (", &
  e_single, &
   ") is not", &
@@ -749,7 +748,7 @@ module verlet_fun
       .le. &
        (e_pair) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:244]"
+              &[verlet.fun:243]"
       print *, "  ", "e_pair (", &
  e_pair, &
   ") is not", &
@@ -781,7 +780,7 @@ module verlet_fun
       .le. &
        (e_single) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:250]"
+              &[verlet.fun:249]"
       print *, "  ", "e_single (", &
  e_single, &
   ") is not", &
@@ -807,7 +806,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (.not.(0.0_dp > e_pair)) then
       print *, " *Assert_True failed* in test auto_update &
-              &[verlet.fun:258]"
+              &[verlet.fun:257]"
       print *, "  ", "0.0_dp > e_pair is not true"
       print *, ""
       noAssertFailed = .false.
@@ -834,7 +833,7 @@ module verlet_fun
       .le. &
        (e_single) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:264]"
+              &[verlet.fun:263]"
       print *, "  ", "e_single (", &
  e_single, &
   ") is not", &
@@ -868,7 +867,7 @@ module verlet_fun
       .le. &
        (e_pair) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:272]"
+              &[verlet.fun:271]"
       print *, "  ", "e_pair (", &
  e_pair, &
   ") is not", &
@@ -900,7 +899,7 @@ module verlet_fun
       .le. &
        (e_single) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:278]"
+              &[verlet.fun:277]"
       print *, "  ", "e_single (", &
  e_single, &
   ") is not", &
@@ -939,7 +938,7 @@ module verlet_fun
       .le. &
        (e_pair) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:291]"
+              &[verlet.fun:290]"
       print *, "  ", "e_pair (", &
  e_pair, &
   ") is not", &
@@ -966,7 +965,7 @@ module verlet_fun
       .le. &
        (e_single) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:292]"
+              &[verlet.fun:291]"
       print *, "  ", "e_single (", &
  e_single, &
   ") is not", &
@@ -1002,7 +1001,7 @@ module verlet_fun
       .le. &
        (e_single) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:302]"
+              &[verlet.fun:301]"
       print *, "  ", "e_single (", &
  e_single, &
   ") is not", &
@@ -1034,7 +1033,7 @@ module verlet_fun
       .le. &
        (e_single) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:308]"
+              &[verlet.fun:307]"
       print *, "  ", "e_single (", &
  e_single, &
   ") is not", &
