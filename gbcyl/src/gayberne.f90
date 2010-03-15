@@ -93,7 +93,7 @@ module gayberne
   !! :TODO: check if ovrlp is really needed and in which conditions.
   !! :TODO: make hard_core adjustable
   !!
-  subroutine potential_s(ui, uj, rij, gbV, ovrlp)
+  pure subroutine potential_s(ui, uj, rij, gbV, ovrlp)
     implicit none
     real(dp), dimension(3), intent(in) :: rij, ui, uj
     real(dp), intent(out) :: gbV
@@ -114,7 +114,7 @@ module gayberne
     end if
   end subroutine
 
-  real(dp) function separation(ui, uj, rij)
+  real(dp) pure function separation(ui, uj, rij)
     implicit none
     real(dp), dimension(3), intent(in) :: ui
     real(dp), dimension(3), intent(in) :: uj
@@ -126,7 +126,7 @@ module gayberne
     separation = (r - sigma(ui, uj, urij) + sigma_0_) / sigma_0_
   end function separation
 
-  real(dp) function sigma(ui, uj, urij)
+  real(dp) pure function sigma(ui, uj, urij)
     implicit none
     real(dp), dimension(3), intent(in) :: ui
     real(dp), dimension(3), intent(in) :: uj
@@ -154,7 +154,7 @@ module gayberne
     sigma_help = sigma_0_ / sqrt(sigma_help)
   end function sigma_help
 
-  real(dp) function epsilon(ui, uj, urij)
+  real(dp) pure function epsilon(ui, uj, urij)
   implicit none
   real(dp), dimension(3), intent(in) :: ui
   real(dp), dimension(3), intent(in) :: uj

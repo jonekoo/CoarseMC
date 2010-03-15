@@ -48,6 +48,18 @@ interface get_z
   module procedure cylinder_get_z
 end interface
 
+interface is_xperiodic
+  module procedure cyl_is_xperiodic
+end interface
+
+interface is_yperiodic
+  module procedure cyl_is_xperiodic
+end interface
+
+interface is_zperiodic
+  module procedure cyl_is_zperiodic
+end interface
+
 interface make_box
   module procedure cylinder_make_box, cylinder_copy
 end interface
@@ -60,12 +72,15 @@ interface create_box
   module procedure cylinder_create_box
 end interface
 
+interface new_cylinder
+  module procedure new_cylinder_dh
+end interface 
+
   contains
   
-  function new_cylinder(diameter, height) result(nc)
-    type(cylinderdat), pointer :: nc
+  function new_cylinder_dh(diameter, height) result(nc)
+    type(cylinderdat) :: nc
     real(dp), intent(in) :: diameter, height
-    allocate(nc)
     call make_box(nc, diameter, height)
   end function
    
@@ -73,7 +88,7 @@ end interface
     type(cylinderdat), intent(out) :: cylbox
     real(dp), intent(in) :: diameter
     real(dp), intent(in) :: height
-    call make_box(cylbox%b, diameter)
+    cylbox%b = new_box(diameter)
     call set_z(cylbox, height)
     call set_x(cylbox, diameter)
     call set_xperiodicity(cylbox%b, .false.)
@@ -92,51 +107,68 @@ end interface
     call create_box(cylbox%b, box_string)
   end subroutine
 
-  pure function radius(cylbox)
+  elemental function radius(cylbox)
     real(dp) :: radius
     type(cylinderdat), intent(in) :: cylbox
     radius = get_x(cylbox) / 2._dp
   end function
 
-  pure function height(cylbox)
+  elemental function height(cylbox)
     real(dp) :: height
     type(cylinderdat), intent(in) :: cylbox
     height = get_z(cylbox)
   end function
 
-  pure function cylinder_get_x(cylbox)
+  elemental function cylinder_get_x(cylbox)
     real(dp) :: cylinder_get_x
     type(cylinderdat), intent(in) :: cylbox
     cylinder_get_x = get_x(cylbox%b)
   end function
 
-  pure function cylinder_get_y(cylbox)
+  elemental function cylinder_get_y(cylbox)
     real(dp) :: cylinder_get_y
     type(cylinderdat), intent(in) :: cylbox
     cylinder_get_y = get_y(cylbox%b)
   end function
 
-  pure function cylinder_get_z(cylbox)
+  elemental function cylinder_get_z(cylbox)
     real(dp) :: cylinder_get_z
     type(cylinderdat), intent(in) :: cylbox
     cylinder_get_z = get_z(cylbox%b)
   end function
 
-  subroutine cylinder_set_x(cylbox, x)
+  !! In a way it makes no sense to ask cylinder of its periodicity in x 
+  !! or y direction. That indicates that the objects needing this 
+  !! routine should be written in a way that they don't need the 
+  !! information or it is given to them and they don't ask for it. 
+  !! 
+  elemental function cyl_is_xperiodic(cylbox) result(is_periodic)
+    type(cylinderdat), intent(in) :: cylbox
+    logical :: is_periodic
+    is_periodic = .false.
+  end function
+
+  elemental function cyl_is_zperiodic(cylbox) result(is_periodic)
+    type(cylinderdat), intent(in) :: cylbox
+    logical :: is_periodic
+    is_periodic = is_zperiodic(cylbox%b)
+  end function
+
+  pure subroutine cylinder_set_x(cylbox, x)
     type(cylinderdat), intent(inout) :: cylbox
     real(dp), intent(in) :: x
     call set_x(cylbox%b, x)
     call set_y(cylbox%b, x)
   end subroutine
 
-  subroutine cylinder_set_y(cylbox, y)
+  pure subroutine cylinder_set_y(cylbox, y)
     type(cylinderdat), intent(inout) :: cylbox
     real(dp), intent(in) :: y
     call set_x(cylbox%b, y)
     call set_y(cylbox%b, y)
   end subroutine
 
-  subroutine cylinder_set_z(cylbox, z)
+  pure subroutine cylinder_set_z(cylbox, z)
     type(cylinderdat), intent(inout) :: cylbox
     real(dp), intent(in) :: z
     call set_z(cylbox%b, z)
@@ -151,7 +183,7 @@ end interface
     cylinder_volume = pi * radius(cylbox)**2 * height(cylbox)
   end function
 
-  function cylinder_min_image(cylbox, r1, r2) result(min_i)
+  pure function cylinder_min_image(cylbox, r1, r2) result(min_i)
     real(dp), dimension(3) :: min_i
     type(cylinderdat), intent(in) :: cylbox
     real(dp), dimension(3), intent(in) :: r1
@@ -159,14 +191,15 @@ end interface
     min_i = min_image(cylbox%b, r1, r2)
   end function
 
-  function cylinder_min_distance(cylbox, r1, r2) result(min_d)
+  pure function cylinder_min_distance(cylbox, r1, r2) result(min_d)
     real(dp) :: min_d
     type(cylinderdat), intent(in) :: cylbox
-    real(dp), dimension(3) :: r1, r2
+    real(dp), dimension(3), intent(in) :: r1
+    real(dp), dimension(3), intent(in) :: r2
     min_d = min_distance(cylbox%b, r1, r2)
   end function
 
-  subroutine cyl_scale(cylbox, max_scaling, rng)
+  function cyl_scale(cylbox, max_scaling, rng) result(scaling)
     type(cylinderdat), intent(inout) :: cylbox
     real(dp), intent(in) :: max_scaling
     real(dp) :: dz
@@ -175,9 +208,11 @@ end interface
         real(8) :: rng
       end function rng
     end interface
+    real(dp), dimension(3) :: scaling
     dz = (2._dp * real(rng(), dp) - 1._dp) * max_scaling
-    call set_z(cylbox, get_z(cylbox) + dz)  
-  end subroutine
+    scaling = (/1._dp, 1._dp, (get_z(cylbox) + dz) / get_z(cylbox)/)  
+    call set_z(cylbox, get_z(cylbox) + dz)
+  end function
 
   subroutine cylinder_write_to_stdio(cylbox)
     type(cylinderdat) :: cylbox
