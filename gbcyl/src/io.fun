@@ -30,7 +30,8 @@ test finding_last
   else
     write(*, *) 'Could not open test file.'
   end if
-  open(unit = test_unit, file = test_file, action = 'READ', status = 'OLD', iostat = ios)
+  open(unit = test_unit, file = test_file, action = 'READ', status = 'OLD', &
+  iostat = ios)
   if(ios == 0) then
     begin = 'meanwhile'
     end = 'EOF'
