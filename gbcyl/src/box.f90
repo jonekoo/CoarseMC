@@ -10,14 +10,11 @@ public :: create_box
 public :: min_image
 public :: min_distance
 public :: get_x, get_y, get_z
-public :: set_x
-public :: set_y
-public :: set_z
+public :: set_x, set_y, set_z
+public :: is_xperiodic, is_yperiodic, is_zperiodic
+public :: set_xperiodicity, set_yperiodicity, set_zperiodicity
 public :: volume
 public :: scale
-public :: set_xperiodicity
-public :: set_yperiodicity
-public :: set_zperiodicity
 public :: write_to_stdio
 
 private
@@ -66,6 +63,18 @@ end interface
 
 interface get_z
   module procedure box_get_z
+end interface
+
+interface is_xperiodic
+  module procedure box_is_xp
+end interface
+
+interface is_yperiodic
+  module procedure box_is_yperiodic
+end interface
+
+interface is_zperiodic
+  module procedure box_is_zperiodic
 end interface
 
 interface set_xperiodicity
@@ -145,55 +154,73 @@ contains
     end if
   end subroutine
 
-  real(dp) pure function box_get_x(a_box)
+  real(dp) elemental function box_get_x(a_box)
     type(boxdat), intent(in) :: a_box
     box_get_x = a_box%lx
   end function
 
-  real(dp) pure function box_get_y(a_box)
+  real(dp) elemental function box_get_y(a_box)
     type(boxdat), intent(in) :: a_box
     box_get_y = a_box%ly
   end function
 
-  real(dp) pure function box_get_z(a_box)
+  real(dp) elemental function box_get_z(a_box)
     type(boxdat), intent(in) :: a_box
     box_get_z = a_box%lz
   end function
 
-  subroutine box_set_x(a_box, x)
+  elemental function box_is_xp(a_box) result(is_periodic)
+    type(boxdat), intent(in) :: a_box
+    logical :: is_periodic
+    is_periodic = a_box%xperiodic
+  end function
+
+  elemental function box_is_yperiodic(a_box) result(is_periodic)
+    type(boxdat), intent(in) :: a_box
+    logical :: is_periodic
+    is_periodic = a_box%yperiodic
+  end function
+
+  elemental function box_is_zperiodic(a_box) result(is_periodic)
+    type(boxdat), intent(in) :: a_box
+    logical :: is_periodic
+    is_periodic = a_box%zperiodic
+  end function
+
+  pure subroutine box_set_x(a_box, x)
     implicit none
     type(boxdat), intent(inout) :: a_box
     real(dp), intent(in) :: x
     a_box%lx = x
   end subroutine 
   
-  subroutine box_set_y(a_box, y)
+  pure subroutine box_set_y(a_box, y)
     implicit none
     type(boxdat), intent(inout) :: a_box
     real(dp), intent(in) :: y
     a_box%ly = y
   end subroutine 
   
-  subroutine box_set_z(a_box, z)
+  pure subroutine box_set_z(a_box, z)
     implicit none
     type(boxdat), intent(inout) :: a_box
     real(dp), intent(in) :: z
     a_box%lz = z
   end subroutine 
 
-  subroutine box_set_xperiodicity(a_box, is_periodic)
+  pure subroutine box_set_xperiodicity(a_box, is_periodic)
     type(boxdat), intent(inout) :: a_box
     logical, intent(in) :: is_periodic
     a_box%xperiodic = is_periodic
   end subroutine
 
-  subroutine box_set_yperiodicity(a_box, is_periodic)
+  pure subroutine box_set_yperiodicity(a_box, is_periodic)
     type(boxdat), intent(inout) :: a_box
     logical, intent(in) :: is_periodic
     a_box%yperiodic = is_periodic
   end subroutine
 
-  subroutine box_set_zperiodicity(a_box, is_periodic)
+  pure subroutine box_set_zperiodicity(a_box, is_periodic)
     type(boxdat), intent(inout) :: a_box
     logical, intent(in) :: is_periodic
     a_box%zperiodic = is_periodic
@@ -205,7 +232,7 @@ contains
     box_volume = simbox%lx * simbox%ly * simbox%lz
   end function
 
-  function box_min_distance(simbox, r_i, r_j)
+  pure function box_min_distance(simbox, r_i, r_j)
     real(dp) :: box_min_distance
     type(boxdat), intent(in) :: simbox
     real(dp), dimension(3), intent(in) :: r_i
@@ -215,7 +242,7 @@ contains
     box_min_distance = sqrt(dot_product(r_ij, r_ij))
   end function 
 
-  function min_image_2(simbox, r_i, r_j) result(r_ij)
+  pure function min_image_2(simbox, r_i, r_j) result(r_ij)
     real(dp), dimension(3) :: r_ij
     type(boxdat), intent(in) :: simbox
     real(dp), dimension(3), intent(in) :: r_i
@@ -224,7 +251,7 @@ contains
     r_ij = min_image_1(simbox, r_ij)
   end function
 
-  recursive function min_image_1(simbox, r)
+  pure recursive function min_image_1(simbox, r)
     implicit none
     real(dp), dimension(3) :: min_image_1
     type(boxdat), intent(in) :: simbox
@@ -242,7 +269,7 @@ contains
     end if
   end function
 
-  subroutine box_scale(simbox, max_scaling, rng)
+  function box_scale(simbox, max_scaling, rng) result(scaling)
     type(boxdat), intent(inout) :: simbox
     real(dp), intent(in) :: max_scaling
     real(dp) :: dx, dy, dz
@@ -251,14 +278,17 @@ contains
         real(8) :: rng
       end function
     end interface
-    !! Make isotropic scaling. How to implement other kinds?
+    real(dp), dimension(3) :: scaling
     dx = (2._dp * real(rng(), dp) - 1._dp) * max_scaling
-    call set_x(simbox, get_x(simbox) + dx)  
     dy = (2._dp * real(rng(), dp) - 1._dp) * max_scaling
-    call set_y(simbox, get_y(simbox) + dy)  
     dz = (2._dp * real(rng(), dp) - 1._dp) * max_scaling
+    scaling = (/(get_x(simbox) + dx) / get_x(simbox), &
+    (get_y(simbox) + dy) / get_y(simbox), &
+    (get_z(simbox) + dz) / get_z(simbox)/)    
+    call set_x(simbox, get_x(simbox) + dx)  
+    call set_y(simbox, get_y(simbox) + dy)  
     call set_z(simbox, get_z(simbox) + dz)  
-  end subroutine
+  end function
 
   subroutine box_write_to_stdio(simbox)
     type(boxdat), intent(in) :: simbox
