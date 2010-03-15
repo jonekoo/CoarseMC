@@ -95,19 +95,25 @@ module io
     write(molecule_data_unit_, *) '$R:',radius,'$Lz:',height
     write(molecule_data_unit_, *) '$N:',n_particles,'$GB:',GB,'$Xe:',Xe
     write(molecule_data_unit_, *) '$x:'
-    write(molecule_data_unit_, '(' // fmt_char_dp() // ')') particles(1:n_particles)%x
+    write(molecule_data_unit_, '(' // fmt_char_dp() // ')') &
+    particles(1:n_particles)%x
     write(molecule_data_unit_, *) '$y:'
-    write(molecule_data_unit_, '(' // fmt_char_dp() // ')') particles(1:n_particles)%y
+    write(molecule_data_unit_, '(' // fmt_char_dp() // ')') &
+    particles(1:n_particles)%y
     write(molecule_data_unit_, *) '$z:'
-    write(molecule_data_unit_, '(' // fmt_char_dp() // ')') particles(1:n_particles)%z
+    write(molecule_data_unit_, '(' // fmt_char_dp() // ')') &
+    particles(1:n_particles)%z
     write(molecule_data_unit_, *) '$rod:'
     write(molecule_data_unit_, *) help(1:n_particles)
     write(molecule_data_unit_, *) '$ux:'
-    write(molecule_data_unit_, '(' // fmt_char_dp() // ')') particles(1:n_particles)%ux
+    write(molecule_data_unit_, '(' // fmt_char_dp() // ')') &
+    particles(1:n_particles)%ux
     write(molecule_data_unit_, *) '$uy:'
-    write(molecule_data_unit_, '(' // fmt_char_dp() // ')') particles(1:n_particles)%uy
+    write(molecule_data_unit_, '(' // fmt_char_dp() // ')') &
+    particles(1:n_particles)%uy
     write(molecule_data_unit_, *) '$uz:'
-    write(molecule_data_unit_, '(' // fmt_char_dp() // ')') particles(1:n_particles)%uz
+    write(molecule_data_unit_, '(' // fmt_char_dp() // ')') &
+    particles(1:n_particles)%uz
     deallocate(help)
   end subroutine writestate
 
@@ -123,7 +129,8 @@ module io
     character(len = 200) :: box_string
     read(read_unit, *) charvar, radius, charvar, height
     read(read_unit, *) charvar, n_particles
-    write(box_string, '(A, 3' // fmt_char_dp() // ', A)') 'cylinder', 2._dp * radius, 2._dp * radius, height, ' F F T'
+    write(box_string, '(A, 3' // fmt_char_dp() // ', A)') 'cylinder', &
+    2._dp * radius, 2._dp * radius, height, ' F F T'
     call create_box(simbox, box_string)
     read(read_unit, *) charvar
     allocate(particles(n_particles), help(n_particles), stat = astat)
@@ -162,7 +169,8 @@ module io
     !Koittaa avata annetun tiedoston
     open(readunit, file = filename, status = 'old', iostat = ios)
     if (ios /= 0) then
-      write(*,*) 'Tiedoston ', filename,' avaaminen ep‰onnistui, virhekoodi: ', ios
+      write(*,*) 'Tiedoston ', filename, &
+      ' avaaminen ep‰onnistui, virhekoodi: ', ios
       write(*,*) 'Ohjelman suoritus keskeytyy.'
       stop;
     end if
@@ -173,8 +181,8 @@ module io
     !Varaa muistin taulukolle
     allocate(particles(n_particles), help(n_particles), stat = astat)
     if (astat /= 0) then
-      write(*,*) 'readstate:Virhe varattaessa muistia: particles,help'
-      stop;
+      write(*,*) 'readstate: Virhe varattaessa muistia: particles, help'
+      stop
     end if   
     !Luetaan  hiukkasten x-koordinaatit
     read(readunit,*) particles(1:n_particles)%x
@@ -200,6 +208,14 @@ module io
     end do
   end subroutine
 
+  !! Move this to another module. Think about how the serialization/writing of
+  !! states should be done. The objects should be responsible of choosing the
+  !! necessary variables to write on disk but the format should be independent
+  !! of the object itself. So the mechanism could be very similar to the 
+  !! parameterizer/parameter_reader mechanism. We could however impose an 
+  !! additional rule that the data is written and read sequentially and the 
+  !! order is dictated by the object to be written.
+  !!
   subroutine read_state(readunit, simbox, particles, n_particles)
     integer, intent(in) :: readunit
     type(poly_box), intent(out) :: simbox
@@ -235,7 +251,8 @@ module io
   !! find_last and read_state when needed. This only aggregates those two and
   !! file opening/closing.
   !!
-  subroutine read_last_state(filename, begin, end, simbox, particles, n_particles)
+  subroutine read_last_state(filename, begin, end, simbox, particles, &
+  n_particles)
     character(len = *), intent(in) :: filename
     character(len = *), intent(in) :: begin
     character(len = *), intent(in) :: end
@@ -277,7 +294,7 @@ module io
         if (0 /= ios) then
           !! This doesn't make a difference if the file ends or there is some 
           !! other reading problem! 
-          write(6, *) 'find_last: no end geometry line found in file ' !!// filename
+          write(6, *) 'find_last: no end geometry line found in file ' 
           stop
         end if
         read(read_unit, *) line
@@ -290,68 +307,12 @@ module io
       if (0 /= ios) then 
         !! This doesn't make a difference if the file ends or there is some 
         !! other reading problem! 
-        write(6, *) 'find_last: no begin geometry line found in file ' !// filename
+        write(6, *) 'find_last: no begin geometry line found in file ' 
         stop
       end if
       read(read_unit, *) line
     end do
     backspace(read_unit, iostat = ios)
   end subroutine
-
-!  subroutine readerror(filename)
-!    implicit none
-!    character(len = *) :: filename
-!    write(*,*) 'Tiedoston ', filename,' muoto on v‰‰r‰.'
-!    write(*,*) 'Tilaa ei voitu lukea. Ohjelman suoritus keskeytyy'
-!    stop;
-!  end subroutine
-
-  !! Reads simulation parameters from the file gbcyl.in. 
-  !!
-  !! Original subroutine authored by Antti Kuronen for the course Atomistiset 
-  !! simulaatiot
-  !!
-  !! @author: Juho Lintuvuori
-  !! @author: Jouni Karjalainen
-  !!
-  subroutine ReadParams(pt_freq)
-    implicit none
-    integer, intent(out) :: pt_freq
-    character(len = *), parameter :: paramsfile = 'gbcyl.in'
-    integer, parameter :: input = 20
-    integer :: i, ios
-    character(len = 100) :: line
-    character(len = 80) :: string
-    real(dp) :: x
-    open(input, file = paramsfile, status = 'old', iostat = ios)   
-    if (ios /= 0) then
-      write(*,*) 'Open error for file ', paramsfile,'.' 
-      STOP 
-    end if
-    ! Loop through file and find all variables
-    i = 0
-    do
-       i = i + 1
-       ! First read in line in whole.
-       read(input,fmt='(A80)',iostat=ios) line
-       ! Check for probable end-of-file
-       if (ios < 0) exit
-       ! If not parameter line, cycle
-       if (line(1:1) /= '$') cycle
-       ! Attempt to parse line into command and value
-       ! using internal formatted read
-       read(unit=line,fmt=*,iostat=ios) string, x
-       if (ios > 0) then
-          print *,'ERROR: Data read in error on line',i
-          stop 'Invalid parameter file'
-       ! From here on line should be in variable format
-       ! Look for variable-defining strings
-       else if(string == '$PT_movefreq') then
-         pt_freq = int(x + 0.5_dp);
-       endif
-       print '(A,A16,A,' // fmt_char_dp() // ')','Read in parameter ', string, ' value ', x
-    enddo
-    close(input)
-  end subroutine ReadParams
-
+ 
 end module
