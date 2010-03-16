@@ -148,6 +148,9 @@ contains
   !! @p simbox the simulation cell. 
   !! @p rand a random number for accepting the exchange. 
   !! 
+  !! :TODO: Test that the routine is capable of sending and receiving a 
+  !! :TODO: different amount of particles. If needed use mpi_get_count 
+  !! :TODO: to implement this feature.
   !!
   subroutine pt_exchange(dest_id, beta, energy, particles, n_particles, &
     simbox, rand)
@@ -192,7 +195,7 @@ contains
     call MPI_COMM_SIZE(MPI_COMM_WORLD, n_tasks, rc)
     call MPI_COMM_RANK(MPI_COMM_WORLD, id, rc)    
     pt_temperature = pt_low + (pt_high - pt_low) * real(id, dp)/ &
-      real(n_tasks - 1, dp)
+    real(n_tasks - 1, dp)
   end function
 
 end module pt
