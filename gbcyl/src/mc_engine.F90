@@ -1,8 +1,6 @@
 module mc_engine
 use nrtype
 use utils
-!use io, only: readstate, writestate, init_io => init, finalizeOutput, &
-!  io_write_parameters
 use class_cylformatter
 use particlewall, only: initptwall, particlewall_write_parameters
 use gayberne, only: gayberne_init => init, gb_write_parameters
@@ -99,8 +97,8 @@ subroutine mce_init
       call get_parameter(parameter_reader, 'production_period', &
       production_period_)
       call get_parameter(parameter_reader, 'i_sweep', i_sweep_)
+      call get_parameter(parameter_reader, 'adjusting_period', adjusting_period_)
       cf_ = new_cylformatter(statefile)
-      isfound = .false.
       call findlast(cf_, isfound)
       if (.not. isfound) then
         write(*, *) 'Error: Could not find a configuration from ' // &
@@ -108,21 +106,19 @@ subroutine mce_init
       end if
       call readstate(cf_, particles_, n_particles_, radius, height)
       !! Initialize modules. 
+      simbox_ = new_cylinder(2._dp * radius, height)
       call initptwall(parameter_reader)
       call gayberne_init(parameter_reader)
-      simbox_ = new_cylinder(2._dp * radius, height)
       call mc_sweep_init(parameter_reader)
       call initvlist(particles_, n_particles_, simbox_, parameter_reader)
       call initparticle(parameter_reader)
-      !restart_period_ = 1000
-      adjusting_period_ = 20
       call open_energyfile
       call pt_init()
       call total_energy(simbox_, particles_(1:n_particles_), e_tot, overlap)
       if (overlap) then
         stop 'Overlap found in starting configuration. Simulation will stop.'
       else
-        write(*,*) 'Total energy of initial configuration is ', e_tot
+        write(*, *) 'Total energy of initial configuration is ', e_tot
       end if
       call MPI_BARRIER(MPI_COMM_WORLD, rc)
       call delete(parameter_reader)
@@ -235,8 +231,6 @@ subroutine write_thermodynamics
   write(energy_unit_, '(' // fmt_char_int() // ', 3' // fmt_char_dp() // &
   ')') i_sweep_, e_tot, volume(simbox_), e_tot + pressure() * &
   volume(simbox_) 
-  write(*, '(' // fmt_char_int() // ', 3' // fmt_char_dp() // ')') &
-  i_sweep_, e_tot, volume(simbox_), e_tot + pressure() * volume(simbox_) 
 end subroutine 
 
 end module mc_engine
