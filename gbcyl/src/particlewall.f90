@@ -11,12 +11,16 @@ module particlewall
   implicit none
   private
 
+  public :: new_sitewallpotential
+  public :: new_gbwallpotential
   public :: initptwall
   public :: particlewall_potential
   public :: repwall
   public :: attwall
-  public :: gbwall
   public :: particlewall_write_parameters
+  public :: energy
+  public :: sitewallpotential
+  public :: gbwallpotential
     
   !! @see Micheletti et. al. Journal of Chemical Physics 123, 224705 for 
   !! definitions of these parameters.
@@ -24,30 +28,98 @@ module particlewall
   real(dp), save :: alpha_A_ = 1._dp
   real(dp), save :: alpha_B_ = 1._dp
   real(dp), save :: K_w_ = 8._dp
+  real(dp), save :: sig=1._dp
   
   !! The distance of LJ interaction sites from the Gay-Berne particle center
   !! along the unique axis.
   real(dp), save :: LJdist = 1.7_dp 
   logical, save :: is_uniform_alignment = .false.
 
-  interface initptwall
-    module procedure initptwall_parameterizer
-  end interface
+!! LJ-GB interaction consists of interactions of the two sites. Basicly
+!! That could be in a different module which then would use this module. 
+!! Keep in mind that the Xe-wall interaction may be of the same form as 
+!! the GB-wall interaction. Things that characterize a typical Lennard-Jones
+!! interaction are the contact distance sigma and the potential well-depth 
+!! parameter epsilon. What is added here is basicly only the alpha parameter. 
+!! In addition to that the strength parameter Kw includes both the well depth
+!! and the density of the wall plus some additional constants.  
 
-  interface particlewall_potential
-    module procedure gbwall
-  end interface
+type sitewallpotential
+  private
+  real(dp) :: alpha = 1._dp    ! relative strength of attraction 
+  real(dp) :: sigma = 1._dp    ! LJ contact distance 
+  real(dp) :: Kw = 8._dp       ! interaction strength 
+end type
+
+type gbwallpotential
+  private
+  type(sitewallpotential) :: sitea
+  type(sitewallpotential) :: siteb
+  real(dp) :: separation = 1.7_dp
+  logical :: isuniformalignment = .true.
+end type
+
+interface initptwall
+  module procedure initptwall_parameterizer, initptwall_regular
+end interface
+
+interface particlewall_potential
+  module procedure gbwall
+end interface
+
+interface energy
+  module procedure sitewallpotential_energy
+end interface
 
 contains 
+
+function new_sitewallpotential(Kw, sigma, alpha) result(potential)
+  real(dp), intent(in), optional :: Kw
+  real(dp), intent(in), optional :: sigma
+  real(dp), intent(in), optional :: alpha
+  type(sitewallpotential) :: potential
+  if(present(Kw)) potential%Kw = Kw
+  if(present(sigma)) potential%sigma = sigma
+  if(present(alpha)) potential%alpha = alpha
+end function
+
+function new_gbwallpotential(sitea, siteb, separation, isuniformalignment) &
+result(potential)
+  type(sitewallpotential), intent(in), optional :: sitea
+  type(sitewallpotential), intent(in), optional :: siteb
+  real(dp), intent(in), optional :: separation
+  logical, intent(in), optional :: isuniformalignment
+  type(gbwallpotential) :: potential
+  if(present(sitea)) potential%sitea = sitea
+  if(present(siteb)) potential%siteb = siteb
+  if(present(separation)) potential%separation = separation
+  if(present(isuniformalignment)) potential%isuniformalignment = &
+  isuniformalignment 
+end function
+
+subroutine initptwall_regular(Kw, alpha_A, alpha_B, LJ_dist, is_unif, sigwall)
+  real(dp), intent(in), optional :: Kw
+  real(dp), intent(in), optional :: alpha_A
+  real(dp), intent(in), optional :: alpha_B
+  real(dp), intent(in), optional :: LJ_dist
+  logical, intent(in), optional :: is_unif
+  real(dp), intent(in), optional :: sigwall
+  if(present(Kw)) K_w_ = Kw
+  if(present(alpha_A)) alpha_A_ = alpha_A
+  if(present(alpha_B)) alpha_B_ = alpha_B
+  if(present(LJ_dist)) LJdist = LJ_dist
+  if(present(is_unif)) is_uniform_alignment = is_unif
+  if(present(sigwall)) sig = sigwall
+end subroutine
 
   subroutine initptwall_parameterizer(reader)
     type(parameterizer), intent(in) :: reader
     call get_parameter(reader, 'Kw', K_w_)
     call get_parameter(reader, 'alpha_A', alpha_A_) 
     call get_parameter(reader, 'alpha_B', alpha_B_) 
-    call get_parameter(reader, 'Kw', K_w_)
     call get_parameter(reader, 'LJ_dist', LJdist) 
     call get_parameter(reader, 'is_uniform_alignment', is_uniform_alignment)
+    call get_parameter(reader, 'sigwall', sig)
   end subroutine
 
   subroutine particlewall_write_parameters(writer)
@@ -66,17 +138,17 @@ contains
     type(poly_box), intent(in) :: simbox
     real(dp), intent(out) :: Eptwall
     logical, intent(out) :: ovrlp
-    real(dp), parameter :: sig=1._dp
     real(dp) :: rsiteA, rsiteB
     real(dp) :: repulA, attracA, repulB, attracB, fu, Rc
     real(dp) :: rAperR, rBperR
     ovrlp = .false.
     Eptwall = 0._dp
-    Rc = get_x(simbox)/2._dp !! :TODO: Remove this dependency by making a cylinder wall object.
+    !! :TODO: Remove this dependency by making a cylinder wall object.
+    Rc = get_x(simbox)/2._dp 
     call rArB(gbparticle, rsiteA, rsiteB)
     if(rsiteA >= Rc .or. rsiteB >= Rc) then
       ovrlp = .true.
-      return;
+      return
     end if
     rAperR  = rsiteA / Rc
     rBperR  = rsiteB / Rc
@@ -92,6 +164,24 @@ contains
     Eptwall = fu * K_w_ * ((repulA - alpha_A_ * attracA) + (repulB - alpha_B_ &
       * attracB))     
   end subroutine gbwall
+
+
+
+subroutine sitewallpotential_energy(sitepotential, r, rwall, energy, overlap)
+  type(sitewallpotential), intent(in) :: sitepotential
+  real(dp), intent(in) :: r
+  real(dp), intent(in) :: rwall
+  real(dp), intent(out) :: energy
+  logical, intent(out) :: overlap
+  energy = 0._dp
+  overlap = .false.
+  if (r >= rwall) then
+    overlap = .true.
+    return
+  end if
+  energy = sitepotential%Kw * (repwall(r/rwall, rwall, sitepotential%sigma) &
+  - sitepotential%alpha * attwall(r/rwall, rwall, sitepotential%sigma))
+end subroutine
 
   !! Returns the distances of the interaction sites from the axis of the 
   !! cylinder.
