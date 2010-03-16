@@ -4,30 +4,26 @@ module verlet
   use nrtype, only: dp
   use particle, only: particledat, position, getmaxmoves
   use class_poly_box
-  use gayberne, only: potential
   use class_parameterizer
   use class_parameter_writer
+  use class_pair_potential
   implicit none 
   private  
 
   public :: initvlist
   public :: updatelist
   public :: freevlist
-  public :: pairV
   public :: pair_interactions
   public :: newlist
   public :: verlet_write_parameters
  
   real(dp), save :: r_list_
-  real(dp), save :: r_cutoff_
   integer, save :: n_particles_
   integer, save :: n_neighbours_
   real(dp), dimension(:, :), allocatable, save :: xyz_list_
   integer, dimension(:), allocatable, save :: neighbour_counts_
   integer, dimension(:, :), allocatable, save ::  neighbours_
   integer, save :: n_neighbours_max_
-  namelist /verlet_nml/ n_particles_, n_neighbours_, r_list_, r_cutoff_, &
-    n_neighbours_max_
 
   interface pair_interactions
     module procedure totpairV, singleparticleV
@@ -47,7 +43,6 @@ module verlet
     type(parameter_writer), intent(in) :: writer
     call write_comment(writer, 'Verlet neighbourlist parameters')
     call write_parameter(writer, 'r_list', r_list_)
-    call write_parameter(writer, 'r_cutoff', r_cutoff_)
   end subroutine
 
   !! Initializes the verlet neighbour list.
@@ -65,8 +60,7 @@ module verlet
     real(dp) :: r_list
     real(dp) :: r_cutoff
     call get_parameter(reader, 'r_list', r_list)
-    call get_parameter(reader, 'r_cutoff', r_cutoff)
-    call initvlist(particles, n_particles, simbox, r_list, r_cutoff)
+    call initvlist(particles, n_particles, simbox, r_list)
   end subroutine
 
   !! Initializes the verlet neighbour list. 
@@ -77,16 +71,14 @@ module verlet
   !! @p r_list the radius of the neighbourlist
   !! @p r_cutoff the cutoff radius of the pair interactions
   !! 
-  subroutine initvlist_r(particles, n_particles, simbox, r_list, r_cutoff)
+  subroutine initvlist_r(particles, n_particles, simbox, r_list)
     intrinsic min
     type(particledat), dimension(:), intent(in) :: particles
     integer, intent(in) :: n_particles
     type(poly_box), intent(in) :: simbox
     real(dp), intent(in) :: r_list
-    real(dp), intent(in) :: r_cutoff
     integer :: astat
     r_list_ = r_list
-    r_cutoff_ = r_cutoff
     n_neighbours_max_ = 500
     n_particles_ = n_particles
     n_neighbours_ = min(n_particles_, n_neighbours_max_) 
@@ -119,9 +111,8 @@ module verlet
   !! @p Vtot the total pair interaction energy
   !! @p overlap true if some particles overlap with each other
   !! 
-  subroutine totpairV(particles, n_particles, simbox, Vtot, overlap)
+  subroutine totpairV(simbox, particles, Vtot, overlap)
     type(particledat), dimension(:), intent(in) :: particles
-    integer, intent(in) :: n_particles
     type(poly_box), intent(in) :: simbox
     integer :: i, j, jj
     real(dp), intent(out) :: Vtot 
@@ -129,8 +120,8 @@ module verlet
     logical, intent(out) :: overlap
     Vtot = 0._dp
     overlap = .false.
-    call updatelist(particles, n_particles, simbox)
-    do i = 1, n_particles
+    call updatelist(particles, size(particles), simbox)
+    do i = 1, size(particles)
       if(neighbour_counts_(i) == 0) cycle
       do jj = 1, neighbour_counts_(i)
         j = neighbours_(i, jj)
@@ -153,10 +144,8 @@ module verlet
   !! @p singleV the interaction energy of @p particlei with other particles.
   !! @p overlap true if particlei and some other particle overlap
   !!
-  subroutine singleparticleV(particles, n_particles, simbox, particlei, i, &
-    singleV, overlap)
+  subroutine singleparticleV(simbox, particles, particlei, i, singleV, overlap)
     type(particledat), dimension(:), intent(in) :: particles
-    integer, intent(in) :: n_particles
     type(particledat), intent(in) :: particlei
     integer, intent(in) :: i
     type(poly_box), intent(in) :: simbox
@@ -170,8 +159,8 @@ module verlet
     overlap = .false.
     distance_moved = min_distance(simbox, xyz_list_(1:3, i), &
     position(particlei))
-    if(distance_moved > 0.5_dp * (r_list_ - r_cutoff_)) then
-      call newlist(particles, n_particles, simbox)
+    if(distance_moved > 0.5_dp * (r_list_ - cutoff())) then
+      call newlist(particles, size(particles), simbox)
     end if
     do j = 1, neighbour_counts_(i)
       particlevij = particles(neighbours_(i, j))
@@ -183,38 +172,6 @@ module verlet
       end if
     end do
   end subroutine
-
-  !! Calculates the interaction energy of a pair of particles. 
-  !! 
-  !! @p particlei the first particle
-  !! @p particlej the second particle
-  !! @p simbox the simulation cell
-  !! @p potE the interaction energy
-  !! @p overlap is true if the two particles overlap each other
-  !! 
-  !! :TODO: put this somewhere else. Problem is that you need to initialize 
-  !! the potential module to use this. 
-  !! 
-  subroutine pairV(particlei, particlej, simbox, potE, overlap)
-    type(particledat), intent(in) :: particlei 
-    type(particledat), intent(in) :: particlej
-    type(poly_box), intent(in) :: simbox
-    real(dp), intent(out) :: potE
-    logical, intent(out) :: overlap
-    real(dp), dimension(3) :: rij, ui, uj
-    potE = 0._dp
-    overlap = .false.
-    rij = min_image(simbox, position(particlei), position(particlej))
-    if (sqrt(dot_product(rij, rij)) < r_cutoff_) then
-      ui(1)=particlei%ux
-      ui(2)=particlei%uy
-      ui(3)=particlei%uz
-      uj(1)=particlej%ux
-      uj(2)=particlej%uy
-      uj(3)=particlej%uz
-      call potential(ui, uj, rij, potE, overlap)  
-    end if
-  end subroutine pairV
 
   !! Makes a new Verlet neighbourlist
   !!
@@ -262,7 +219,7 @@ module verlet
     integer :: i
     do i = 1, n_particles
       if(min_distance(simbox, xyz_list_(1:3, i), position(particles(i))) > &
-      0.5_dp * (r_list_ - r_cutoff_)) then
+      0.5_dp * (r_list_ - cutoff())) then
         call newlist(particles, n_particles, simbox)
         exit
       end if
