@@ -1,7 +1,7 @@
 ! verlet_fun.f90 - a unit test suite for verlet.f90
 !
 ! funit generated this file from verlet.fun
-! at Tue Nov 17 19:02:31 +0200 2009
+! at Mon Nov 30 20:13:08 +0200 2009
 
 module verlet_fun
 
@@ -32,6 +32,7 @@ module verlet_fun
   use box
   use class_poly_box
   use configurations
+  use class_pair_potential
   implicit none
   type(particledat), dimension(2) :: particles
   integer :: n_particles = 2
@@ -45,9 +46,10 @@ module verlet_fun
   call init(4.4_dp, 20._dp, 1._dp, 1._dp, 1._dp, 1._dp)
   call make_sidebyside(particles, n_particles)
   !! initialize verlet
-  call initvlist(particles, n_particles, simbox, r_list, r_cutoff)
+  call initvlist(particles, n_particles, simbox, r_list)
+  call pp_init(r_cutoff)
   !! Test that a simple side by side configuration produces zero total energy
-  call pair_interactions(particles, n_particles, simbox, pair_energy, overlap)
+  call pair_interactions(simbox, particles, pair_energy, overlap)
   ! Assert_Real_Equal assertion
   numAsserts = numAsserts + 1
   if (noAssertFailed) then
@@ -61,7 +63,7 @@ module verlet_fun
       .le. &
        (pair_energy) )) then
       print *, " *Assert_Real_Equal failed* in test total_pair_e &
-              &[verlet.fun:26]"
+              &[verlet.fun:28]"
       print *, "  ", "pair_energy (", &
  pair_energy, &
   ") is not", &
@@ -80,7 +82,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (overlap) then
       print *, " *Assert_False failed* in test total_pair_e &
-              &[verlet.fun:27]"
+              &[verlet.fun:29]"
       print *, "  ", "overlap is not false"
       print *, ""
       noAssertFailed = .false.
@@ -92,7 +94,7 @@ module verlet_fun
   !! Check that x-configuration energy at contact distance is zero
   call make_xconf(particles, n_particles)
   call updatelist(particles, n_particles, simbox)
-  call pair_interactions(particles, n_particles, simbox, pair_energy, overlap)
+  call pair_interactions(simbox, particles, pair_energy, overlap)
   ! Assert_Real_Equal assertion
   numAsserts = numAsserts + 1
   if (noAssertFailed) then
@@ -106,7 +108,7 @@ module verlet_fun
       .le. &
        (pair_energy) )) then
       print *, " *Assert_Real_Equal failed* in test total_pair_e &
-              &[verlet.fun:32]"
+              &[verlet.fun:34]"
       print *, "  ", "pair_energy (", &
  pair_energy, &
   ") is not", &
@@ -125,7 +127,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (overlap) then
       print *, " *Assert_False failed* in test total_pair_e &
-              &[verlet.fun:33]"
+              &[verlet.fun:35]"
       print *, "  ", "overlap is not false"
       print *, ""
       noAssertFailed = .false.
@@ -164,13 +166,13 @@ module verlet_fun
   simbox = new_box(box_side)
   call init(4.4_dp, 20._dp, 1._dp, 1._dp, 1._dp, 1._dp)
   call updatelist(particles, n_particles, simbox)
-  call pair_interactions(particles, n_particles, simbox, xenergy, overlap)
+  call pair_interactions(simbox, particles, xenergy, overlap)
   ! Assert_False assertion
   numAsserts = numAsserts + 1
   if (noAssertFailed) then
     if (overlap) then
       print *, " *Assert_False failed* in test min_image &
-              &[verlet.fun:60]"
+              &[verlet.fun:62]"
       print *, "  ", "overlap is not false"
       print *, ""
       noAssertFailed = .false.
@@ -182,7 +184,7 @@ module verlet_fun
   particles(1)%x = -(box_side - sigma_0()) / 2._dp
   particles(2)%x = (box_side - sigma_0()) / 2._dp
   call updatelist(particles, n_particles, simbox)
-  call pair_interactions(particles, n_particles, simbox, pair_energy, overlap)
+  call pair_interactions(simbox, particles, pair_energy, overlap)
   ! Assert_Real_Equal assertion
   numAsserts = numAsserts + 1
   if (noAssertFailed) then
@@ -196,7 +198,7 @@ module verlet_fun
       .le. &
        (pair_energy) )) then
       print *, " *Assert_Real_Equal failed* in test min_image &
-              &[verlet.fun:65]"
+              &[verlet.fun:67]"
       print *, "  ", "pair_energy (", &
  pair_energy, &
   ") is not", &
@@ -215,7 +217,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (overlap) then
       print *, " *Assert_False failed* in test min_image &
-              &[verlet.fun:66]"
+              &[verlet.fun:68]"
       print *, "  ", "overlap is not false"
       print *, ""
       noAssertFailed = .false.
@@ -232,7 +234,7 @@ module verlet_fun
   particles(2)%x = separation
   simbox = new_box(box_side)
   call updatelist(particles, n_particles, simbox)
-  call pair_interactions(particles, n_particles, simbox, pair_energy, overlap)
+  call pair_interactions(simbox, particles, pair_energy, overlap)
   ! Assert_Real_Equal assertion
   numAsserts = numAsserts + 1
   if (noAssertFailed) then
@@ -246,7 +248,7 @@ module verlet_fun
       .le. &
        (pair_energy) )) then
       print *, " *Assert_Real_Equal failed* in test min_image &
-              &[verlet.fun:76]"
+              &[verlet.fun:78]"
       print *, "  ", "pair_energy (", &
  pair_energy, &
   ") is not", &
@@ -265,7 +267,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (overlap) then
       print *, " *Assert_False failed* in test min_image &
-              &[verlet.fun:77]"
+              &[verlet.fun:79]"
       print *, "  ", "overlap is not false"
       print *, ""
       noAssertFailed = .false.
@@ -277,7 +279,7 @@ module verlet_fun
   particles(1)%x = -(box_side - separation) / 2._dp
   particles(2)%x = (box_side - separation) / 2._dp
   call updatelist(particles, n_particles, simbox)
-  call pair_interactions(particles, n_particles, simbox, pair_energy, overlap)
+  call pair_interactions(simbox, particles, pair_energy, overlap)
   ! Assert_Real_Equal assertion
   numAsserts = numAsserts + 1
   if (noAssertFailed) then
@@ -291,7 +293,7 @@ module verlet_fun
       .le. &
        (pair_energy) )) then
       print *, " *Assert_Real_Equal failed* in test min_image &
-              &[verlet.fun:82]"
+              &[verlet.fun:84]"
       print *, "  ", "pair_energy (", &
  pair_energy, &
   ") is not", &
@@ -310,7 +312,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (overlap) then
       print *, " *Assert_False failed* in test min_image &
-              &[verlet.fun:83]"
+              &[verlet.fun:85]"
       print *, "  ", "overlap is not false"
       print *, ""
       noAssertFailed = .false.
@@ -324,7 +326,7 @@ module verlet_fun
   box_side = 2._dp * box_side
   simbox = new_box(box_side)
   call updatelist(particles, n_particles, simbox)
-  call pair_interactions(particles, n_particles, simbox, pair_energy, overlap)
+  call pair_interactions(simbox, particles, pair_energy, overlap)
   ! Assert_Real_Equal assertion
   numAsserts = numAsserts + 1
   if (noAssertFailed) then
@@ -338,7 +340,7 @@ module verlet_fun
       .le. &
        (pair_energy) )) then
       print *, " *Assert_Real_Equal failed* in test min_image &
-              &[verlet.fun:90]"
+              &[verlet.fun:92]"
       print *, "  ", "pair_energy (", &
  pair_energy, &
   ") is not", &
@@ -357,7 +359,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (overlap) then
       print *, " *Assert_False failed* in test min_image &
-              &[verlet.fun:91]"
+              &[verlet.fun:93]"
       print *, "  ", "overlap is not false"
       print *, ""
       noAssertFailed = .false.
@@ -396,7 +398,7 @@ module verlet_fun
   particles(2)%x = separation
   simbox = new_box(box_side)
   call updatelist(particles, n_particles, simbox)
-  call pair_interactions(particles, n_particles, simbox, pair_energy, overlap)
+  call pair_interactions(simbox, particles, pair_energy, overlap)
   ! Assert_Real_Equal assertion
   numAsserts = numAsserts + 1
   if (noAssertFailed) then
@@ -410,7 +412,7 @@ module verlet_fun
       .le. &
        (pair_energy) )) then
       print *, " *Assert_Real_Equal failed* in test overlapping &
-              &[verlet.fun:118]"
+              &[verlet.fun:120]"
       print *, "  ", "pair_energy (", &
  pair_energy, &
   ") is not", &
@@ -429,7 +431,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (.not.(overlap)) then
       print *, " *Assert_True failed* in test overlapping &
-              &[verlet.fun:119]"
+              &[verlet.fun:121]"
       print *, "  ", "overlap is not true"
       print *, ""
       noAssertFailed = .false.
@@ -441,7 +443,7 @@ module verlet_fun
   particles(1)%x = -(box_side - separation) / 2._dp
   particles(2)%x = (box_side - separation) / 2._dp
   call updatelist(particles, n_particles, simbox)
-  call pair_interactions(particles, n_particles, simbox, pair_energy, overlap)
+  call pair_interactions(simbox, particles, pair_energy, overlap)
   ! Assert_Real_Equal assertion
   numAsserts = numAsserts + 1
   if (noAssertFailed) then
@@ -455,7 +457,7 @@ module verlet_fun
       .le. &
        (pair_energy) )) then
       print *, " *Assert_Real_Equal failed* in test overlapping &
-              &[verlet.fun:124]"
+              &[verlet.fun:126]"
       print *, "  ", "pair_energy (", &
  pair_energy, &
   ") is not", &
@@ -474,7 +476,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (.not.(overlap)) then
       print *, " *Assert_True failed* in test overlapping &
-              &[verlet.fun:125]"
+              &[verlet.fun:127]"
       print *, "  ", "overlap is not true"
       print *, ""
       noAssertFailed = .false.
@@ -556,7 +558,7 @@ module verlet_fun
   ! region 3
   ! Start from region 1
   particles(2) = region_1
-  call pair_interactions(particles, n_particles, simbox, e_pair, overlap)
+  call pair_interactions(simbox, particles, e_pair, overlap)
   write(*, *) 'Energy of pair interactions in region 1 is ', e_pair  
   if (overlap) then
     stop 'Should not overlap in this test!' 
@@ -566,7 +568,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (.not.(0.0_dp > e_pair)) then
       print *, " *Assert_True failed* in test auto_update &
-              &[verlet.fun:199]"
+              &[verlet.fun:201]"
       print *, "  ", "0.0_dp > e_pair is not true"
       print *, ""
       noAssertFailed = .false.
@@ -575,7 +577,7 @@ module verlet_fun
       numAssertsTested = numAssertsTested + 1
     endif
   endif
-  call pair_interactions(particles, n_particles, simbox, particles(2), 2, &
+  call pair_interactions(simbox, particles, particles(2), 2, &
     e_single, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
@@ -593,7 +595,7 @@ module verlet_fun
       .le. &
        (e_single) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:205]"
+              &[verlet.fun:207]"
       print *, "  ", "e_single (", &
  e_single, &
   ") is not", &
@@ -610,7 +612,7 @@ module verlet_fun
 
   ! Move to region 3
   particles(2) = region_3
-  call pair_interactions(particles, n_particles, simbox, e_pair, overlap)
+  call pair_interactions(simbox, particles, e_pair, overlap)
   if (overlap) then
     stop 'Should not overlap in this test!'
   end if
@@ -627,7 +629,7 @@ module verlet_fun
       .le. &
        (e_pair) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:213]"
+              &[verlet.fun:215]"
       print *, "  ", "e_pair (", &
  e_pair, &
   ") is not", &
@@ -641,7 +643,7 @@ module verlet_fun
       numAssertsTested = numAssertsTested + 1
     endif
   endif
-  call pair_interactions(particles, n_particles, simbox, particles(2), 2, &
+  call pair_interactions(simbox, particles, particles(2), 2, &
     e_single, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
@@ -659,7 +661,7 @@ module verlet_fun
       .le. &
        (e_single) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:219]"
+              &[verlet.fun:221]"
       print *, "  ", "e_single (", &
  e_single, &
   ") is not", &
@@ -676,7 +678,7 @@ module verlet_fun
 
   ! Move back to region 1
   particles(2) = region_1
-  call pair_interactions(particles, n_particles, simbox, e_pair, overlap)
+  call pair_interactions(simbox, particles, e_pair, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
   end if
@@ -685,7 +687,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (.not.(0.0_dp > e_pair)) then
       print *, " *Assert_True failed* in test auto_update &
-              &[verlet.fun:227]"
+              &[verlet.fun:229]"
       print *, "  ", "0.0_dp > e_pair is not true"
       print *, ""
       noAssertFailed = .false.
@@ -694,7 +696,7 @@ module verlet_fun
       numAssertsTested = numAssertsTested + 1
     endif
   endif
-  call pair_interactions(particles, n_particles, simbox, particles(2), 2, &
+  call pair_interactions(simbox, particles, particles(2), 2, &
     e_single, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
@@ -712,7 +714,7 @@ module verlet_fun
       .le. &
        (e_single) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:233]"
+              &[verlet.fun:235]"
       print *, "  ", "e_single (", &
  e_single, &
   ") is not", &
@@ -731,7 +733,7 @@ module verlet_fun
   ! region 1
   ! Start from region 2
   particles(2) = region_2
-  call pair_interactions(particles, n_particles, simbox, e_pair, overlap)
+  call pair_interactions(simbox, particles, e_pair, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
   end if
@@ -748,7 +750,7 @@ module verlet_fun
       .le. &
        (e_pair) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:243]"
+              &[verlet.fun:245]"
       print *, "  ", "e_pair (", &
  e_pair, &
   ") is not", &
@@ -762,7 +764,7 @@ module verlet_fun
       numAssertsTested = numAssertsTested + 1
     endif
   endif
-  call pair_interactions(particles, n_particles, simbox, particles(2), 2, &
+  call pair_interactions(simbox, particles, particles(2), 2, &
     e_single, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
@@ -780,7 +782,7 @@ module verlet_fun
       .le. &
        (e_single) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:249]"
+              &[verlet.fun:251]"
       print *, "  ", "e_single (", &
  e_single, &
   ") is not", &
@@ -797,7 +799,7 @@ module verlet_fun
 
   ! Move to region 1
   particles(2) = region_1
-  call pair_interactions(particles, n_particles, simbox, e_pair, overlap)
+  call pair_interactions(simbox, particles, e_pair, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
   end if
@@ -806,7 +808,7 @@ module verlet_fun
   if (noAssertFailed) then
     if (.not.(0.0_dp > e_pair)) then
       print *, " *Assert_True failed* in test auto_update &
-              &[verlet.fun:257]"
+              &[verlet.fun:259]"
       print *, "  ", "0.0_dp > e_pair is not true"
       print *, ""
       noAssertFailed = .false.
@@ -815,7 +817,7 @@ module verlet_fun
       numAssertsTested = numAssertsTested + 1
     endif
   endif
-  call pair_interactions(particles, n_particles, simbox, particles(2), 2, &
+  call pair_interactions(simbox, particles, particles(2), 2, &
     e_single, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
@@ -833,7 +835,7 @@ module verlet_fun
       .le. &
        (e_single) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:263]"
+              &[verlet.fun:265]"
       print *, "  ", "e_single (", &
  e_single, &
   ") is not", &
@@ -850,7 +852,7 @@ module verlet_fun
 
   ! and back to region 2
   particles(2) = region_2
-  call pair_interactions(particles, n_particles, simbox, e_pair, overlap)
+  call pair_interactions(simbox, particles, e_pair, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
   end if
@@ -867,7 +869,7 @@ module verlet_fun
       .le. &
        (e_pair) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:271]"
+              &[verlet.fun:273]"
       print *, "  ", "e_pair (", &
  e_pair, &
   ") is not", &
@@ -881,7 +883,7 @@ module verlet_fun
       numAssertsTested = numAssertsTested + 1
     endif
   endif
-  call pair_interactions(particles, n_particles, simbox, particles(2), 2, &
+  call pair_interactions(simbox, particles, particles(2), 2, &
     e_single, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
@@ -899,7 +901,7 @@ module verlet_fun
       .le. &
        (e_single) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:277]"
+              &[verlet.fun:279]"
       print *, "  ", "e_single (", &
  e_single, &
   ") is not", &
@@ -916,12 +918,12 @@ module verlet_fun
 
   ! Move to region 3 
   particles(2) = region_3
-  call pair_interactions(particles, n_particles, simbox, particles(2), 2, &
+  call pair_interactions(simbox, particles, particles(2), 2, &
     e_single, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
   end if
-  call pair_interactions(particles, n_particles, simbox, e_pair, overlap)
+  call pair_interactions(simbox, particles, e_pair, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
   end if
@@ -938,7 +940,7 @@ module verlet_fun
       .le. &
        (e_pair) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:290]"
+              &[verlet.fun:292]"
       print *, "  ", "e_pair (", &
  e_pair, &
   ") is not", &
@@ -965,7 +967,7 @@ module verlet_fun
       .le. &
        (e_single) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:291]"
+              &[verlet.fun:293]"
       print *, "  ", "e_single (", &
  e_single, &
   ") is not", &
@@ -983,7 +985,7 @@ module verlet_fun
   ! Swap particles
   particles(1) = region_3
   particles(2) = center
-  call pair_interactions(particles, n_particles, simbox, particles(2), 2, &
+  call pair_interactions(simbox, particles, particles(2), 2, &
     e_single, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
@@ -1001,7 +1003,7 @@ module verlet_fun
       .le. &
        (e_single) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:301]"
+              &[verlet.fun:303]"
       print *, "  ", "e_single (", &
  e_single, &
   ") is not", &
@@ -1015,7 +1017,7 @@ module verlet_fun
       numAssertsTested = numAssertsTested + 1
     endif
   endif
-  call pair_interactions(particles, n_particles, simbox, particles(1), 1, &
+  call pair_interactions(simbox, particles, particles(1), 1, &
     e_single, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
@@ -1033,7 +1035,7 @@ module verlet_fun
       .le. &
        (e_single) )) then
       print *, " *Assert_Real_Equal failed* in test auto_update &
-              &[verlet.fun:307]"
+              &[verlet.fun:309]"
       print *, "  ", "e_single (", &
  e_single, &
   ") is not", &

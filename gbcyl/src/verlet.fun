@@ -7,6 +7,7 @@ test total_pair_e
   use box
   use class_poly_box
   use configurations
+  use class_pair_potential
   implicit none
   type(particledat), dimension(2) :: particles
   integer :: n_particles = 2
@@ -20,15 +21,16 @@ test total_pair_e
   call init(4.4_dp, 20._dp, 1._dp, 1._dp, 1._dp, 1._dp)
   call make_sidebyside(particles, n_particles)
   !! initialize verlet
-  call initvlist(particles, n_particles, simbox, r_list, r_cutoff)
+  call initvlist(particles, n_particles, simbox, r_list)
+  call pp_init(r_cutoff)
   !! Test that a simple side by side configuration produces zero total energy
-  call pair_interactions(particles, n_particles, simbox, pair_energy, overlap)
+  call pair_interactions(simbox, particles, pair_energy, overlap)
   assert_real_equal(0._dp, pair_energy)
   assert_false(overlap)
   !! Check that x-configuration energy at contact distance is zero
   call make_xconf(particles, n_particles)
   call updatelist(particles, n_particles, simbox)
-  call pair_interactions(particles, n_particles, simbox, pair_energy, overlap)
+  call pair_interactions(simbox, particles, pair_energy, overlap)
   assert_real_equal(0._dp, pair_energy)
   assert_false(overlap)
 end test
@@ -56,12 +58,12 @@ test min_image
   simbox = new_box(box_side)
   call init(4.4_dp, 20._dp, 1._dp, 1._dp, 1._dp, 1._dp)
   call updatelist(particles, n_particles, simbox)
-  call pair_interactions(particles, n_particles, simbox, xenergy, overlap)
+  call pair_interactions(simbox, particles, xenergy, overlap)
   assert_false(overlap)
   particles(1)%x = -(box_side - sigma_0()) / 2._dp
   particles(2)%x = (box_side - sigma_0()) / 2._dp
   call updatelist(particles, n_particles, simbox)
-  call pair_interactions(particles, n_particles, simbox, pair_energy, overlap)
+  call pair_interactions(simbox, particles, pair_energy, overlap)
   assert_real_equal(0._dp, pair_energy) 
   assert_false(overlap)  
 
@@ -72,13 +74,13 @@ test min_image
   particles(2)%x = separation
   simbox = new_box(box_side)
   call updatelist(particles, n_particles, simbox)
-  call pair_interactions(particles, n_particles, simbox, pair_energy, overlap)
+  call pair_interactions(simbox, particles, pair_energy, overlap)
   assert_real_equal(lj_potential(separation), pair_energy)
   assert_false(overlap)
   particles(1)%x = -(box_side - separation) / 2._dp
   particles(2)%x = (box_side - separation) / 2._dp
   call updatelist(particles, n_particles, simbox)
-  call pair_interactions(particles, n_particles, simbox, pair_energy, overlap)
+  call pair_interactions(simbox, particles, pair_energy, overlap)
   assert_real_equal(lj_potential(separation), pair_energy) 
   assert_false(overlap)
  
@@ -86,7 +88,7 @@ test min_image
   box_side = 2._dp * box_side
   simbox = new_box(box_side)
   call updatelist(particles, n_particles, simbox)
-  call pair_interactions(particles, n_particles, simbox, pair_energy, overlap)
+  call pair_interactions(simbox, particles, pair_energy, overlap)
   assert_real_equal(0._dp, pair_energy)
   assert_false(overlap)  
 end test
@@ -114,13 +116,13 @@ test overlapping
   particles(2)%x = separation
   simbox = new_box(box_side)
   call updatelist(particles, n_particles, simbox)
-  call pair_interactions(particles, n_particles, simbox, pair_energy, overlap)
+  call pair_interactions(simbox, particles, pair_energy, overlap)
   assert_real_equal(0._dp, pair_energy)
   assert_true(overlap)
   particles(1)%x = -(box_side - separation) / 2._dp
   particles(2)%x = (box_side - separation) / 2._dp
   call updatelist(particles, n_particles, simbox)
-  call pair_interactions(particles, n_particles, simbox, pair_energy, overlap)
+  call pair_interactions(simbox, particles, pair_energy, overlap)
   assert_real_equal(0._dp, pair_energy) 
   assert_true(overlap)
 end test
@@ -191,13 +193,13 @@ test auto_update
   ! region 3
   ! Start from region 1
   particles(2) = region_1
-  call pair_interactions(particles, n_particles, simbox, e_pair, overlap)
+  call pair_interactions(simbox, particles, e_pair, overlap)
   write(*, *) 'Energy of pair interactions in region 1 is ', e_pair  
   if (overlap) then
     stop 'Should not overlap in this test!' 
   end if 
   assert_true(0.0_dp > e_pair)
-  call pair_interactions(particles, n_particles, simbox, particles(2), 2, &
+  call pair_interactions(simbox, particles, particles(2), 2, &
     e_single, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
@@ -206,12 +208,12 @@ test auto_update
 
   ! Move to region 3
   particles(2) = region_3
-  call pair_interactions(particles, n_particles, simbox, e_pair, overlap)
+  call pair_interactions(simbox, particles, e_pair, overlap)
   if (overlap) then
     stop 'Should not overlap in this test!'
   end if
   assert_real_equal(0.0_dp, e_pair)
-  call pair_interactions(particles, n_particles, simbox, particles(2), 2, &
+  call pair_interactions(simbox, particles, particles(2), 2, &
     e_single, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
@@ -220,12 +222,12 @@ test auto_update
 
   ! Move back to region 1
   particles(2) = region_1
-  call pair_interactions(particles, n_particles, simbox, e_pair, overlap)
+  call pair_interactions(simbox, particles, e_pair, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
   end if
   assert_true(0.0_dp > e_pair)
-  call pair_interactions(particles, n_particles, simbox, particles(2), 2, &
+  call pair_interactions(simbox, particles, particles(2), 2, &
     e_single, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
@@ -236,12 +238,12 @@ test auto_update
   ! region 1
   ! Start from region 2
   particles(2) = region_2
-  call pair_interactions(particles, n_particles, simbox, e_pair, overlap)
+  call pair_interactions(simbox, particles, e_pair, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
   end if
   assert_real_equal(0.0_dp, e_pair)
-  call pair_interactions(particles, n_particles, simbox, particles(2), 2, &
+  call pair_interactions(simbox, particles, particles(2), 2, &
     e_single, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
@@ -250,12 +252,12 @@ test auto_update
 
   ! Move to region 1
   particles(2) = region_1
-  call pair_interactions(particles, n_particles, simbox, e_pair, overlap)
+  call pair_interactions(simbox, particles, e_pair, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
   end if
   assert_true(0.0_dp > e_pair)
-  call pair_interactions(particles, n_particles, simbox, particles(2), 2, &
+  call pair_interactions(simbox, particles, particles(2), 2, &
     e_single, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
@@ -264,12 +266,12 @@ test auto_update
 
   ! and back to region 2
   particles(2) = region_2
-  call pair_interactions(particles, n_particles, simbox, e_pair, overlap)
+  call pair_interactions(simbox, particles, e_pair, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
   end if
   assert_real_equal(0.0_dp, e_pair)
-  call pair_interactions(particles, n_particles, simbox, particles(2), 2, &
+  call pair_interactions(simbox, particles, particles(2), 2, &
     e_single, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
@@ -278,12 +280,12 @@ test auto_update
 
   ! Move to region 3 
   particles(2) = region_3
-  call pair_interactions(particles, n_particles, simbox, particles(2), 2, &
+  call pair_interactions(simbox, particles, particles(2), 2, &
     e_single, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
   end if
-  call pair_interactions(particles, n_particles, simbox, e_pair, overlap)
+  call pair_interactions(simbox, particles, e_pair, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
   end if
@@ -293,13 +295,13 @@ test auto_update
   ! Swap particles
   particles(1) = region_3
   particles(2) = center
-  call pair_interactions(particles, n_particles, simbox, particles(2), 2, &
+  call pair_interactions(simbox, particles, particles(2), 2, &
     e_single, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
   end if
   assert_real_equal(e_pair, e_single)
-  call pair_interactions(particles, n_particles, simbox, particles(1), 1, &
+  call pair_interactions(simbox, particles, particles(1), 1, &
     e_single, overlap)
   if (overlap) then 
     stop 'Should not overlap in this test!'
