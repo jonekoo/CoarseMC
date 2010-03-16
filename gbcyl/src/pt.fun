@@ -21,8 +21,8 @@ type(particledat), dimension(2) :: sidebyside
 type(particledat), dimension(2) :: particles
 integer :: n_particles
 type(poly_box) :: a_box
-type(boxdat) :: large_box
-type(boxdat) :: small_box
+type(poly_box) :: large_box
+type(poly_box) :: small_box
 real(dp) :: small_box_side = 10.0_dp
 real(dp) :: large_box_side = 20.0_dp
 integer :: seed = 123456
@@ -56,9 +56,9 @@ logical :: overlap
   !! Make side by side configuration
   call make_sidebyside(sidebyside, n_particles) 
   !! 3.1. Make small box
-  call make_box(small_box, small_box_side)
+  small_box = new_box(small_box_side)
   !! Make large box
-  call make_box(large_box, large_box_side)
+  large_box = new_box(large_box_side)
   !! 3.2. task 0: put T-configuration inside a small box
   if (id == 0) then
     a_box = small_box
