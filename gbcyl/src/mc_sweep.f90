@@ -1,12 +1,10 @@
 module mc_sweep
-  use nrtype, only : dp
-  use energy, only: total_energy, potential_energy
+  use nrtype
+  use energy
   use class_poly_box
-  use particle, only : particledat, move, setmaxmoves, getmaxmoves, position, &
-    set_position
-  use mtmod, only : grnd
-  use verlet, only : pair_interactions, updatelist
-!  use all_pairs, only: pair_interactions
+  use particle
+  use mtmod
+  use verlet
   use pt
   use class_parameterizer
   use class_parameter_writer
@@ -29,9 +27,9 @@ module mc_sweep
   real(dp), save :: move_ratio_
   real(dp), save :: scaling_ratio_
   real(dp), save :: largest_translation_ = 1._dp    !! molecule diameter
-  real(dp), save :: smallest_translation_ = 0.01_dp !! 1/100 molecule diameter
+  real(dp), save :: smallest_translation_ = 0.1_dp !! 1/10 molecule diameter
   real(dp), save :: largest_rotation_ = 1.57_dp     !! ~ pi/4
-  real(dp), save :: smallest_rotation_ = 0.0157_dp  !! 1/100 largest rotation
+  real(dp), save :: smallest_rotation_ = 0.157_dp  !! 1/10 largest rotation
   real(dp), save :: pt_low
   real(dp), save :: pt_high
   integer, save :: pt_ratio_ = 10
@@ -46,9 +44,7 @@ module mc_sweep
   subroutine init_parameterizer(reader)
     type(parameterizer), intent(in) :: reader
     call get_parameter(reader, 'volume_change_type', volume_change_type_)
-    call get_parameter(reader, 'pt_low', pt_low)
-    call get_parameter(reader, 'pt_high', pt_high)
-    temperature_ = pt_temperature(pt_low, pt_high)
+    call get_parameter(reader, 'temperature', temperature_)
     call get_parameter(reader, 'pressure', pressure_)
     call get_parameter(reader, 'move_ratio', move_ratio_)
     call get_parameter(reader, 'scaling_ratio', scaling_ratio_)
@@ -78,71 +74,116 @@ module mc_sweep
     call write_parameter(writer, 'pt_ratio', pt_ratio_)
   end subroutine
 
-  subroutine sweep(particles, n_particles, simbox)
-    intrinsic log, real
+  subroutine sweep(simbox, particles)
     type(particledat), dimension(:), intent(inout) :: particles
-    integer, intent(inout) :: n_particles
     type(poly_box), intent(inout) :: simbox
     integer :: i
-    real(dp) :: Eold
-    real(dp) :: Enew
-    logical :: accept
     logical :: overlap
-    type(particledat) :: newparticle 
-    real(dp) :: beta
-    real(dp) :: enthalpy
     integer :: i_vol_move
     real(dp) :: e_total_old
     !! Trial moves of particles and one particle move replaced with volume move
-    i_vol_move = int(grnd() * real(n_particles, dp)) + 1
-    e_total_old = e_total_
-    call total_energy(particles, n_particles, simbox, e_total_, overlap)
+    i_vol_move = int(grnd() * real(size(particles), dp)) + 1
+    e_total_old = e_total_    
+    call total_energy(simbox, particles, e_total_, overlap)
     if(overlap) then 
       stop 'Overlap when entering sweep! Stopping.'
     end if
-    !write(*, *) 'These should be the same: ', e_total_old, e_total_
-    do i = 1, n_particles
+    do i = 1, size(particles)
       if (i == i_vol_move) then
-        call move_vol(simbox, particles, n_particles)
+        !! Replace random particle update with a volume update.
+        call move_vol(simbox, particles, size(particles))
       else
-        Enew = 0._dp
-        Eold = 0._dp
-        overlap = .false.
-        !! :TODO: Change moving of particles for a separate object which gets the whole particle array!
-        call move(particles(i), newparticle)
-        call set_position(newparticle, min_image(simbox, (/0._dp, 0._dp, 0._dp/), position(newparticle))) 
-        call potential_energy(particles, n_particles, newparticle, i, simbox, &
-          Enew, overlap)
-        if(.not. overlap) then 
-          call potential_energy(particles, n_particles, particles(i), i, simbox, &
-            Eold, overlap)   
-          if (overlap) then
-            stop 'sweep: overlap with old particle'
-          end if
-          accept = acceptchange(Eold, Enew)       
-          if(accept) then
-            particles(i) = newparticle
-            e_total_ = e_total_ + (Enew - Eold)
-            n_accepted_moves_ = n_accepted_moves_ + 1
-          end if
-        end if 
+        call move_particle(simbox, particles, i)
       end if
       if (mod(i, pt_ratio_) == 0) then
-        beta = 1._dp/temperature_
-        !call total_energy(particles, n_particles, simbox, enthalpy, overlap)
-        !write(*, *) "These should be the same: ", e_total_, enthalpy
-        !if (overlap) then 
-        !  stop 'Overlap before parallel tempering move!'
-        !end if
-        enthalpy = e_total_ + pressure_ * volume(simbox)
-        call pt_move(beta, enthalpy, particles, n_particles, simbox)
-        e_total_ = enthalpy - pressure_ * volume(simbox)
-        !! One way to get rid of explicit list update would be to use some kind 
-        !! of observing system between the particlearray and the neighbour list. 
-        call updatelist(particles, n_particles, simbox) 
+        call make_pt_move(simbox, particles)
       end if 
     end do
   end subroutine
+
+  subroutine make_pt_move(simbox, particles)
+    type(poly_box), intent(inout) :: simbox
+    type(particledat), dimension(:), intent(inout) :: particles
+    real(dp) :: beta
+    real(dp) :: enthalpy
+    integer :: n_particles
+    beta = 1._dp/temperature_
+    enthalpy = e_total_ + pressure_ * volume(simbox)
+    n_particles = size(particles)
+    call pt_move(beta, enthalpy, particles, n_particles, simbox)
+    e_total_ = enthalpy - pressure_ * volume(simbox)
+    !! One way to get rid of explicit list update would be to use some kind 
+    !! of observing system between the particlearray and the neighbour list. 
+    call updatelist(particles, size(particles), simbox) 
+  end subroutine
+
+  subroutine move_particle(simbox, particles, i)
+    type(poly_box), intent(in) :: simbox
+    type(particledat), dimension(:), intent(inout) :: particles
+    integer, intent(in) :: i
+    type(particledat) :: newparticle
+    type(particledat) :: oldparticle
+    logical :: overlap
+    real(dp) :: e_new
+    real(dp) :: e_old
+    logical :: is_accepted
+    e_new = 0._dp
+    e_old = 0._dp
+    overlap = .false.
+    !! :TODO: Change moving of particles for a separate object which 
+    !! :TODO: gets the whole particle array.
+    call move(particles(i), newparticle)
+    call set_position(newparticle, min_image(simbox, &
+    (/0._dp, 0._dp, 0._dp/), position(newparticle)))
+    oldparticle = particles(i) 
+    particles(i) = newparticle
+    call potential_energy(simbox, particles, i, e_new, overlap)
+    if(.not. overlap) then 
+      particles(i) = oldparticle
+      call potential_energy(simbox, particles, i, e_old, overlap)
+      if (overlap) then
+        stop 'sweep: overlap with old particle'
+      end if
+      is_accepted = acceptchange(e_old, e_new)       
+      if(is_accepted) then
+        particles(i) = newparticle
+        e_total_ = e_total_ + (e_new - e_old)
+        n_accepted_moves_ = n_accepted_moves_ + 1
+      end if
+    end if 
+  end subroutine
+
+  !subroutine move_particleinsystem(simbox, particles, i)
+  !  type(poly_box), intent(in) :: simbox
+  !  type(particledat), dimension(:), intent(inout) :: particles
+  !  integer, intent(in) :: i
+  !  type(particledat) :: newparticle
+  !  type(particledat) :: oldparticle
+  !  logical :: overlap
+  !  real(dp) :: e_new
+  !  real(dp) :: e_old
+  !  logical :: is_accepted
+  !  e_new = 0._dp
+  !  e_old = 0._dp
+  !  overlap = .false.
+    !! :TODO: Change moving of particles for a separate object which 
+    !! :TODO: gets the whole particle array.
+    !call move_particle(particle_iterator) 
+    !call potential_energy(particle_iterator, e_new, overlap) 
+    !if(.not. overlap) then 
+    !  call undo_move(particle_iterator)
+    !  call potential_energy(particle_iterator, e_old, overlap)
+    !  if (overlap) then
+    !    stop 'sweep: overlap with old particle'
+    !  end if
+    !  is_accepted = acceptchange(e_old, e_new)       
+    !  if (is_accepted) then
+    !    call redo_move(particle_iterator)
+    !    e_total_ = e_total_ + (e_new - e_old) !! :TODO: Remove this.
+    !    n_accepted_moves_ = n_accepted_moves_ + 1
+    !  end if
+    !end if 
+  !end subroutine
 
   subroutine move_vol(simbox, particles, n_particles)
     type(poly_box), intent(inout) :: simbox
@@ -150,39 +191,32 @@ module mc_sweep
     integer, intent(in) :: n_particles
     logical :: overlap
     real(dp) :: V_o, V_n
-    logical :: accept
-!    real(dp) :: totEold
-    real(dp) :: totEnew
+    logical :: is_accepted
+    real(dp) :: tote_new
     real(dp) :: boltzmann_n
     real(dp) :: boltzmann_o
     type(poly_box) :: oldbox
+    real(dp), dimension(3) :: scaling
     overlap = .false.
     V_o = volume(simbox)
     oldbox = simbox
-    call scale(simbox, max_scaling_, grnd)
+    scaling = scale(simbox, max_scaling_, grnd)
     call scale_positions(oldbox, simbox, particles, n_particles) 
     V_n = volume(simbox)
-    call total_energy(particles, n_particles, simbox, totEnew, overlap)
+    call total_energy(simbox, particles, tote_new, overlap)
     call scale_positions(simbox, oldbox, particles, n_particles)
     if (overlap) then
       simbox = oldbox  
     else
-      !call total_energy(particles, n_particles, oldbox, totEold, overlap)
-      !if (overlap) then
-      !  stop 'move_vol: overlap in old configuration'
-      !end if
-      !write(*, *) 'These should be the same: ', e_total_, totEold
-      !e_total_ = totEold
-      boltzmann_n = totEnew + pressure_ * V_n - real(n_particles, dp) * &
+      boltzmann_n = tote_new + pressure_ * V_n - real(n_particles, dp) * &
         temperature_ * log(V_n)  
       boltzmann_o = e_total_ + pressure_ * V_o - real(n_particles, dp) * &
         temperature_ * log(V_o)
-      accept = acceptchange(boltzmann_o, boltzmann_n)
-      if (accept) then
+      is_accepted = acceptchange(boltzmann_o, boltzmann_n)
+      if (is_accepted) then
         !! Scale back to new configuration
-        !write(*, *) 'Accepted volume move' 
         call scale_positions(oldbox, simbox, particles, n_particles)
-        e_total_ = totEnew
+        e_total_ = tote_new
         n_accepted_scalings_ = n_accepted_scalings_ + 1
       else 
         simbox = oldbox
