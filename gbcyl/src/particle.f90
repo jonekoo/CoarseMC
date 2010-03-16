@@ -1,6 +1,8 @@
 !Partikkelidatan ja siihen kohdistuvien operaatioiden
 !m‰‰rittelyt
 
+!! :TODO: Think what functions and subroutines could be made elemental.
+
 module particle
   use nrtype
   use mtmod
@@ -22,6 +24,7 @@ module particle
   public :: move
   public :: setmaxmoves
   public :: set_position
+  public :: max_trans
   
   type particledat
      real(dp) :: x, y, z, ux, uy, uz
@@ -34,6 +37,14 @@ module particle
 
   interface initparticle
     module procedure init_particle_old, init_particle_parameterizer
+  end interface
+
+  interface max_trans
+    module procedure max_trans_f
+  end interface
+
+  interface move
+    module procedure move1, move2
   end interface
 
   contains
@@ -88,24 +99,24 @@ module particle
   subroutine write_particle(write_unit, a_particle)
     integer, intent(in) :: write_unit
     type(particledat), intent(in) :: a_particle
-    write(write_unit, '(A, 6' // fmt_char_dp() // ')', advance='no') type_id_, a_particle%x, &
-      a_particle%y, a_particle%z, a_particle%ux, a_particle%uy, a_particle%uz 
+    write(write_unit, '(A, 6' // fmt_char_dp() // ')', advance='no') &
+    type_id_, a_particle%x, a_particle%y, a_particle%z, a_particle%ux, &
+    a_particle%uy, a_particle%uz 
   end subroutine
 
-  function position(a_particle)
+  pure function position(a_particle)
     real(dp), dimension(3) :: position
     type(particledat), intent(in) :: a_particle
     position = (/a_particle%x, a_particle%y, a_particle%z/)
   end function
   
-  function orientation(a_particle) 
+  pure function orientation(a_particle) 
     real(dp), dimension(3) :: orientation
     type(particledat), intent(in) :: a_particle
     orientation = (/a_particle%ux, a_particle%uy, a_particle%uz/)
   end function 
 
-  subroutine set_position(a_particle, vec)
-    implicit none
+  pure subroutine set_position(a_particle, vec)
     type(particledat), intent(inout) :: a_particle
     real(dp), dimension(3), intent(in) :: vec
     a_particle%x = vec(1)
@@ -113,8 +124,14 @@ module particle
     a_particle%z = vec(3)
   end subroutine
 
-  subroutine move(oldp, newp)
-    implicit none
+  subroutine move1(a_particle)
+    type(particledat), intent(inout) :: a_particle
+    type(particledat) :: temp
+    call move(a_particle, temp)
+    a_particle = temp
+  end subroutine
+
+  subroutine move2(oldp, newp)
     type(particledat), intent(in) :: oldp
     type(particledat), intent(out) :: newp
     newp = oldp
@@ -154,8 +171,8 @@ module particle
   end subroutine
     
   subroutine rotate(uxo, uyo, uzo, uxn, uyn, uzn)
-    real(dp) :: uxo,uyo,uzo
-    real(dp) :: uxn,uyn,uzn
+    real(dp), intent(in) :: uxo,uyo,uzo
+    real(dp), intent(out) :: uxn,uyn,uzn
     real(dp) :: theta, nx, ny, nz
     call nvec(nx, ny, nz)
     theta = (2._dp * grnd() - 1._dp) * dthetamax
@@ -175,6 +192,12 @@ module particle
     distance = maxdr
     angle = dthetamax
   end subroutine 
+
+  pure function max_trans_f(particle) result(mtr)
+    type(particledat), intent(in) :: particle
+    real(dp) :: mtr
+    mtr = maxdr
+  end function
   
 end module particle
 
