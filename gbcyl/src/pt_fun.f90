@@ -1,7 +1,7 @@
 ! pt_fun.f90 - a unit test suite for pt.f90
 !
 ! funit generated this file from pt.fun
-! at Tue Oct 13 22:42:43 +0300 2009
+! at Fri Nov 20 11:22:57 +0200 2009
 
 module pt_fun
 
@@ -30,8 +30,7 @@ module pt_fun
 
 use pt
 use particle
-use box, only: boxdat, new_box
-!use cylinder, only: cylinderdat, cyl_make_box
+use box
 use class_poly_box
 use nrtype
 use mtmod
@@ -47,8 +46,8 @@ type(particledat), dimension(2) :: sidebyside
 type(particledat), dimension(2) :: particles
 integer :: n_particles
 type(poly_box) :: a_box
-type(boxdat) :: large_box
-type(boxdat) :: small_box
+type(poly_box) :: large_box
+type(poly_box) :: small_box
 real(dp) :: small_box_side = 10.0_dp
 real(dp) :: large_box_side = 20.0_dp
 integer :: seed = 123456
@@ -127,7 +126,7 @@ logical :: overlap
       .le. &
        (get_x(a_box)) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:92]"
+              &[pt.fun:91]"
       print *, "  ", "get_x(a_box) (", &
  get_x(a_box), &
   ") is not", &
@@ -154,7 +153,7 @@ logical :: overlap
       .le. &
        (get_y(a_box)) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:93]"
+              &[pt.fun:92]"
       print *, "  ", "get_y(a_box) (", &
  get_y(a_box), &
   ") is not", &
@@ -181,7 +180,7 @@ logical :: overlap
       .le. &
        (get_z(a_box)) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:94]"
+              &[pt.fun:93]"
       print *, "  ", "get_z(a_box) (", &
  get_z(a_box), &
   ") is not", &
@@ -211,7 +210,7 @@ logical :: overlap
       .le. &
        (sidebyside(1)%x) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:98]"
+              &[pt.fun:97]"
       print *, "  ", "sidebyside(1)%x (", &
  sidebyside(1)%x, &
   ") is not", &
@@ -238,7 +237,7 @@ logical :: overlap
       .le. &
        (sidebyside(1)%y) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:99]"
+              &[pt.fun:98]"
       print *, "  ", "sidebyside(1)%y (", &
  sidebyside(1)%y, &
   ") is not", &
@@ -265,7 +264,7 @@ logical :: overlap
       .le. &
        (sidebyside(1)%z) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:100]"
+              &[pt.fun:99]"
       print *, "  ", "sidebyside(1)%z (", &
  sidebyside(1)%z, &
   ") is not", &
@@ -292,7 +291,7 @@ logical :: overlap
       .le. &
        (sidebyside(1)%ux) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:101]"
+              &[pt.fun:100]"
       print *, "  ", "sidebyside(1)%ux (", &
  sidebyside(1)%ux, &
   ") is not", &
@@ -319,7 +318,7 @@ logical :: overlap
       .le. &
        (sidebyside(1)%uy) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:102]"
+              &[pt.fun:101]"
       print *, "  ", "sidebyside(1)%uy (", &
  sidebyside(1)%uy, &
   ") is not", &
@@ -346,7 +345,7 @@ logical :: overlap
       .le. &
        (sidebyside(1)%uz) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:103]"
+              &[pt.fun:102]"
       print *, "  ", "sidebyside(1)%uz (", &
  sidebyside(1)%uz, &
   ") is not", &
@@ -373,7 +372,7 @@ logical :: overlap
       .le. &
        (sidebyside(2)%x) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:104]"
+              &[pt.fun:103]"
       print *, "  ", "sidebyside(2)%x (", &
  sidebyside(2)%x, &
   ") is not", &
@@ -400,7 +399,7 @@ logical :: overlap
       .le. &
        (sidebyside(2)%y) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:105]"
+              &[pt.fun:104]"
       print *, "  ", "sidebyside(2)%y (", &
  sidebyside(2)%y, &
   ") is not", &
@@ -427,7 +426,7 @@ logical :: overlap
       .le. &
        (sidebyside(2)%z) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:106]"
+              &[pt.fun:105]"
       print *, "  ", "sidebyside(2)%z (", &
  sidebyside(2)%z, &
   ") is not", &
@@ -454,7 +453,7 @@ logical :: overlap
       .le. &
        (sidebyside(2)%ux) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:107]"
+              &[pt.fun:106]"
       print *, "  ", "sidebyside(2)%ux (", &
  sidebyside(2)%ux, &
   ") is not", &
@@ -481,7 +480,7 @@ logical :: overlap
       .le. &
        (sidebyside(2)%uy) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:108]"
+              &[pt.fun:107]"
       print *, "  ", "sidebyside(2)%uy (", &
  sidebyside(2)%uy, &
   ") is not", &
@@ -508,7 +507,7 @@ logical :: overlap
       .le. &
        (sidebyside(2)%uz) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:109]"
+              &[pt.fun:108]"
       print *, "  ", "sidebyside(2)%uz (", &
  sidebyside(2)%uz, &
   ") is not", &
@@ -527,7 +526,7 @@ logical :: overlap
   if (noAssertFailed) then
     if (.not.(particles(1)%rod)) then
       print *, " *Assert_True failed* in test exchange &
-              &[pt.fun:110]"
+              &[pt.fun:109]"
       print *, "  ", "particles(1)%rod is not true"
       print *, ""
       noAssertFailed = .false.
@@ -541,7 +540,7 @@ logical :: overlap
   if (noAssertFailed) then
     if (.not.(particles(2)%rod)) then
       print *, " *Assert_True failed* in test exchange &
-              &[pt.fun:111]"
+              &[pt.fun:110]"
       print *, "  ", "particles(2)%rod is not true"
       print *, ""
       noAssertFailed = .false.
@@ -573,7 +572,7 @@ logical :: overlap
       .le. &
        (E_particles) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:122]"
+              &[pt.fun:121]"
       print *, "  ", "E_particles (", &
  E_particles, &
   ") is not", &
@@ -603,7 +602,7 @@ logical :: overlap
       .le. &
        (beta) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:126]"
+              &[pt.fun:125]"
       print *, "  ", "beta (", &
  beta, &
   ") is not", &
@@ -632,7 +631,7 @@ logical :: overlap
       .le. &
        (energy) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:129]"
+              &[pt.fun:128]"
       print *, "  ", "energy (", &
  energy, &
   ") is not", &
@@ -661,7 +660,7 @@ logical :: overlap
       .le. &
        (rand) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:132]"
+              &[pt.fun:131]"
       print *, "  ", "rand (", &
  rand, &
   ") is not", &
@@ -693,7 +692,7 @@ logical :: overlap
       .le. &
        (get_x(a_box)) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:138]"
+              &[pt.fun:137]"
       print *, "  ", "get_x(a_box) (", &
  get_x(a_box), &
   ") is not", &
@@ -720,7 +719,7 @@ logical :: overlap
       .le. &
        (get_y(a_box)) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:139]"
+              &[pt.fun:138]"
       print *, "  ", "get_y(a_box) (", &
  get_y(a_box), &
   ") is not", &
@@ -747,7 +746,7 @@ logical :: overlap
       .le. &
        (get_z(a_box)) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:140]"
+              &[pt.fun:139]"
       print *, "  ", "get_z(a_box) (", &
  get_z(a_box), &
   ") is not", &
@@ -778,7 +777,7 @@ logical :: overlap
       .le. &
        (tconf(1)%x) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:145]"
+              &[pt.fun:144]"
       print *, "  ", "tconf(1)%x (", &
  tconf(1)%x, &
   ") is not", &
@@ -805,7 +804,7 @@ logical :: overlap
       .le. &
        (tconf(1)%y) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:146]"
+              &[pt.fun:145]"
       print *, "  ", "tconf(1)%y (", &
  tconf(1)%y, &
   ") is not", &
@@ -832,7 +831,7 @@ logical :: overlap
       .le. &
        (tconf(1)%z) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:147]"
+              &[pt.fun:146]"
       print *, "  ", "tconf(1)%z (", &
  tconf(1)%z, &
   ") is not", &
@@ -859,7 +858,7 @@ logical :: overlap
       .le. &
        (tconf(1)%ux) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:148]"
+              &[pt.fun:147]"
       print *, "  ", "tconf(1)%ux (", &
  tconf(1)%ux, &
   ") is not", &
@@ -886,7 +885,7 @@ logical :: overlap
       .le. &
        (tconf(1)%uy) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:149]"
+              &[pt.fun:148]"
       print *, "  ", "tconf(1)%uy (", &
  tconf(1)%uy, &
   ") is not", &
@@ -913,7 +912,7 @@ logical :: overlap
       .le. &
        (tconf(1)%uz) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:150]"
+              &[pt.fun:149]"
       print *, "  ", "tconf(1)%uz (", &
  tconf(1)%uz, &
   ") is not", &
@@ -932,7 +931,7 @@ logical :: overlap
   if (noAssertFailed) then
     if (.not.(particles(1)%rod)) then
       print *, " *Assert_True failed* in test exchange &
-              &[pt.fun:151]"
+              &[pt.fun:150]"
       print *, "  ", "particles(1)%rod is not true"
       print *, ""
       noAssertFailed = .false.
@@ -954,7 +953,7 @@ logical :: overlap
       .le. &
        (tconf(2)%x) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:152]"
+              &[pt.fun:151]"
       print *, "  ", "tconf(2)%x (", &
  tconf(2)%x, &
   ") is not", &
@@ -981,7 +980,7 @@ logical :: overlap
       .le. &
        (tconf(2)%y) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:153]"
+              &[pt.fun:152]"
       print *, "  ", "tconf(2)%y (", &
  tconf(2)%y, &
   ") is not", &
@@ -1008,7 +1007,7 @@ logical :: overlap
       .le. &
        (tconf(2)%z) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:154]"
+              &[pt.fun:153]"
       print *, "  ", "tconf(2)%z (", &
  tconf(2)%z, &
   ") is not", &
@@ -1035,7 +1034,7 @@ logical :: overlap
       .le. &
        (tconf(2)%ux) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:155]"
+              &[pt.fun:154]"
       print *, "  ", "tconf(2)%ux (", &
  tconf(2)%ux, &
   ") is not", &
@@ -1062,7 +1061,7 @@ logical :: overlap
       .le. &
        (tconf(2)%uy) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:156]"
+              &[pt.fun:155]"
       print *, "  ", "tconf(2)%uy (", &
  tconf(2)%uy, &
   ") is not", &
@@ -1089,7 +1088,7 @@ logical :: overlap
       .le. &
        (tconf(2)%uz) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:157]"
+              &[pt.fun:156]"
       print *, "  ", "tconf(2)%uz (", &
  tconf(2)%uz, &
   ") is not", &
@@ -1108,7 +1107,7 @@ logical :: overlap
   if (noAssertFailed) then
     if (.not.(particles(2)%rod)) then
       print *, " *Assert_True failed* in test exchange &
-              &[pt.fun:158]"
+              &[pt.fun:157]"
       print *, "  ", "particles(2)%rod is not true"
       print *, ""
       noAssertFailed = .false.
@@ -1140,7 +1139,7 @@ logical :: overlap
       .le. &
        (E_particles) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:169]"
+              &[pt.fun:168]"
       print *, "  ", "E_particles (", &
  E_particles, &
   ") is not", &
@@ -1169,7 +1168,7 @@ logical :: overlap
       .le. &
        (energy) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:172]"
+              &[pt.fun:171]"
       print *, "  ", "energy (", &
  energy, &
   ") is not", &
@@ -1199,7 +1198,7 @@ logical :: overlap
       .le. &
        (beta) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:176]"
+              &[pt.fun:175]"
       print *, "  ", "beta (", &
  beta, &
   ") is not", &
@@ -1228,7 +1227,7 @@ logical :: overlap
       .le. &
        (rand) )) then
       print *, " *Assert_Real_Equal failed* in test exchange &
-              &[pt.fun:179]"
+              &[pt.fun:178]"
       print *, "  ", "rand (", &
  rand, &
   ") is not", &
