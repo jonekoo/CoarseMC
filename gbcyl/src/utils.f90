@@ -25,7 +25,7 @@ contains
     nz = 1._dp - 2._dp * l
   end subroutine
 
-  SUBROUTINE XVEC2(X, Y, Z, NX, NY, NZ, PHI, XP, YP, ZP)
+  pure SUBROUTINE XVEC2(X, Y, Z, NX, NY, NZ, PHI, XP, YP, ZP)
     intrinsic cos
     intrinsic sin
     intrinsic dot_product
@@ -46,18 +46,30 @@ contains
     ZP = Z * COS(PHI) + NZ * DOTP * (1._dp - COS(PHI)) + ZP * SIN(PHI)
   END SUBROUTINE
 
-  SUBROUTINE CROSSP(AX,AY,AZ,BX,BY,BZ,CX,CY,CZ)
+  pure SUBROUTINE CROSSP(AX,AY,AZ,BX,BY,BZ,CX,CY,CZ)
     !
     ! calculates (AX,AY,AZ) x (BX,BY,BZ) = (CZ,CY,CZ)
     !
-    REAL(DP) AX,AY,AZ,BX,BY,BZ,CX,CY,CZ
+    REAL(DP), intent(in) :: AX, AY, AZ, BX, BY, BZ
+    real(dp), intent(out) :: CX, CY, CZ
     !
     CX = AY * BZ - AZ * BY
     CY = AZ * BX - AX * BZ
     CZ = AX * BY - AY * BX
   END SUBROUTINE
 
-function fmt_char_int() result(format_char)
+function freeunit() result(unitnr)
+  integer :: unitnr
+  logical :: isunitfree = .false.
+  logical :: isopened
+  unitnr = 0
+  do while(.not. isunitfree)
+    unitnr = unitnr + 1
+    inquire(unit = unitnr, opened = isunitfree)    
+  end do
+end function
+
+pure function fmt_char_int() result(format_char)
   character(len = 50) :: format_char
   integer :: r
   character(len = 50) :: w_char
@@ -67,7 +79,7 @@ function fmt_char_int() result(format_char)
   format_char = trim(adjustl(format_char))
 end function
 
-function fmt_char_dp() result(format_char)
+pure function fmt_char_dp() result(format_char)
   integer :: e
   integer :: w
   integer :: d
