@@ -25,7 +25,7 @@ public :: readstate
 public :: writestate
 public :: init
 !!public :: finalizeOutput
-!!public :: io_write_parameters
+!!public :: io_writeparameters
 public :: findlast
 public :: beginmark
 public :: endmark
@@ -41,15 +41,19 @@ type cylformatter
 end type
 
 interface init
-  module procedure init_with, init_molfile
+  module procedure initwith, initmolfile
 end interface
 
 interface findlast
-  module procedure general_findlast, cf_findlast
+  module procedure generalfindlast, cf_findlast
 end interface
 
 interface delete
   module procedure cf_delete
+end interface
+
+interface readstate
+  module procedure readstateunit, cf_readstate
 end interface
 
 contains
@@ -74,24 +78,24 @@ subroutine cf_delete(cf)
   close(cf%unit)
 end subroutine
 
-subroutine init_molfile(cf, statefile)
+subroutine initmolfile(cf, statefile)
   type(cylformatter), intent(inout) :: cf
   character(len = *), intent(in) :: statefile
   cf%file = statefile
-  call open_output(cf)
+  call openoutput(cf)
 end subroutine
 
-subroutine init_with(cf, reader)
+subroutine initwith(cf, reader)
   type(cylformatter), intent(inout) :: cf
   type(parameterizer), intent(in) :: reader
-  call get_parameter(reader, 'molecule_file', cf%file)
-  call open_output(cf)
+  call getparameter(reader, 'molecule_file', cf%file)
+  call openoutput(cf)
 end subroutine
 
-subroutine io_write_parameters(cf, writer)
+subroutine io_writeparameters(cf, writer)
   type(cylformatter), intent(in) :: cf
   type(parameter_writer), intent(in) :: writer
-  call write_parameter(writer, 'molecule_file', cf%file)
+  call writeparameter(writer, 'molecule_file', cf%file)
 end subroutine
 
 subroutine finalizeOutput(cf)
@@ -99,7 +103,7 @@ subroutine finalizeOutput(cf)
   close(cf%unit) 
 end subroutine finalizeOutput
 
-subroutine open_output(cf)
+subroutine openoutput(cf)
   type(cylformatter), intent(in) :: cf
   integer :: ios
   open(UNIT = cf%unit, FILE = cf%file, & 
@@ -108,29 +112,29 @@ subroutine open_output(cf)
     write (*, *) 'Could not open file ', cf%file, '.'
     stop;
   end if
-end subroutine open_output
+end subroutine openoutput
 
 !! Writes the coordinates of @p particles and the dimensions of the 
 !! cylindrical simulation cell to the file specified by @p cf.
 !! 
 !! @p cf the cylformatter object defining the file to write to.
 !! @p particles the array of particles to write to the file.
-!! @p n_particles number of particles in array @p particles.
+!! @p nparticles number of particles in array @p particles.
 !! @p radius the radius of the cylinder.
 !! @p height the height of the cylinder.
 !! 
-subroutine writestate(cf, particles, n_particles, radius, height)
+subroutine writestate(cf, particles, nparticles, radius, height)
   type(cylformatter), intent(in) :: cf
   type(particledat), dimension(:), intent(in) :: particles
-  integer, intent(in) :: n_particles    
+  integer, intent(in) :: nparticles    
   real(dp), intent(in) :: radius
   real(dp), intent(in) :: height
   integer :: GB = 0, Xe = 0, astat, i
   integer, dimension(:), allocatable :: help
-  allocate(help(n_particles), stat = astat)
+  allocate(help(nparticles), stat = astat)
   GB = 0
   Xe = 0
-  do i = 1, n_particles
+  do i = 1, nparticles
     if(particles(i)%rod) then 
       GB=GB+1
       help(i)=1
@@ -142,56 +146,56 @@ subroutine writestate(cf, particles, n_particles, radius, height)
   write(cf%unit, '(A3, 1X,' // fmt_char_dp() // ', 1X, A4, 1X, ' // &
   fmt_char_dp() // ')') '$R:', radius, '$Lz:', height
   write(cf%unit, '(A3, 1X, I7, 1X, A4, 1X, I7, 1X, A4, 1X, I7)') '$N:', &
-  n_particles, '$GB:', GB, '$Xe:', Xe
+  nparticles, '$GB:', GB, '$Xe:', Xe
   write(cf%unit, *) '$x:'
-  write(cf%unit, '(' // fmt_char_dp() // ')') particles(1:n_particles)%x
+  write(cf%unit, '(' // fmt_char_dp() // ')') particles(1:nparticles)%x
   write(cf%unit, *) '$y:'
-  write(cf%unit, '(' // fmt_char_dp() // ')') particles(1:n_particles)%y
+  write(cf%unit, '(' // fmt_char_dp() // ')') particles(1:nparticles)%y
   write(cf%unit, *) '$z:'
-  write(cf%unit, '(' // fmt_char_dp() // ')') particles(1:n_particles)%z
+  write(cf%unit, '(' // fmt_char_dp() // ')') particles(1:nparticles)%z
   write(cf%unit, *) '$rod:'
-  write(cf%unit, *) help(1:n_particles)
+  write(cf%unit, *) help(1:nparticles)
   write(cf%unit, *) '$ux:'
-  write(cf%unit, '(' // fmt_char_dp() // ')') particles(1:n_particles)%ux
+  write(cf%unit, '(' // fmt_char_dp() // ')') particles(1:nparticles)%ux
   write(cf%unit, *) '$uy:'
-  write(cf%unit, '(' // fmt_char_dp() // ')') particles(1:n_particles)%uy
+  write(cf%unit, '(' // fmt_char_dp() // ')') particles(1:nparticles)%uy
   write(cf%unit, *) '$uz:'
-  write(cf%unit, '(' // fmt_char_dp() // ')') particles(1:n_particles)%uz
+  write(cf%unit, '(' // fmt_char_dp() // ')') particles(1:nparticles)%uz
   deallocate(help)
 end subroutine writestate
 
-subroutine read_configuration(read_unit, simbox, particles, n_particles)
-  integer, intent(in) :: read_unit
+subroutine readconfiguration(readunit, simbox, particles, nparticles)
+  integer, intent(in) :: readunit
   type(poly_box), intent(out) :: simbox
   type(particledat), dimension(:), pointer :: particles
-  integer, intent(out) :: n_particles
+  integer, intent(out) :: nparticles
   real(dp) :: radius, height
   integer :: astat, i
   character(len = 3) :: charvar
   integer, dimension(:), allocatable :: help
-  character(len = 200) :: box_string
-  read(read_unit, *) charvar, radius, charvar, height
-  read(read_unit, *) charvar, n_particles
-  write(box_string, '(A, 3' // fmt_char_dp() // ', A)') 'cylinder', &
+  character(len = 200) :: boxstring
+  read(readunit, *) charvar, radius, charvar, height
+  read(readunit, *) charvar, nparticles
+  write(boxstring, '(A, 3' // fmt_char_dp() // ', A)') 'cylinder', &
   2._dp * radius, 2._dp * radius, height, ' F F T'
-  call create_box(simbox, box_string)
-  read(read_unit, *) charvar
-  allocate(particles(n_particles), help(n_particles), stat = astat)
+  call createbox(simbox, boxstring)
+  read(readunit, *) charvar
+  allocate(particles(nparticles), help(nparticles), stat = astat)
   if (astat /= 0) then
-    stop 'Error! Allocation of memory failed in read_configuration'
+    stop 'Error! Allocation of memory failed in readconfiguration'
   end if   
-  read(read_unit,*) particles(1:n_particles)%x
-  read(read_unit,*) charvar
-  read(read_unit,*) particles(1:n_particles)%y
-  read(read_unit,*) charvar,particles(1:n_particles)%z
-  read(read_unit,*) charvar
-  read(read_unit,*) help(1:n_particles)
-  read(read_unit,*) charvar
-  read(read_unit,*) particles(1:n_particles)%ux
-  read(read_unit,*) charvar,particles(1:n_particles)%uy
-  read(read_unit,*) charvar,particles(1:n_particles)%uz
-  close(read_unit) 
-  do i = 1, n_particles
+  read(readunit,*) particles(1:nparticles)%x
+  read(readunit,*) charvar
+  read(readunit,*) particles(1:nparticles)%y
+  read(readunit,*) charvar,particles(1:nparticles)%z
+  read(readunit,*) charvar
+  read(readunit,*) help(1:nparticles)
+  read(readunit,*) charvar
+  read(readunit,*) particles(1:nparticles)%ux
+  read(readunit,*) charvar,particles(1:nparticles)%uy
+  read(readunit,*) charvar,particles(1:nparticles)%uz
+  close(readunit) 
+  do i = 1, nparticles
     if(help(i) == 1) then
       particles(i)%rod = .true.
     else
@@ -212,34 +216,34 @@ function endmark(cf) result(mark)
   mark = cf%endmark
 end function endmark
 
-subroutine readstate(cf, particles, n_particles, radius, height)
+subroutine cf_readstate(cf, particles, nparticles, radius, height)
   type(cylformatter), intent(in) :: cf
   type(particledat), dimension(:), pointer :: particles
-  integer, intent(out) :: n_particles
+  integer, intent(out) :: nparticles
   real(dp), intent(out) :: radius, height
   integer :: astat
   integer :: i
   character(len = 3) :: charvar
   integer, dimension(:), allocatable :: help
   read(cf%unit, *) charvar, radius, charvar, height
-  read(cf%unit, *) charvar, n_particles
+  read(cf%unit, *) charvar, nparticles
   read(cf%unit, *) charvar
-  allocate(particles(n_particles), help(n_particles), stat = astat)
+  allocate(particles(nparticles), help(nparticles), stat = astat)
   if (astat /= 0) then
     write(*,*) 'readstate: Virhe varattaessa muistia: particles, help'     
     stop
   end if   
-  read(cf%unit, *) particles(1:n_particles)%x
+  read(cf%unit, *) particles(1:nparticles)%x
   read(cf%unit, *) charvar
-  read(cf%unit, *) particles(1:n_particles)%y
-  read(cf%unit, *) charvar,particles(1:n_particles)%z
+  read(cf%unit, *) particles(1:nparticles)%y
+  read(cf%unit, *) charvar,particles(1:nparticles)%z
   read(cf%unit, *) charvar
-  read(cf%unit, *) help(1:n_particles)
+  read(cf%unit, *) help(1:nparticles)
   read(cf%unit, *) charvar
-  read(cf%unit, *) particles(1:n_particles)%ux
-  read(cf%unit, *) charvar,particles(1:n_particles)%uy
-  read(cf%unit, *) charvar,particles(1:n_particles)%uz
-  do i = 1, n_particles
+  read(cf%unit, *) particles(1:nparticles)%ux
+  read(cf%unit, *) charvar,particles(1:nparticles)%uy
+  read(cf%unit, *) charvar,particles(1:nparticles)%uz
+  do i = 1, nparticles
     if(help(i) == 1) then
       particles(i)%rod = .true.
     else
@@ -256,27 +260,27 @@ end subroutine
 !! additional rule that the data is written and read sequentially and the 
 !! order is dictated by the object to be written.
 !!
-subroutine read_state(readunit, simbox, particles, n_particles)
+subroutine readstateunit(readunit, simbox, particles, nparticles)
   integer, intent(in) :: readunit
   type(poly_box), intent(out) :: simbox
   type(particledat), dimension(:), pointer :: particles 
-  integer, intent(out) :: n_particles
+  integer, intent(out) :: nparticles
   character(len = 3) :: charvar
-  character(len = 500) :: particle_string
-  character(len = 200) :: box_string
+  character(len = 500) :: particlestring
+  character(len = 200) :: boxstring
   integer :: astat, i
-  type(particledat) :: particle_read
-  read(readunit, '(A200)') box_string
-  call create_box(simbox, box_string)
-  read(readunit, *) charvar, n_particles
-  allocate(particles(n_particles), stat = astat)
+  type(particledat) :: particleread
+  read(readunit, '(A200)') boxstring
+  call createbox(simbox, boxstring)
+  read(readunit, *) charvar, nparticles
+  allocate(particles(nparticles), stat = astat)
   if (astat /= 0) then
     stop 'Error: Could not allocate memory for particle array. Stopping.'
   end if
-  do i = 1, n_particles
-    read(readunit, '(A500)') particle_string
-    particle_read = create_particle(particle_string)
-    particles(i) = particle_read 
+  do i = 1, nparticles
+    read(readunit, '(A500)') particlestring
+    particleread = createparticle(particlestring)
+    particles(i) = particleread 
   end do
 end subroutine
 
@@ -285,18 +289,18 @@ end subroutine
 !! @p filename the name of the file to be read from
 !! @p simbox the simulation box to be read.
 !! @p particles the dynamic array to which particles will be read
-!! @p n_particles the number of particles in @p particles
+!! @p nparticles the number of particles in @p particles
 !!
 !! :NOTE: it may be better to discard this routine and use the two routines
-!! findlast and read_state when needed. This only aggregates those two and
+!! findlast and readstate when needed. This only aggregates those two and
 !! file opening/closing.
 !!
-subroutine read_last_state(filename, begin, end, simbox, particles, n_particles)
+subroutine readlaststate(filename, begin, end, simbox, particles, nparticles)
   character(len = *), intent(in) :: filename
   character(len = *), intent(in) :: begin
   character(len = *), intent(in) :: end
   type(particledat), dimension(:), pointer :: particles
-  integer, intent(out) :: n_particles
+  integer, intent(out) :: nparticles
   integer, parameter :: readunit = 17   
   integer :: ios
   logical :: isfound
@@ -307,7 +311,7 @@ subroutine read_last_state(filename, begin, end, simbox, particles, n_particles)
     stop 
   end if
   call findlast(readunit, begin, end, isfound)
-  call read_state(readunit, simbox, particles, n_particles)
+  call readstate(readunit, simbox, particles, nparticles)
   close(readunit) 
 end subroutine
 
@@ -335,7 +339,7 @@ end subroutine
 !! @p isfound evaluates to .true. only if both begin and end are found in the 
 !! file and begin is on a line preceding end. 
 !!
-subroutine general_findlast(readunit, begin, end, isfound)
+subroutine generalfindlast(readunit, begin, end, isfound)
   integer, intent(in) :: readunit
   character(len = *), intent(in) :: begin
   character(len = *), intent(in) :: end
