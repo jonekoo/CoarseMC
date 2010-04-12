@@ -15,16 +15,16 @@ module particle
   public :: particledat
   public :: initparticle
   public :: new_particle
-  public :: create_particle
-  public :: write_particle
+  public :: createparticle
+  public :: writeparticle
   public :: position
   public :: orientation
-  public :: particle_write_parameters
+  public :: particle_writeparameters
   public :: getmaxmoves
   public :: move
   public :: setmaxmoves
-  public :: set_position
-  public :: max_trans
+  public :: setposition
+  public :: maxtrans
   
   type particledat
      real(dp) :: x, y, z, ux, uy, uz
@@ -33,14 +33,14 @@ module particle
 
   real(dp), save :: dthetamax = -1._dp
   real(dp), save :: maxdr = -1._dp
-  character(len = *), parameter :: type_id_ = 'gb'
+  character(len = *), parameter :: typeid = 'gb'
 
   interface initparticle
-    module procedure init_particle_old, init_particle_parameterizer
+    module procedure init_particleold, init_particleparameterizer
   end interface
 
-  interface max_trans
-    module procedure max_trans_f
+  interface maxtrans
+    module procedure maxtransf
   end interface
 
   interface move
@@ -49,15 +49,15 @@ module particle
 
   contains
 
-  subroutine init_particle_parameterizer(reader)
+  subroutine init_particleparameterizer(reader)
     type(parameterizer), intent(in) :: reader
-    call get_parameter(reader, 'max_translation', maxdr)
-    call get_parameter(reader, 'max_rotation', dthetamax)
+    call getparameter(reader, 'max_translation', maxdr)
+    call getparameter(reader, 'max_rotation', dthetamax)
     if(maxdr < 0._dp) stop 'No max_translation given. Stopping.'
     if(dthetamax < 0._dp) stop 'No max_rotation given. Stopping.'
   end subroutine
 
-  subroutine init_particle_old(maxTranslation, maxRotation)
+  subroutine init_particleold(maxTranslation, maxRotation)
     implicit none
     real(dp), intent(in) :: maxTranslation 
     real(dp), intent(in) :: maxRotation
@@ -65,11 +65,11 @@ module particle
     maxdr = maxTranslation
   end subroutine
 
-  subroutine particle_write_parameters(writer)
+  subroutine particle_writeparameters(writer)
     type(parameter_writer), intent(in) :: writer
-    call write_comment(writer, 'Particle parameters')
-    call write_parameter(writer, 'max_translation', maxdr)
-    call write_parameter(writer, 'max_rotation', dthetamax)    
+    call writecomment(writer, 'Particle parameters')
+    call writeparameter(writer, 'max_translation', maxdr)
+    call writeparameter(writer, 'max_rotation', dthetamax)    
   end subroutine
 
   function new_particle()
@@ -83,52 +83,52 @@ module particle
     new_particle%rod = .true.
   end function
 
-  function create_particle(particle_string) result(pp)
+  function createparticle(particlestring) result(pp)
     type(particledat) :: pp
-    character(len = *), intent(in) :: particle_string
-    character(len = 3) :: type_id
-    read(particle_string, *) type_id
-    if ('gb' == type_id) then
-      read(particle_string, *) type_id, pp%x, pp%y, pp%z, pp%ux, pp%uy, pp%uz
+    character(len = *), intent(in) :: particlestring
+    character(len = 3) :: typeid
+    read(particlestring, *) typeid
+    if ('gb' == typeid) then
+      read(particlestring, *) typeid, pp%x, pp%y, pp%z, pp%ux, pp%uy, pp%uz
       pp%rod = .true.
     else
       stop 'Error: Could not read particle from string. Stopping.'
     end if
   end function
 
-  subroutine write_particle(write_unit, a_particle)
-    integer, intent(in) :: write_unit
-    type(particledat), intent(in) :: a_particle
-    write(write_unit, '(A, 6' // fmt_char_dp() // ')', advance='no') &
-    type_id_, a_particle%x, a_particle%y, a_particle%z, a_particle%ux, &
-    a_particle%uy, a_particle%uz 
+  subroutine writeparticle(writeunit, aparticle)
+    integer, intent(in) :: writeunit
+    type(particledat), intent(in) :: aparticle
+    write(writeunit, '(A, 6' // fmt_char_dp() // ')', advance='no') &
+    typeid, aparticle%x, aparticle%y, aparticle%z, aparticle%ux, &
+    aparticle%uy, aparticle%uz 
   end subroutine
 
-  pure function position(a_particle)
+  pure function position(aparticle)
     real(dp), dimension(3) :: position
-    type(particledat), intent(in) :: a_particle
-    position = (/a_particle%x, a_particle%y, a_particle%z/)
+    type(particledat), intent(in) :: aparticle
+    position = (/aparticle%x, aparticle%y, aparticle%z/)
   end function
   
-  pure function orientation(a_particle) 
+  pure function orientation(aparticle) 
     real(dp), dimension(3) :: orientation
-    type(particledat), intent(in) :: a_particle
-    orientation = (/a_particle%ux, a_particle%uy, a_particle%uz/)
+    type(particledat), intent(in) :: aparticle
+    orientation = (/aparticle%ux, aparticle%uy, aparticle%uz/)
   end function 
 
-  pure subroutine set_position(a_particle, vec)
-    type(particledat), intent(inout) :: a_particle
+  pure subroutine setposition(aparticle, vec)
+    type(particledat), intent(inout) :: aparticle
     real(dp), dimension(3), intent(in) :: vec
-    a_particle%x = vec(1)
-    a_particle%y = vec(2)
-    a_particle%z = vec(3)
+    aparticle%x = vec(1)
+    aparticle%y = vec(2)
+    aparticle%z = vec(3)
   end subroutine
 
-  subroutine move1(a_particle)
-    type(particledat), intent(inout) :: a_particle
+  subroutine move1(aparticle)
+    type(particledat), intent(inout) :: aparticle
     type(particledat) :: temp
-    call move(a_particle, temp)
-    a_particle = temp
+    call move(aparticle, temp)
+    aparticle = temp
   end subroutine
 
   subroutine move2(oldp, newp)
@@ -145,11 +145,11 @@ module particle
     implicit none
     real(dp), intent(in) :: xo,yo,zo
     real(dp), intent(out) :: xn,yn,zn
-    real(dp) :: max_1d 
-    max_1d = maxdr/sqrt(3._dp)
-    xn = xo + (2.0_dp*grnd()-1.0_dp)*max_1d
-    yn = yo + (2.0_dp*grnd()-1.0_dp)*max_1d
-    zn = zo + (2.0_dp*grnd()-1.0_dp)*max_1d
+    real(dp) :: max1d 
+    max1d = maxdr/sqrt(3._dp)
+    xn = xo + (2.0_dp*grnd()-1.0_dp)*max1d
+    yn = yo + (2.0_dp*grnd()-1.0_dp)*max1d
+    zn = zo + (2.0_dp*grnd()-1.0_dp)*max1d
   end subroutine
 
   !Palauttaa partikkelin orientaatiovektorin komponentit
@@ -193,12 +193,10 @@ module particle
     angle = dthetamax
   end subroutine 
 
-  pure function max_trans_f(particle) result(mtr)
+  pure function maxtransf(particle) result(mtr)
     type(particledat), intent(in) :: particle
     real(dp) :: mtr
     mtr = maxdr
   end function
   
 end module particle
-
-

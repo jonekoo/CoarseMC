@@ -13,13 +13,13 @@ module pt
   public :: pt_finalize
   public :: pt_temperature
 
-  integer, save :: dp_type
+  integer, save :: dptype
   integer, save :: particletype
-  integer, save :: id_above
-  integer, save :: id_below
+  integer, save :: idabove
+  integer, save :: idbelow
   integer, save :: id
   integer, save :: ntasks
-  integer, save :: i_direction = 0
+  integer, save :: idirection = 0
 
 contains
 
@@ -37,18 +37,18 @@ contains
       stop 'Program stopped by pt_init.'
     end if
     call MPI_COMM_RANK(MPI_COMM_WORLD, id, ierr) 
-    id_above = mod(id + 1, ntasks)
-    id_below = mod(id - 1 + ntasks, ntasks)
-    call MPI_TYPE_CREATE_F90_REAL(dp, MPI_UNDEFINED, dp_type, ierr) 
+    idabove = mod(id + 1, ntasks)
+    idbelow = mod(id - 1 + ntasks, ntasks)
+    call MPI_TYPE_CREATE_F90_REAL(dp, MPI_UNDEFINED, dptype, ierr) 
   
     !! Create particle type 
     !! Set up description of the coordinate variables.
     offsets(0) = 0 
-    oldtypes(0) = dp_type 
+    oldtypes(0) = dptype 
     blockcounts(0) = 6
     !! Setup description of the logical rod variable
-    !! Need to first figure offset by getting size of dp_type 
-    call MPI_TYPE_EXTENT(dp_type, extent, ierr) 
+    !! Need to first figure offset by getting size of dptype 
+    call MPI_TYPE_EXTENT(dptype, extent, ierr) 
     offsets(1) = 6 * extent 
     oldtypes(1) = MPI_LOGICAL 
     blockcounts(1) = 1 
@@ -77,74 +77,74 @@ contains
   !! @p energy is the total energy (NVT) or enthalpy (NPT) of the process' 
   !!    system.
   !! @p particles array of particles the process is holding. 
-  !! @p n_particles dimension of @p particles
+  !! @p nparticles dimension of @p particles
   !! @p simbox desribes the simulation cell dimensions and periodicity. 
   !!
   !! :TODO: Make pt_move independent of MPI and only pt_exchange dependent
   !!
-  subroutine pt_move(beta, energy, particles, n_particles, simbox)
+  subroutine pt_move(beta, energy, particles, nparticles, simbox)
     real(dp), intent(in) :: beta
     real(dp), intent(inout) :: energy
     type(particledat), dimension(:), intent(inout) :: particles
-    integer, intent(inout) :: n_particles
+    integer, intent(inout) :: nparticles
     type(poly_box), intent(inout) :: simbox
-    real(dp) :: beta_n
-    real(dp) :: energy_n
-    type(particledat), dimension(n_particles) :: particles_n
-    integer :: n_particles_n
-    type(poly_box) :: simbox_n
-    integer :: dest_id
+    real(dp) :: betan
+    real(dp) :: energyn
+    type(particledat), dimension(nparticles) :: particlesn
+    integer :: nparticlesn
+    type(poly_box) :: simboxn
+    integer :: destid
     real(dp) :: rand 
-    real(dp) :: rand_n
+    real(dp) :: randn
     !! Select communication direction
-    i_direction = mod(i_direction + 1, 2)
+    idirection = mod(idirection + 1, 2)
     if (mod(id, 2) == 0) then 
-      if(1 == i_direction) then 
-        dest_id = id_above
+      if(1 == idirection) then 
+        destid = idabove
       else 
-        dest_id = id_below
+        destid = idbelow
       end if
     else 
-      if(1 == i_direction) then
-        dest_id = id_below
+      if(1 == idirection) then
+        destid = idbelow
       else 
-        dest_id = id_above
+        destid = idabove
       end if
     end if 
     !! Calculate random number for accepting the move.
     rand = grnd()
     !! Make temporary variables. 
-    beta_n = beta
-    energy_n = energy
-    particles_n(1:n_particles) = particles(1:n_particles)
-    n_particles_n = n_particles
-    simbox_n = simbox
-    rand_n = rand
+    betan = beta
+    energyn = energy
+    particlesn(1:nparticles) = particles(1:nparticles)
+    nparticlesn = nparticles
+    simboxn = simbox
+    randn = rand
     !! Exchange temporary variables
-    call pt_exchange(dest_id, beta_n, energy_n, particles_n, n_particles_n, &
-      simbox_n, rand_n)
-    if (mod(id, 2) == 1) rand = rand_n
+    call pt_exchange(destid, betan, energyn, particlesn, nparticlesn, &
+      simboxn, randn)
+    if (mod(id, 2) == 1) rand = randn
     !! :TODO: Check validity of expression below
-    if(exp((beta - beta_n) * (energy - energy_n)) > rand ) then
-      energy = energy_n
-      particles(1:n_particles) = particles_n(1:n_particles)
-      n_particles = n_particles_n
-      simbox = simbox_n
+    if(exp((beta - betan) * (energy - energyn)) > rand ) then
+      energy = energyn
+      particles(1:nparticles) = particlesn(1:nparticles)
+      nparticles = nparticlesn
+      simbox = simboxn
     end if
   end subroutine
 
 
-  !! Exchanges @p beta, @p energy, @p particles, @p n_particles @p simbox 
-  !! dimensions and @p rand with task @p dest_id 
+  !! Exchanges @p beta, @p energy, @p particles, @p nparticles @p simbox 
+  !! dimensions and @p rand with task @p destid 
   !!
   !! Currently works only if the communicating processes have the same number 
   !! of particles
   !!
-  !! @p dest_id the task id with which the exchange is made with. 
+  !! @p destid the task id with which the exchange is made with. 
   !! @p beta the inverse temperature. 
   !! @p energy the total energy (NVT) or total enthalpy (NPT) of the process.
   !! @p particles the array of particles. 
-  !! @p n_particles the number of particles. 
+  !! @p nparticles the number of particles. 
   !! @p simbox the simulation cell. 
   !! @p rand a random number for accepting the exchange. 
   !! 
@@ -152,50 +152,50 @@ contains
   !! :TODO: different amount of particles. If needed use mpi_get_count 
   !! :TODO: to implement this feature.
   !!
-  subroutine pt_exchange(dest_id, beta, energy, particles, n_particles, &
+  subroutine pt_exchange(destid, beta, energy, particles, nparticles, &
     simbox, rand)
-    integer, intent(in) :: dest_id
+    integer, intent(in) :: destid
     real(dp), intent(inout) :: beta
     real(dp), intent(inout) :: energy
     type(particledat), dimension(:), intent(inout) :: particles
-    integer, intent(inout) :: n_particles
+    integer, intent(inout) :: nparticles
     type(poly_box), intent(inout) :: simbox
     real(dp), intent(inout) :: rand
-    integer, parameter :: first_tag = 50
-    integer, parameter :: second_tag = 52
+    integer, parameter :: firsttag = 50
+    integer, parameter :: secondtag = 52
     integer, dimension(MPI_STATUS_SIZE) :: status 
-    integer :: msg_size = 6
+    integer :: msgsize = 6
     real(dp), dimension(6) :: msg 
     integer :: ierr
     msg(1) = beta 
     msg(2) = energy 
     msg(3) = rand
-    msg(4) = get_x(simbox)
-    msg(5) = get_y(simbox)
-    msg(6) = get_z(simbox)
-    call mpi_sendrecv_replace(msg(1:msg_size), msg_size, dp_type, dest_id, &
-      first_tag, dest_id, first_tag, MPI_COMM_WORLD, status, ierr)
-    call mpi_sendrecv_replace(particles(1:n_particles), n_particles, &
-      particletype, dest_id, second_tag, dest_id, second_tag, MPI_COMM_WORLD, &
+    msg(4) = getx(simbox)
+    msg(5) = gety(simbox)
+    msg(6) = getz(simbox)
+    call mpi_sendrecv_replace(msg(1:msgsize), msgsize, dptype, destid, &
+      firsttag, destid, firsttag, MPI_COMM_WORLD, status, ierr)
+    call mpi_sendrecv_replace(particles(1:nparticles), nparticles, &
+      particletype, destid, secondtag, destid, secondtag, MPI_COMM_WORLD, &
       status, ierr)    
     beta = msg(1)
     energy = msg(2)
     rand = msg(3) 
-    call set_x(simbox, msg(4))
-    call set_y(simbox, msg(5))
-    call set_z(simbox, msg(6))
+    call setx(simbox, msg(4))
+    call sety(simbox, msg(5))
+    call setz(simbox, msg(6))
   end subroutine pt_exchange
 
-  real(dp) function pt_temperature(pt_low, pt_high)
-    real(dp), intent(in) :: pt_low
-    real(dp), intent(in) :: pt_high
-    integer :: n_tasks
+  real(dp) function pt_temperature(ptlow, pthigh)
+    real(dp), intent(in) :: ptlow
+    real(dp), intent(in) :: pthigh
+    integer :: ntasks
     integer :: rc
     integer :: id
-    call MPI_COMM_SIZE(MPI_COMM_WORLD, n_tasks, rc)
+    call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, rc)
     call MPI_COMM_RANK(MPI_COMM_WORLD, id, rc)    
-    pt_temperature = pt_low + (pt_high - pt_low) * real(id, dp)/ &
-    real(n_tasks - 1, dp)
+    pt_temperature = ptlow + (pthigh - ptlow) * real(id, dp)/ &
+    real(ntasks - 1, dp)
   end function
 
 end module pt

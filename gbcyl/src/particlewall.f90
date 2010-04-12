@@ -17,7 +17,7 @@ module particlewall
   public :: particlewall_potential
   public :: repwall
   public :: attwall
-  public :: particlewall_write_parameters
+  public :: particlewall_writeparameters
   public :: energy
   public :: sitewallpotential
   public :: gbwallpotential
@@ -25,15 +25,15 @@ module particlewall
   !! @see Micheletti et. al. Journal of Chemical Physics 123, 224705 for 
   !! definitions of these parameters.
   !!
-  real(dp), save :: alpha_A_ = 1._dp
-  real(dp), save :: alpha_B_ = 1._dp
-  real(dp), save :: K_w_ = 8._dp
+  real(dp), save :: alphaA = 1._dp
+  real(dp), save :: alphaB = 1._dp
+  real(dp), save :: Kw = 8._dp
   real(dp), save :: sig=1._dp
   
   !! The distance of LJ interaction sites from the Gay-Berne particle center
   !! along the unique axis.
   real(dp), save :: LJdist = 1.7_dp 
-  logical, save :: is_uniform_alignment = .false.
+  logical, save :: isuniformalignment = .false.
 
 !! LJ-GB interaction consists of interactions of the two sites. Basicly
 !! That could be in a different module which then would use this module. 
@@ -60,7 +60,7 @@ type gbwallpotential
 end type
 
 interface initptwall
-  module procedure initptwall_parameterizer, initptwall_regular
+  module procedure initptwallparameterizer, initptwallregular
 end interface
 
 interface particlewall_potential
@@ -97,39 +97,39 @@ result(potential)
   isuniformalignment 
 end function
 
-subroutine initptwall_regular(Kw, alpha_A, alpha_B, LJ_dist, is_unif, sigwall)
-  real(dp), intent(in), optional :: Kw
-  real(dp), intent(in), optional :: alpha_A
-  real(dp), intent(in), optional :: alpha_B
-  real(dp), intent(in), optional :: LJ_dist
-  logical, intent(in), optional :: is_unif
-  real(dp), intent(in), optional :: sigwall
-  if(present(Kw)) K_w_ = Kw
-  if(present(alpha_A)) alpha_A_ = alpha_A
-  if(present(alpha_B)) alpha_B_ = alpha_B
-  if(present(LJ_dist)) LJdist = LJ_dist
-  if(present(is_unif)) is_uniform_alignment = is_unif
-  if(present(sigwall)) sig = sigwall
+subroutine initptwallregular(Kwin, alphaAin, alphaBin, LJdistin, isunifin, sigwallin)
+  real(dp), intent(in), optional :: Kwin
+  real(dp), intent(in), optional :: alphaAin
+  real(dp), intent(in), optional :: alphaBin
+  real(dp), intent(in), optional :: LJdistin
+  logical, intent(in), optional :: isunifin
+  real(dp), intent(in), optional :: sigwallin
+  if(present(Kwin)) Kw = Kwin
+  if(present(alphaAin)) alphaA = alphaAin
+  if(present(alphaBin)) alphaB = alphaBin
+  if(present(LJdistin)) LJdist = LJdistin
+  if(present(isunifin)) isuniformalignment = isunifin
+  if(present(sigwallin)) sig = sigwallin
 end subroutine
 
-  subroutine initptwall_parameterizer(reader)
+  subroutine initptwallparameterizer(reader)
     type(parameterizer), intent(in) :: reader
-    call get_parameter(reader, 'Kw', K_w_)
-    call get_parameter(reader, 'alpha_A', alpha_A_) 
-    call get_parameter(reader, 'alpha_B', alpha_B_) 
-    call get_parameter(reader, 'LJ_dist', LJdist) 
-    call get_parameter(reader, 'is_uniform_alignment', is_uniform_alignment)
-    call get_parameter(reader, 'sigwall', sig)
+    call getparameter(reader, 'Kw', Kw)
+    call getparameter(reader, 'alpha_A', alphaA) 
+    call getparameter(reader, 'alpha_B', alphaB) 
+    call getparameter(reader, 'LJ_dist', LJdist) 
+    call getparameter(reader, 'is_uniform_alignment', isuniformalignment)
+    call getparameter(reader, 'sigwall', sig)
   end subroutine
 
-  subroutine particlewall_write_parameters(writer)
+  subroutine particlewall_writeparameters(writer)
     type(parameter_writer), intent(in) :: writer
-    call write_comment(writer, 'Particle-wall interaction parameters')
-    call write_parameter(writer, 'alpha_A', alpha_A_) 
-    call write_parameter(writer, 'alpha_B', alpha_B_) 
-    call write_parameter(writer, 'Kw', K_w_)
-    call write_parameter(writer, 'LJ_dist', LJdist) 
-    call write_parameter(writer, 'is_uniform_alignment', is_uniform_alignment)
+    call writecomment(writer, 'Particle-wall interaction parameters')
+    call writeparameter(writer, 'alpha_A', alphaA) 
+    call writeparameter(writer, 'alpha_B', alphaB) 
+    call writeparameter(writer, 'Kw', Kw)
+    call writeparameter(writer, 'LJ_dist', LJdist) 
+    call writeparameter(writer, 'is_uniform_alignment', isuniformalignment)
   end subroutine
 
   subroutine gbwall(gbparticle, simbox, Eptwall,ovrlp)
@@ -144,7 +144,7 @@ end subroutine
     ovrlp = .false.
     Eptwall = 0._dp
     !! :TODO: Remove this dependency by making a cylinder wall object.
-    Rc = get_x(simbox)/2._dp 
+    Rc = getx(simbox)/2._dp 
     call rArB(gbparticle, rsiteA, rsiteB)
     if(rsiteA >= Rc .or. rsiteB >= Rc) then
       ovrlp = .true.
@@ -156,12 +156,12 @@ end subroutine
     repulA  = repwall(rAperR, Rc, sig)
     attracB = attwall(rBperR, Rc, sig)
     repulB  = repwall(rBperR, Rc, sig)
-    if (is_uniform_alignment) then
+    if (isuniformalignment) then
       fu = angular(gbparticle)  
     else 
       fu = 1._dp
     end if
-    Eptwall = fu * K_w_ * ((repulA - alpha_A_ * attracA) + (repulB - alpha_B_ &
+    Eptwall = fu * Kw * ((repulA - alphaA * attracA) + (repulB - alphaB &
       * attracB))     
   end subroutine gbwall
 
@@ -187,20 +187,20 @@ end subroutine
   !! cylinder.
   !! 
   !! @p particle the particle of which interaction sites are calcula 
-  !! @p r_a the distance of site A from the cylinder center
+  !! @p ra the distance of site A from the cylinder center
   !! @p rb the distance of site B from the cylinder center
-  subroutine rarb(particle, r_a, r_b)
+  subroutine rarb(particle, ra, rb)
     implicit none
     intrinsic sqrt
     type(particledat), intent(in) :: particle
-    real(dp), intent(out) :: r_a, r_b
-    real(dp) :: x_a, y_a, x_b, y_b
-    x_a=particle%x+LJdist*particle%ux
-    y_a=particle%y+LJdist*particle%uy
-    x_b=particle%x-LJdist*particle%ux
-    y_b=particle%y-LJdist*particle%uy
-    r_a=sqrt(x_a**2 + y_a**2)
-    r_b=sqrt(x_b**2 + y_b**2)
+    real(dp), intent(out) :: ra, rb
+    real(dp) :: xa, ya, xb, yb
+    xa=particle%x+LJdist*particle%ux
+    ya=particle%y+LJdist*particle%uy
+    xb=particle%x-LJdist*particle%ux
+    yb=particle%y-LJdist*particle%uy
+    ra=sqrt(xa**2 + ya**2)
+    rb=sqrt(xb**2 + yb**2)
   end subroutine
 
   real(dp) function angular(particle)
