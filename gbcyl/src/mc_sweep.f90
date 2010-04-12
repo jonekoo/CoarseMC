@@ -4,7 +4,9 @@ module mc_sweep
   use class_poly_box
   use particle
   use mtmod
-  use verlet
+!  use verlet
+  use cell
+  use cell_energy, only: new_list, pairinteractions  
   use pt
   use class_parameterizer
   use class_parameter_writer
@@ -14,210 +16,216 @@ module mc_sweep
   public :: init
   public :: sweep
   public :: updatemaxvalues
-  public :: pressure
-  public :: mc_sweep_write_parameters
+  public :: getpressure
+  public :: mc_sweep_writeparameters
 
-  integer, save :: n_accepted_moves_
-  integer, save :: n_accepted_scalings_
-  real(dp), save :: max_scaling_
-  integer, save :: volume_change_type_ 
-  real(dp), save :: temperature_
-  real(dp), save :: pressure_
-  integer, save :: adjust_type_
-  real(dp), save :: move_ratio_
-  real(dp), save :: scaling_ratio_
-  real(dp), save :: largest_translation_ = 1._dp    !! molecule diameter
-  real(dp), save :: smallest_translation_ = 0.1_dp !! 1/10 molecule diameter
-  real(dp), save :: largest_rotation_ = 1.57_dp     !! ~ pi/4
-  real(dp), save :: smallest_rotation_ = 0.157_dp  !! 1/10 largest rotation
-  real(dp), save :: pt_low
-  real(dp), save :: pt_high
-  integer, save :: pt_ratio_ = 10
-  real(dp), save :: e_total_ = 0._dp
+  integer, save :: nacceptedmoves
+  integer, save :: nacceptedscalings
+  real(dp), save :: maxscaling
+  integer, save :: volumechangetype 
+  real(dp), save :: temperature
+  real(dp), save :: pressure
+  integer, save :: adjusttype
+  real(dp), save :: moveratio
+  real(dp), save :: scalingratio
+  real(dp), save :: largesttranslation = 1._dp    !! molecule diameter
+  real(dp), save :: smallesttranslation = 0.1_dp !! 1/10 molecule diameter
+  real(dp), save :: largestrotation = 1.57_dp     !! ~ pi/4
+  real(dp), save :: smallestrotation = 0.157_dp  !! 1/10 largest rotation
+  real(dp), save :: ptlow
+  real(dp), save :: pthigh
+  integer, save :: ptratio = 10
+  real(dp), save :: etotal = 0._dp
  
   interface init
-    module procedure init_parameterizer
+    module procedure initparameterizer
   end interface
 
   contains
 
-  subroutine init_parameterizer(reader)
+  subroutine initparameterizer(reader)
     type(parameterizer), intent(in) :: reader
-    call get_parameter(reader, 'volume_change_type', volume_change_type_)
-    call get_parameter(reader, 'temperature', temperature_)
-    call get_parameter(reader, 'pressure', pressure_)
-    call get_parameter(reader, 'move_ratio', move_ratio_)
-    call get_parameter(reader, 'scaling_ratio', scaling_ratio_)
-    call get_parameter(reader, 'largest_translation', largest_translation_)
-    call get_parameter(reader, 'smallest_translation', smallest_translation_)
-    call get_parameter(reader, 'largest_rotation', largest_rotation_)
-    call get_parameter(reader, 'smallest_rotation', smallest_rotation_)
-    call get_parameter(reader, 'max_scaling', max_scaling_)
-    call get_parameter(reader, 'pt_ratio', pt_ratio_)
+    call getparameter(reader, 'volume_change_type', volumechangetype)
+    call getparameter(reader, 'temperature', temperature)
+    call getparameter(reader, 'pressure', pressure)
+    call getparameter(reader, 'move_ratio', moveratio)
+    call getparameter(reader, 'scaling_ratio', scalingratio)
+    call getparameter(reader, 'largest_translation', largesttranslation)
+    call getparameter(reader, 'smallest_translation', smallesttranslation)
+    call getparameter(reader, 'largest_rotation', largestrotation)
+    call getparameter(reader, 'smallest_rotation', smallestrotation)
+    call getparameter(reader, 'max_scaling', maxscaling)
+    call getparameter(reader, 'pt_ratio', ptratio)
     !! The initializations below may affect restart so that it does not result
     !! in the same simulation. 
-    n_accepted_moves_ = 0
-    n_accepted_scalings_ = 0
+    nacceptedmoves = 0
+    nacceptedscalings = 0
   end subroutine
 
-  subroutine mc_sweep_write_parameters(writer)
+  subroutine mc_sweep_writeparameters(writer)
     type(parameter_writer), intent(in) :: writer
-    call write_comment(writer, 'MC sweep parameters')
-    call write_parameter(writer, 'volume_change_type', volume_change_type_)
-    call write_parameter(writer, 'pt_low', pt_low)
-    call write_parameter(writer, 'pt_high', pt_high)
-    call write_parameter(writer, 'pressure', pressure_)
-    call write_parameter(writer, 'move_ratio', move_ratio_)
-    call write_parameter(writer, 'scaling_ratio', scaling_ratio_)
-    call write_parameter(writer, 'largest_translation', largest_translation_)
-    call write_parameter(writer, 'max_scaling', max_scaling_)
-    call write_parameter(writer, 'pt_ratio', pt_ratio_)
+    call writecomment(writer, 'MC sweep parameters')
+    call writeparameter(writer, 'volume_change_type', volumechangetype)
+    call writeparameter(writer, 'pt_low', ptlow)
+    call writeparameter(writer, 'pt_high', pthigh)
+    call writeparameter(writer, 'pressure', pressure)
+    call writeparameter(writer, 'move_ratio', moveratio)
+    call writeparameter(writer, 'scaling_ratio', scalingratio)
+    call writeparameter(writer, 'largest_translation', largesttranslation)
+    call writeparameter(writer, 'max_scaling', maxscaling)
+    call writeparameter(writer, 'pt_ratio', ptratio)
   end subroutine
 
-  subroutine sweep(simbox, particles)
+  subroutine sweep(simbox, particles, nbrlist)
     type(particledat), dimension(:), intent(inout) :: particles
     type(poly_box), intent(inout) :: simbox
+    type(list), intent(inout) :: nbrlist
     integer :: i
     logical :: overlap
-    integer :: i_vol_move
-    real(dp) :: e_total_old
+    integer :: ivolmove
+    real(dp) :: etotalold
     !! Trial moves of particles and one particle move replaced with volume move
-    i_vol_move = int(grnd() * real(size(particles), dp)) + 1
-    e_total_old = e_total_    
-    call total_energy(simbox, particles, e_total_, overlap)
+    ivolmove = int(grnd() * real(size(particles), dp)) + 1
+    etotalold = etotal   
+    nbrlist = new_list(simbox, particles)
+    call totalenergy(simbox, particles, nbrlist, etotal, overlap)
     if(overlap) then 
       stop 'Overlap when entering sweep! Stopping.'
     end if
     do i = 1, size(particles)
-      if (i == i_vol_move) then
+      if (i == ivolmove) then
         !! Replace random particle update with a volume update.
-        call move_vol(simbox, particles, size(particles))
+        call movevol(simbox, particles, nbrlist)
       else
-        call move_particle(simbox, particles, i)
+        call moveparticle(simbox, particles, nbrlist, i)
       end if
-      if (mod(i, pt_ratio_) == 0) then
-        call make_pt_move(simbox, particles)
+      if (mod(i, ptratio) == 0) then
+        call makeptmove(simbox, particles, nbrlist)
       end if 
     end do
   end subroutine
 
-  subroutine make_pt_move(simbox, particles)
+  subroutine makeptmove(simbox, particles, nbrlist)
     type(poly_box), intent(inout) :: simbox
     type(particledat), dimension(:), intent(inout) :: particles
+    type(list), intent(inout) :: nbrlist
     real(dp) :: beta
     real(dp) :: enthalpy
-    integer :: n_particles
-    beta = 1._dp/temperature_
-    enthalpy = e_total_ + pressure_ * volume(simbox)
-    n_particles = size(particles)
-    call pt_move(beta, enthalpy, particles, n_particles, simbox)
-    e_total_ = enthalpy - pressure_ * volume(simbox)
+    integer :: nparticles
+    beta = 1._dp/temperature
+    enthalpy = etotal + pressure * volume(simbox)
+    nparticles = size(particles)
+    call pt_move(beta, enthalpy, particles, nparticles, simbox)
+    etotal = enthalpy - pressure * volume(simbox)
     !! One way to get rid of explicit list update would be to use some kind 
     !! of observing system between the particlearray and the neighbour list. 
-    call updatelist(particles, size(particles), simbox) 
+    nbrlist = new_list(simbox, particles(1:size(particles)))
   end subroutine
 
-  subroutine move_particle(simbox, particles, i)
+  subroutine moveparticle(simbox, particles, nbrlist, i)
     type(poly_box), intent(in) :: simbox
     type(particledat), dimension(:), intent(inout) :: particles
+    type(list), intent(inout) :: nbrlist
     integer, intent(in) :: i
     type(particledat) :: newparticle
     type(particledat) :: oldparticle
     logical :: overlap
-    real(dp) :: e_new
-    real(dp) :: e_old
-    logical :: is_accepted
-    e_new = 0._dp
-    e_old = 0._dp
+    real(dp) :: enew
+    real(dp) :: eold
+    logical :: isaccepted
+    enew = 0._dp
+    eold = 0._dp
     overlap = .false.
     !! :TODO: Change moving of particles for a separate object which 
     !! :TODO: gets the whole particle array.
     call move(particles(i), newparticle)
-    call set_position(newparticle, min_image(simbox, &
+    call setposition(newparticle, minimage(simbox, &
     (/0._dp, 0._dp, 0._dp/), position(newparticle)))
     oldparticle = particles(i) 
     particles(i) = newparticle
-    call potential_energy(simbox, particles, i, e_new, overlap)
+    call potentialenergy(simbox, particles, nbrlist, i, enew, overlap)
     if(.not. overlap) then 
       particles(i) = oldparticle
-      call potential_energy(simbox, particles, i, e_old, overlap)
+      call potentialenergy(simbox, particles, nbrlist, i, eold, overlap)
       if (overlap) then
         stop 'sweep: overlap with old particle'
       end if
-      is_accepted = acceptchange(e_old, e_new)       
-      if(is_accepted) then
+      isaccepted = acceptchange(eold, enew)       
+      if(isaccepted) then
         particles(i) = newparticle
-        e_total_ = e_total_ + (e_new - e_old)
-        n_accepted_moves_ = n_accepted_moves_ + 1
+        etotal = etotal + (enew - eold)
+        nacceptedmoves = nacceptedmoves + 1
       end if
     end if 
   end subroutine
 
-  !subroutine move_particleinsystem(simbox, particles, i)
+  !subroutine moveparticleinsystem(simbox, particles, i)
   !  type(poly_box), intent(in) :: simbox
   !  type(particledat), dimension(:), intent(inout) :: particles
   !  integer, intent(in) :: i
   !  type(particledat) :: newparticle
   !  type(particledat) :: oldparticle
   !  logical :: overlap
-  !  real(dp) :: e_new
-  !  real(dp) :: e_old
-  !  logical :: is_accepted
-  !  e_new = 0._dp
-  !  e_old = 0._dp
+  !  real(dp) :: enew
+  !  real(dp) :: eold
+  !  logical :: isaccepted
+  !  enew = 0._dp
+  !  eold = 0._dp
   !  overlap = .false.
     !! :TODO: Change moving of particles for a separate object which 
     !! :TODO: gets the whole particle array.
-    !call move_particle(particle_iterator) 
-    !call potential_energy(particle_iterator, e_new, overlap) 
+    !call moveparticle(particleiterator) 
+    !call potentialenergy(particleiterator, enew, overlap) 
     !if(.not. overlap) then 
-    !  call undo_move(particle_iterator)
-    !  call potential_energy(particle_iterator, e_old, overlap)
+    !  call undomove(particleiterator)
+    !  call potentialenergy(particleiterator, eold, overlap)
     !  if (overlap) then
     !    stop 'sweep: overlap with old particle'
     !  end if
-    !  is_accepted = acceptchange(e_old, e_new)       
-    !  if (is_accepted) then
-    !    call redo_move(particle_iterator)
-    !    e_total_ = e_total_ + (e_new - e_old) !! :TODO: Remove this.
-    !    n_accepted_moves_ = n_accepted_moves_ + 1
+    !  isaccepted = acceptchange(eold, enew)       
+    !  if (isaccepted) then
+    !    call redomove(particleiterator)
+    !    etotal = etotal + (enew - eold) !! :TODO: Remove this.
+    !    nacceptedmoves = nacceptedmoves + 1
     !  end if
     !end if 
   !end subroutine
 
-  subroutine move_vol(simbox, particles, n_particles)
+  subroutine movevol(simbox, particles, nbrlist)
     type(poly_box), intent(inout) :: simbox
     type(particledat), dimension(:), intent(inout) :: particles
-    integer, intent(in) :: n_particles
+    type(list), intent(in) :: nbrlist
+    integer :: nparticles 
     logical :: overlap
-    real(dp) :: V_o, V_n
-    logical :: is_accepted
-    real(dp) :: tote_new
-    real(dp) :: boltzmann_n
-    real(dp) :: boltzmann_o
+    real(dp) :: Vo, Vn
+    logical :: isaccepted
+    real(dp) :: totenew
+    real(dp) :: boltzmannn
+    real(dp) :: boltzmanno
     type(poly_box) :: oldbox
     real(dp), dimension(3) :: scaling
+    nparticles = size(particles)
     overlap = .false.
-    V_o = volume(simbox)
+    Vo = volume(simbox)
     oldbox = simbox
-    scaling = scale(simbox, max_scaling_, grnd)
-    call scale_positions(oldbox, simbox, particles, n_particles) 
-    V_n = volume(simbox)
-    call total_energy(simbox, particles, tote_new, overlap)
-    call scale_positions(simbox, oldbox, particles, n_particles)
+    scaling = scale(simbox, maxscaling, grnd)
+    call scalepositions(oldbox, simbox, particles, nparticles) 
+    Vn = volume(simbox)
+    call totalenergy(simbox, particles, nbrlist, totenew, overlap)
+    call scalepositions(simbox, oldbox, particles, nparticles)
     if (overlap) then
       simbox = oldbox  
     else
-      boltzmann_n = tote_new + pressure_ * V_n - real(n_particles, dp) * &
-        temperature_ * log(V_n)  
-      boltzmann_o = e_total_ + pressure_ * V_o - real(n_particles, dp) * &
-        temperature_ * log(V_o)
-      is_accepted = acceptchange(boltzmann_o, boltzmann_n)
-      if (is_accepted) then
+      boltzmannn = totenew + pressure * Vn - real(nparticles, dp) * &
+        temperature * log(Vn)  
+      boltzmanno = etotal + pressure * Vo - real(nparticles, dp) * &
+        temperature * log(Vo)
+      isaccepted = acceptchange(boltzmanno, boltzmannn)
+      if (isaccepted) then
         !! Scale back to new configuration
-        call scale_positions(oldbox, simbox, particles, n_particles)
-        e_total_ = tote_new
-        n_accepted_scalings_ = n_accepted_scalings_ + 1
+        call scalepositions(oldbox, simbox, particles, nparticles)
+        etotal = totenew
+        nacceptedscalings = nacceptedscalings + 1
       else 
         simbox = oldbox
       end if 
@@ -228,17 +236,17 @@ module mc_sweep
   !! p‰‰tt‰‰, hyv‰ksyt‰‰nkˆ muutos
   !!
   function acceptchange(oldenergy, newenergy) &
-    result(is_accepted)
+    result(isaccepted)
     intrinsic exp
-    logical :: is_accepted
+    logical :: isaccepted
     real(dp), intent(in) :: oldenergy
     real(dp), intent(in) :: newenergy
     real(dp) :: dE
     dE = newenergy - oldenergy
     if(dE < 0._dp) then
-      is_accepted = .true.
+      isaccepted = .true.
     else
-      is_accepted = (grnd() < exp(-dE/temperature_))
+      isaccepted = (grnd() < exp(-dE/temperature))
     end if  
   end function
 
@@ -248,8 +256,8 @@ module mc_sweep
   subroutine ratios(Nparticles, period, movratio, volratio)
     real(dp), intent(out) :: movratio, volratio
     integer, intent(in) :: Nparticles, period
-    movratio = real(n_accepted_moves_, dp)/real(Nparticles*period, dp)
-    volratio = real(n_accepted_scalings_, dp)/real(period, dp)   
+    movratio = real(nacceptedmoves, dp)/real(Nparticles*period, dp)
+    volratio = real(nacceptedscalings, dp)/real(period, dp)   
   end subroutine
 
   !! P‰ivitt‰‰ maksimimuutosarvot koordinaateille/kulmille ja 
@@ -260,45 +268,45 @@ module mc_sweep
     real(dp) :: olddximax, olddthetamax
     real(dp) :: newdximax, newdthetamax
     integer, intent(in) :: Nparticles, period
-    !real(dp), save :: last_mratio = 0._dp
-    !real(dp), save :: d_macceptance = 0._dp
-    !real(dp) :: d_transrot
+    !real(dp), save :: lastmratio = 0._dp
+    !real(dp), save :: dmacceptance = 0._dp
+    !real(dp) :: dtransrot
     call ratios(Nparticles, period, mratio, vratio)      
     !! Jos tilavuuden muutoksista on hyv‰ksytty yli 25%,
     !! kasvatetaan s‰teen maksimimuutosarvoa. Vastaavasti
     !! siirrolle/kierrolle rajana 33%.
     !! Nollataan hyv‰ksynt‰laskurit
-    n_accepted_scalings_ = 0
-    n_accepted_moves_ = 0
-    max_scaling_ = newmaxvalue(vratio > scaling_ratio_, max_scaling_)
+    nacceptedscalings = 0
+    nacceptedmoves = 0
+    maxscaling = newmaxvalue(vratio > scalingratio, maxscaling)
     call getmaxmoves(olddximax, olddthetamax)
-    !if(adjust_type_ == 1 .or. adjust_type_ == 2) then
-      newdthetamax = newmaxvalue(mratio > move_ratio_, olddthetamax)
-      newdximax = newmaxvalue(mratio > move_ratio_, olddximax)
+    !if(adjusttype == 1 .or. adjusttype == 2) then
+      newdthetamax = newmaxvalue(mratio > moveratio, olddthetamax)
+      newdximax = newmaxvalue(mratio > moveratio, olddximax)
     !end if
-    !if (adjust_type_ == 2) then
+    !if (adjusttype == 2) then
       !! adjust ratio maxtranslation/maxrotation
-    !  d_macceptance = mratio - last_mratio
-    !  if (d_macceptance*d_transrot > 0._dp) then
+    !  dmacceptance = mratio - lastmratio
+    !  if (dmacceptance*dtransrot > 0._dp) then
     !    newdximax = 1.05_dp*newdximax
-    !    d_transrot = 1._dp
+    !    dtransrot = 1._dp
     !  else
     !    newdximax = newdximax/1.05_dp
-    !    d_transrot = -1._dp
+    !    dtransrot = -1._dp
     !  end if
-    !  last_mratio = mratio
+    !  lastmratio = mratio
     !end if
     !! :TODO: write to log if trying to increase max move too much
     !! :TODO: add also smallest possible newdximax? 
     !! :TODO: write to log if trying to decrease below smallest newdximax
-    if (newdximax > largest_translation_) then
-      !write(*, *) 'Tried to increase maxtrans above largest_translation.'
-      newdximax = largest_translation_
-      newdthetamax = largest_rotation_
-    else if(newdximax < smallest_translation_) then
-      !write(*, *) 'Tried to decrease maxtrans below smallest_translation.'
-      newdximax = smallest_translation_
-      newdthetamax = smallest_rotation_
+    if (newdximax > largesttranslation) then
+      !write(*, *) 'Tried to increase maxtrans above largesttranslation.'
+      newdximax = largesttranslation
+      newdthetamax = largestrotation
+    else if(newdximax < smallesttranslation) then
+      !write(*, *) 'Tried to decrease maxtrans below smallesttranslation.'
+      newdximax = smallesttranslation
+      newdthetamax = smallestrotation
     end if
     call setmaxmoves(newdximax, newdthetamax)
   end subroutine
@@ -315,22 +323,22 @@ module mc_sweep
     end if
   end function
 
-  function pressure()
-    real(dp) :: pressure
-    pressure = pressure_
+  function getpressure()
+    real(dp) :: getpressure
+    getpressure = pressure
   end function
 
-  subroutine scale_positions(oldbox, newbox, particles, n_particles)
+  subroutine scalepositions(oldbox, newbox, particles, nparticles)
     implicit none
     type(poly_box), intent(in) :: oldbox
     type(poly_box), intent(in) :: newbox
     type(particledat), dimension(:), intent(inout) :: particles
-    integer, intent(in) :: n_particles
+    integer, intent(in) :: nparticles
     integer :: i
-    do i = 1, n_particles
-      particles(i)%x = particles(i)%x * get_x(newbox) / get_x(oldbox)
-      particles(i)%y = particles(i)%y * get_y(newbox) / get_y(oldbox)
-      particles(i)%z = particles(i)%z * get_z(newbox) / get_z(oldbox)
+    do i = 1, nparticles
+      particles(i)%x = particles(i)%x * getx(newbox) / getx(oldbox)
+      particles(i)%y = particles(i)%y * gety(newbox) / gety(oldbox)
+      particles(i)%z = particles(i)%z * getz(newbox) / getz(oldbox)
     end do    
   end subroutine
 
