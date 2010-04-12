@@ -2,40 +2,43 @@ module energy
   use nrtype, only: dp
   use particle, only: particledat
   use particlewall
-  !use cell_energy
-  use verlet
+  use cell, only: list
+  use cell_energy
+  !use all_pairs
+  !use verlet
   use class_poly_box
   implicit none
   private
  
-  public :: total_energy
-  public :: potential_energy
+  public :: totalenergy
+  public :: potentialenergy
 
   contains
  
-  subroutine total_energy(simbox, particles, Etot, overlap)
-    type(particledat), dimension(:), intent(in) :: particles
+  subroutine totalenergy(simbox, particles, nbrlist, Etot, overlap)
     type(poly_box), intent(in) :: simbox
+    type(particledat), dimension(:), intent(in) :: particles
+    type(list), intent(in) :: nbrlist
     real(dp), intent(out) :: Etot
     logical, intent(out) :: overlap
     real(dp) :: Vpairtot
     real(dp) :: Vwalltot
     Etot = 0._dp
     overlap = .false.
-    call pair_interactions(simbox, particles, Vpairtot, overlap)
+    call pairinteractions(nbrlist, simbox, particles, Vpairtot, overlap)
     if (.not. overlap) then
       call totwallprtclV(simbox, particles, Vwalltot, overlap)
     end if  
     if (.not. overlap) then
       Etot = Vpairtot + Vwalltot
     end if
-  end subroutine total_energy
+  end subroutine totalenergy
           
   !! Palauttaa hiukkasten ja seinän välisen vuorovaikutuksen
   !! kokonaisenergian 
   subroutine totwallprtclV(simbox, particles, Eptwlltot, overlap)
-    type(particledat), dimension(:), intent(in) :: particles
     type(poly_box), intent(in) :: simbox
+    type(particledat), dimension(:), intent(in) :: particles
     real(dp), intent(out) :: Eptwlltot
     logical, intent(out) :: overlap 
     integer :: i
@@ -54,10 +57,11 @@ module energy
   !! vuorovaikutusenergian seinän ja muiden hiukkasten 
   !! kanssa. 
   !!
-  subroutine potential_energy(simbox, particles, i, Vitot, overlap)
-    type(particledat), dimension(:), intent(in) :: particles
-    integer, intent(in) :: i
+  subroutine potentialenergy(simbox, particles, nbrlist, i, Vitot, overlap)
     type(poly_box), intent(in) :: simbox
+    type(particledat), dimension(:), intent(in) :: particles
+    type(list), intent(in) :: nbrlist
+    integer, intent(in) :: i
     real(dp), intent(out) :: Vitot
     logical, intent(out) :: overlap
     real(dp) :: Vipair 
@@ -68,7 +72,7 @@ module energy
     overlap = .false.
     call particlewall_potential(particles(i), simbox, Viwall, overlap)
     if (.not. overlap) then
-      call pair_interactions(simbox, particles, particles(i), i, Vipair, overlap)
+      call pairinteractions(nbrlist, simbox, particles, i, Vipair, overlap)
     end if
     if (.not. overlap) then 
       Vitot = Vipair + Viwall
@@ -76,4 +80,3 @@ module energy
   end subroutine
 
 end module
-
