@@ -5,17 +5,17 @@ implicit none
 
 public :: boxdat
 public :: new_box
-public :: make_box
-public :: create_box
-public :: min_image
-public :: min_distance
-public :: get_x, get_y, get_z
-public :: set_x, set_y, set_z
-public :: is_xperiodic, is_yperiodic, is_zperiodic
-public :: set_xperiodicity, set_yperiodicity, set_zperiodicity
+public :: makebox
+public :: createbox
+public :: minimage
+public :: mindistance
+public :: getx, gety, getz
+public :: setx, sety, setz
+public :: isxperiodic, isyperiodic, iszperiodic
+public :: setxperiodicity, setyperiodicity, setzperiodicity
 public :: volume
 public :: scale
-public :: write_to_stdio
+public :: writetostdio
 
 private
 
@@ -29,80 +29,80 @@ type boxdat
   logical :: zperiodic    
 end type boxdat
 
-interface min_image
-  module procedure min_image_1, min_image_2
+interface minimage
+  module procedure minimage1, minimage2
 end interface
 
-interface min_distance
-  module procedure box_min_distance
+interface mindistance
+  module procedure box_mindistance
 end interface
 
 interface scale
   module procedure box_scale
 end interface
 
-interface set_x
-  module procedure box_set_x
+interface setx
+  module procedure box_setx
 end interface
 
-interface set_y
-  module procedure box_set_y
+interface sety
+  module procedure box_sety
 end interface
 
-interface set_z
-  module procedure box_set_z
+interface setz
+  module procedure box_setz
 end interface
 
-interface get_x
-  module procedure box_get_x
+interface getx
+  module procedure box_getx
 end interface
 
-interface get_y
-  module procedure box_get_y
+interface gety
+  module procedure box_gety
 end interface
 
-interface get_z
-  module procedure box_get_z
+interface getz
+  module procedure box_getz
 end interface
 
-interface is_xperiodic
-  module procedure box_is_xp
+interface isxperiodic
+  module procedure box_isxp
 end interface
 
-interface is_yperiodic
-  module procedure box_is_yperiodic
+interface isyperiodic
+  module procedure box_isyperiodic
 end interface
 
-interface is_zperiodic
-  module procedure box_is_zperiodic
+interface iszperiodic
+  module procedure box_iszperiodic
 end interface
 
-interface set_xperiodicity
-  module procedure box_set_xperiodicity
+interface setxperiodicity
+  module procedure box_setxperiodicity
 end interface
 
-interface set_yperiodicity
-  module procedure box_set_yperiodicity
+interface setyperiodicity
+  module procedure box_setyperiodicity
 end interface
 
-interface set_zperiodicity
-  module procedure box_set_zperiodicity
+interface setzperiodicity
+  module procedure box_setzperiodicity
 end interface
 
-interface write_to_stdio
-  module procedure box_write_to_stdio
+interface writetostdio
+  module procedure box_writetostdio
 end interface
 
 interface volume
   module procedure box_volume
 end interface
 
-interface make_box
-  module procedure box_make_box, box_copy
+interface makebox
+  module procedure box_makebox, box_copy
 end interface
 
-interface create_box
-  module procedure box_create_box
+interface createbox
+  module procedure box_createbox
 end interface
 
 contains 
@@ -112,7 +112,7 @@ contains
   function new_box(side) result(b)
     type(boxdat) :: b
     real(dp), intent(in) :: side
-    call box_make_box(b, side)
+    call box_makebox(b, side)
   end function
 
   !! Returns a "well-defined" periodic cubic box with sidelengths @p side.
@@ -123,7 +123,7 @@ contains
   !!
   !! @return a cubic box.
   !!  
-  subroutine box_make_box(simbox, side) 
+  subroutine box_makebox(simbox, side) 
     type(boxdat), intent(out) :: simbox
     real(dp), intent(in) :: side
     simbox%lx = side
@@ -140,90 +140,90 @@ contains
     copy = simbox
   end subroutine
 
-  subroutine box_create_box(bp, box_string)
+  subroutine box_createbox(bp, boxstring)
     type(boxdat), intent(inout) :: bp
-    character(len = *), intent(in) :: box_string
-    character(len = 5) :: type_id
+    character(len = *), intent(in) :: boxstring
+    character(len = 5) :: typeid
     integer :: ios
-    read(box_string, *, iostat = ios) type_id, bp%lx, bp%ly, bp%lz, bp%xperiodic, bp%yperiodic, bp%zperiodic
+    read(boxstring, *, iostat = ios) typeid, bp%lx, bp%ly, bp%lz, bp%xperiodic, bp%yperiodic, bp%zperiodic
     if (ios /= 0) then
-      write(6, *) 'box_create_box: failed to read box with iostat = ', ios, '. Stopping.'
+      write(6, *) 'box_createbox: failed to read box with iostat = ', ios, '. Stopping.'
       stop 
-    else if('box' /= type_id) then
-      write(6, *) 'box_create_box: Warning converting from ', trim(adjustl(type_id)), 'to box!'
+    else if('box' /= typeid) then
+      write(6, *) 'box_createbox: Warning converting from ', trim(adjustl(typeid)), 'to box!'
     end if
   end subroutine
 
-  real(dp) elemental function box_get_x(a_box)
-    type(boxdat), intent(in) :: a_box
-    box_get_x = a_box%lx
+  real(dp) elemental function box_getx(abox)
+    type(boxdat), intent(in) :: abox
+    box_getx = abox%lx
   end function
 
-  real(dp) elemental function box_get_y(a_box)
-    type(boxdat), intent(in) :: a_box
-    box_get_y = a_box%ly
+  real(dp) elemental function box_gety(abox)
+    type(boxdat), intent(in) :: abox
+    box_gety = abox%ly
   end function
 
-  real(dp) elemental function box_get_z(a_box)
-    type(boxdat), intent(in) :: a_box
-    box_get_z = a_box%lz
+  real(dp) elemental function box_getz(abox)
+    type(boxdat), intent(in) :: abox
+    box_getz = abox%lz
   end function
 
-  elemental function box_is_xp(a_box) result(is_periodic)
-    type(boxdat), intent(in) :: a_box
-    logical :: is_periodic
-    is_periodic = a_box%xperiodic
+  elemental function box_isxp(abox) result(isperiodic)
+    type(boxdat), intent(in) :: abox
+    logical :: isperiodic
+    isperiodic = abox%xperiodic
   end function
 
-  elemental function box_is_yperiodic(a_box) result(is_periodic)
-    type(boxdat), intent(in) :: a_box
-    logical :: is_periodic
-    is_periodic = a_box%yperiodic
+  elemental function box_isyperiodic(abox) result(isperiodic)
+    type(boxdat), intent(in) :: abox
+    logical :: isperiodic
+    isperiodic = abox%yperiodic
   end function
 
-  elemental function box_is_zperiodic(a_box) result(is_periodic)
-    type(boxdat), intent(in) :: a_box
-    logical :: is_periodic
-    is_periodic = a_box%zperiodic
+  elemental function box_iszperiodic(abox) result(isperiodic)
+    type(boxdat), intent(in) :: abox
+    logical :: isperiodic
+    isperiodic = abox%zperiodic
   end function
 
-  pure subroutine box_set_x(a_box, x)
+  pure subroutine box_setx(abox, x)
     implicit none
-    type(boxdat), intent(inout) :: a_box
+    type(boxdat), intent(inout) :: abox
     real(dp), intent(in) :: x
-    a_box%lx = x
+    abox%lx = x
   end subroutine 
   
-  pure subroutine box_set_y(a_box, y)
+  pure subroutine box_sety(abox, y)
     implicit none
-    type(boxdat), intent(inout) :: a_box
+    type(boxdat), intent(inout) :: abox
     real(dp), intent(in) :: y
-    a_box%ly = y
+    abox%ly = y
   end subroutine 
   
-  pure subroutine box_set_z(a_box, z)
+  pure subroutine box_setz(abox, z)
     implicit none
-    type(boxdat), intent(inout) :: a_box
+    type(boxdat), intent(inout) :: abox
     real(dp), intent(in) :: z
-    a_box%lz = z
+    abox%lz = z
   end subroutine 
 
-  pure subroutine box_set_xperiodicity(a_box, is_periodic)
-    type(boxdat), intent(inout) :: a_box
-    logical, intent(in) :: is_periodic
-    a_box%xperiodic = is_periodic
+  pure subroutine box_setxperiodicity(abox, isperiodic)
+    type(boxdat), intent(inout) :: abox
+    logical, intent(in) :: isperiodic
+    abox%xperiodic = isperiodic
   end subroutine
 
-  pure subroutine box_set_yperiodicity(a_box, is_periodic)
-    type(boxdat), intent(inout) :: a_box
-    logical, intent(in) :: is_periodic
-    a_box%yperiodic = is_periodic
+  pure subroutine box_setyperiodicity(abox, isperiodic)
+    type(boxdat), intent(inout) :: abox
+    logical, intent(in) :: isperiodic
+    abox%yperiodic = isperiodic
   end subroutine
 
-  pure subroutine box_set_zperiodicity(a_box, is_periodic)
-    type(boxdat), intent(inout) :: a_box
-    logical, intent(in) :: is_periodic
-    a_box%zperiodic = is_periodic
+  pure subroutine box_setzperiodicity(abox, isperiodic)
+    type(boxdat), intent(inout) :: abox
+    logical, intent(in) :: isperiodic
+    abox%zperiodic = isperiodic
   end subroutine
 
   pure function box_volume(simbox)
@@ -232,46 +232,46 @@ contains
     box_volume = simbox%lx * simbox%ly * simbox%lz
   end function
 
-  pure function box_min_distance(simbox, r_i, r_j)
-    real(dp) :: box_min_distance
+  pure function box_mindistance(simbox, ri, rj)
+    real(dp) :: box_mindistance
     type(boxdat), intent(in) :: simbox
-    real(dp), dimension(3), intent(in) :: r_i
-    real(dp), dimension(3), intent(in) :: r_j
-    real(dp), dimension(3) :: r_ij
-    r_ij = min_image(simbox, r_i, r_j)
-    box_min_distance = sqrt(dot_product(r_ij, r_ij))
+    real(dp), dimension(3), intent(in) :: ri
+    real(dp), dimension(3), intent(in) :: rj
+    real(dp), dimension(3) :: rij
+    rij = minimage(simbox, ri, rj)
+    box_mindistance = sqrt(dot_product(rij, rij))
   end function 
 
-  pure function min_image_2(simbox, r_i, r_j) result(r_ij)
-    real(dp), dimension(3) :: r_ij
+  pure function minimage2(simbox, ri, rj) result(rij)
+    real(dp), dimension(3) :: rij
     type(boxdat), intent(in) :: simbox
-    real(dp), dimension(3), intent(in) :: r_i
-    real(dp), dimension(3), intent(in) :: r_j
-    r_ij = r_j - r_i
-    r_ij = min_image_1(simbox, r_ij)
+    real(dp), dimension(3), intent(in) :: ri
+    real(dp), dimension(3), intent(in) :: rj
+    rij = rj - ri
+    rij = minimage1(simbox, rij)
   end function
 
-  pure recursive function min_image_1(simbox, r)
+  pure recursive function minimage1(simbox, r)
     implicit none
-    real(dp), dimension(3) :: min_image_1
+    real(dp), dimension(3) :: minimage1
     type(boxdat), intent(in) :: simbox
     real(dp), dimension(3), intent(in) :: r
     !! Make periodic transformations
-    min_image_1 = r
+    minimage1 = r
     if (simbox%xperiodic) then
-      min_image_1(1) = r(1) - simbox%lx * anint(r(1)/simbox%lx)
+      minimage1(1) = r(1) - simbox%lx * anint(r(1)/simbox%lx)
     end if
     if (simbox%yperiodic) then
-      min_image_1(2) = r(2) - simbox%ly * anint(r(2)/simbox%ly)
+      minimage1(2) = r(2) - simbox%ly * anint(r(2)/simbox%ly)
     end if
     if (simbox%zperiodic) then
-      min_image_1(3) = r(3) - simbox%lz * anint(r(3)/simbox%lz)
+      minimage1(3) = r(3) - simbox%lz * anint(r(3)/simbox%lz)
     end if
   end function
 
-  function box_scale(simbox, max_scaling, rng) result(scaling)
+  function box_scale(simbox, maxscaling, rng) result(scaling)
     type(boxdat), intent(inout) :: simbox
-    real(dp), intent(in) :: max_scaling
+    real(dp), intent(in) :: maxscaling
     real(dp) :: dx, dy, dz
     interface
       function rng()
@@ -279,18 +279,18 @@ contains
       end function
     end interface
     real(dp), dimension(3) :: scaling
-    dx = (2._dp * real(rng(), dp) - 1._dp) * max_scaling
-    dy = (2._dp * real(rng(), dp) - 1._dp) * max_scaling
-    dz = (2._dp * real(rng(), dp) - 1._dp) * max_scaling
-    scaling = (/(get_x(simbox) + dx) / get_x(simbox), &
-    (get_y(simbox) + dy) / get_y(simbox), &
-    (get_z(simbox) + dz) / get_z(simbox)/)    
-    call set_x(simbox, get_x(simbox) + dx)  
-    call set_y(simbox, get_y(simbox) + dy)  
-    call set_z(simbox, get_z(simbox) + dz)  
+    dx = (2._dp * real(rng(), dp) - 1._dp) * maxscaling
+    dy = (2._dp * real(rng(), dp) - 1._dp) * maxscaling
+    dz = (2._dp * real(rng(), dp) - 1._dp) * maxscaling
+    scaling = (/(getx(simbox) + dx) / getx(simbox), &
+    (gety(simbox) + dy) / gety(simbox), &
+    (getz(simbox) + dz) / getz(simbox)/)    
+    call setx(simbox, getx(simbox) + dx)  
+    call sety(simbox, gety(simbox) + dy)  
+    call setz(simbox, getz(simbox) + dz)  
   end function
 
-  subroutine box_write_to_stdio(simbox)
+  subroutine box_writetostdio(simbox)
     type(boxdat), intent(in) :: simbox
     write(*,*) simbox
   end subroutine
