@@ -5,8 +5,9 @@ module mc_sweep
   use particle
   use mtmod
 !  use verlet
-  use cell
-  use cell_energy, only: new_list, pairinteractions  
+!  use cell
+!  use cell_energy, only: update, pairinteractions  
+  use class_poly_nbrlist
   use pt
   use class_parameterizer
   use class_parameter_writer
@@ -17,7 +18,9 @@ module mc_sweep
   public :: sweep
   public :: updatemaxvalues
   public :: getpressure
+  public :: gettemperature
   public :: mc_sweep_writeparameters
+  public :: settemperature
 
   integer, save :: nacceptedmoves
   integer, save :: nacceptedscalings
@@ -69,6 +72,7 @@ module mc_sweep
     call writeparameter(writer, 'pt_low', ptlow)
     call writeparameter(writer, 'pt_high', pthigh)
     call writeparameter(writer, 'pressure', pressure)
+    call writeparameter(writer, 'temperature', temperature)
     call writeparameter(writer, 'move_ratio', moveratio)
     call writeparameter(writer, 'scaling_ratio', scalingratio)
     call writeparameter(writer, 'largest_translation', largesttranslation)
@@ -79,7 +83,7 @@ module mc_sweep
   subroutine sweep(simbox, particles, nbrlist)
     type(particledat), dimension(:), intent(inout) :: particles
     type(poly_box), intent(inout) :: simbox
-    type(list), intent(inout) :: nbrlist
+    type(poly_nbrlist), intent(inout) :: nbrlist
     integer :: i
     logical :: overlap
     integer :: ivolmove
@@ -87,7 +91,7 @@ module mc_sweep
     !! Trial moves of particles and one particle move replaced with volume move
     ivolmove = int(grnd() * real(size(particles), dp)) + 1
     etotalold = etotal   
-    nbrlist = new_list(simbox, particles)
+    call update(nbrlist, simbox, particles)
     call totalenergy(simbox, particles, nbrlist, etotal, overlap)
     if(overlap) then 
       stop 'Overlap when entering sweep! Stopping.'
@@ -108,7 +112,7 @@ module mc_sweep
   subroutine makeptmove(simbox, particles, nbrlist)
     type(poly_box), intent(inout) :: simbox
     type(particledat), dimension(:), intent(inout) :: particles
-    type(list), intent(inout) :: nbrlist
+    type(poly_nbrlist), intent(inout) :: nbrlist
     real(dp) :: beta
     real(dp) :: enthalpy
     integer :: nparticles
@@ -119,13 +123,13 @@ module mc_sweep
     etotal = enthalpy - pressure * volume(simbox)
     !! One way to get rid of explicit list update would be to use some kind 
     !! of observing system between the particlearray and the neighbour list. 
-    nbrlist = new_list(simbox, particles(1:size(particles)))
+    call update(nbrlist, simbox, particles)
   end subroutine
 
   subroutine moveparticle(simbox, particles, nbrlist, i)
     type(poly_box), intent(in) :: simbox
     type(particledat), dimension(:), intent(inout) :: particles
-    type(list), intent(inout) :: nbrlist
+    type(poly_nbrlist), intent(inout) :: nbrlist
     integer, intent(in) :: i
     type(particledat) :: newparticle
     type(particledat) :: oldparticle
@@ -157,6 +161,16 @@ module mc_sweep
         nacceptedmoves = nacceptedmoves + 1
       end if
     end if 
+  end subroutine
+
+  pure function gettemperature() result(temp)
+    real(dp) :: temp
+    temp = temperature
+  end function
+
+  subroutine settemperature(temperaturein)
+    real(dp), intent(in) :: temperaturein
+    temperature = temperaturein
   end subroutine
 
   !subroutine moveparticleinsystem(simbox, particles, i)
@@ -194,7 +208,7 @@ module mc_sweep
   subroutine movevol(simbox, particles, nbrlist)
     type(poly_box), intent(inout) :: simbox
     type(particledat), dimension(:), intent(inout) :: particles
-    type(list), intent(in) :: nbrlist
+    type(poly_nbrlist), intent(in) :: nbrlist
     integer :: nparticles 
     logical :: overlap
     real(dp) :: Vo, Vn
@@ -285,7 +299,7 @@ module mc_sweep
       newdximax = newmaxvalue(mratio > moveratio, olddximax)
     !end if
     !if (adjusttype == 2) then
-      !! adjust ratio maxtranslation/maxrotation
+       !! adjust ratio maxtranslation/maxrotation
     !  dmacceptance = mratio - lastmratio
     !  if (dmacceptance*dtransrot > 0._dp) then
     !    newdximax = 1.05_dp*newdximax
