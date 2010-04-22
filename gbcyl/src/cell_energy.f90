@@ -10,7 +10,7 @@ use class_parameterizer
 implicit none
 private
 
-public :: new_list
+public :: new_celllist
 public :: pairinteractions
 public :: new_nbriterator
 public :: scaledposition
@@ -18,22 +18,27 @@ public :: nbriterator
 public :: advance
 public :: isdone
 public :: value
-public :: init
+public :: cell_energy_init
 public :: writeparameters
+public :: update
 
 real(dp), save :: this_minlength = 7.5_dp
 logical, save :: this_iseven = .false.
 
-interface init
+interface cell_energy_init
   module procedure initwtparameters, initwtreader 
 end interface
 
-interface new_list
+interface new_celllist
   module procedure new_lists
 end interface
 
+interface update
+  module procedure cell_energy_update
+end interface
+
 interface pairinteractions
-  module procedure pairinteractionss, pairinteractionsit
+  module procedure cell_energy_pairinteractionss, cell_energy_pairinteractionsit
 end interface
 
 !! Iterator to iterate through neighbours of a position (a particle).
@@ -115,7 +120,7 @@ contains
 !! @p nparticles is the number of particles.
 !! @p minlength is the minimum length of a cell side. 
 !!
-pure function new_lists(simbox, particles) result(cl)
+function new_lists(simbox, particles) result(cl)
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
   type(list) :: cl
@@ -135,6 +140,13 @@ pure function new_lists(simbox, particles) result(cl)
   end do
   cl = new_list(rs, nx, ny, nz)
 end function
+
+subroutine cell_energy_update(cl, simbox, particles)
+  type(list), intent(inout) :: cl
+  type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:) :: particles
+  cl = new_celllist(simbox, particles)
+end subroutine
 
 subroutine initwtreader(parameterreader)
   type(parameterizer), intent(in) :: parameterreader
@@ -156,7 +168,7 @@ subroutine writeparameters(writer)
   call writeparameter(writer, 'isdivisioneven', this_iseven) 
 end subroutine
 
-subroutine pairinteractionss(cl, simbox, particles, i, vpairtot, overlap)
+subroutine cell_energy_pairinteractionss(cl, simbox, particles, i, vpairtot, overlap)
   type(list), intent(in) :: cl
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
@@ -180,7 +192,7 @@ subroutine pairinteractionss(cl, simbox, particles, i, vpairtot, overlap)
   end do
 end subroutine
 
-subroutine pairinteractionsit(cl, simbox, particles, vpairtot, overlap)
+subroutine cell_energy_pairinteractionsit(cl, simbox, particles, vpairtot, overlap)
   type(list), intent(in) :: cl
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
