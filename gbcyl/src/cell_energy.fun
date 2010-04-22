@@ -25,8 +25,8 @@ test onecelllist
   end do
 
   !! make cell list of only one cell
-  call init(minlength, .false.)
-  clist = new_list(simbox, particles)
+  call cell_energy_init(minlength, .false.)
+  clist = new_celllist(simbox, particles)
 
   !! check that all particles go to that cell
   citerator = new_nbriterator(clist, scaledposition(simbox, particles(1)))
@@ -99,8 +99,8 @@ test division
       end do
     end do
   end do 
-  call init(minlength, .false.)
-  clist = new_list(simbox, particles)
+  call cell_energy_init(minlength, .false.)
+  clist = new_celllist(simbox, particles)
   assert_equal(ncells(clist), 8)
   !! check that all particles go to their designated cells
   do i = 1, nparticles
@@ -139,8 +139,8 @@ test nbriteration
   particles(3) = new_particle()
   call setposition(particles(3), (/-0.5_dp * cutoff, 0.5_dp * cutoff, 0._dp/))
   simbox = new_cylinder(2._dp * cutoff, cutoff)
-  call init(cutoff, .false.)
-  cl = new_list(simbox, particles)
+  call cell_energy_init(cutoff, .false.)
+  cl = new_celllist(simbox, particles)
   assert_equal(4, ncells(cl))
   it = new_nbriterator(cl, scaledposition(simbox, particles(1)))
   assert_false(isdone(it))
@@ -162,7 +162,7 @@ test nbriteration
   call setposition(particles(1), (/0._dp, 0._dp, -1.5_dp * cutoff/))
   call setposition(particles(2), (/0._dp, 0._dp, 0._dp * cutoff/))
   call setposition(particles(3), (/0._dp, 0._dp, 1.5_dp * cutoff/))
-  cl = new_list(simbox, particles)
+  cl = new_celllist(simbox, particles)
   assert_equal(3, ncells(cl))
   it = new_nbriterator(cl, scaledposition(simbox, particles(1)))
   assert_false(isdone(it))
