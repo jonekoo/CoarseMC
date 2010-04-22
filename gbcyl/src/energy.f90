@@ -2,10 +2,11 @@ module energy
   use nrtype, only: dp
   use particle, only: particledat
   use particlewall
-  use cell, only: list
-  use cell_energy
+!  use cell, only: list
+!  use cell_energy
   !use all_pairs
   !use verlet
+  use class_poly_nbrlist
   use class_poly_box
   implicit none
   private
@@ -18,7 +19,7 @@ module energy
   subroutine totalenergy(simbox, particles, nbrlist, Etot, overlap)
     type(poly_box), intent(in) :: simbox
     type(particledat), dimension(:), intent(in) :: particles
-    type(list), intent(in) :: nbrlist
+    type(poly_nbrlist), intent(in) :: nbrlist
     real(dp), intent(out) :: Etot
     logical, intent(out) :: overlap
     real(dp) :: Vpairtot
@@ -60,7 +61,7 @@ module energy
   subroutine potentialenergy(simbox, particles, nbrlist, i, Vitot, overlap)
     type(poly_box), intent(in) :: simbox
     type(particledat), dimension(:), intent(in) :: particles
-    type(list), intent(in) :: nbrlist
+    type(poly_nbrlist), intent(in) :: nbrlist
     integer, intent(in) :: i
     real(dp), intent(out) :: Vitot
     logical, intent(out) :: overlap
