@@ -3,16 +3,17 @@ use nrtype
 use utils
 use class_cylformatter
 use particlewall, only: initptwall, particlewall_writeparameters
-use gayberne, only: gayberne_init => init, gb_writeparameters
+use gayberne, only: gayberne_init, gb_writeparameters
 use mtmod, only: sgrnd, mtsave, mtget
 use particle, only: particledat, initParticle, particle_writeparameters
 use class_poly_box
 use cylinder, only: new_cylinder
-use mc_sweep, only: mc_sweep_init => init, updatemaxvalues, sweep, getpressure, &
-mc_sweep_writeparameters
+use mc_sweep, only: mc_sweep_init => init, updatemaxvalues, sweep, &
+getpressure, gettemperature, settemperature, mc_sweep_writeparameters
 !!use verlet, only: initvlist, freevlist, verlet_writeparameters
+use class_poly_nbrlist
 use cell, only: list, writetostdout
-use cell_energy, only: cell_energy_init => init, new_list, &
+use cell_energy, only: cell_energy_init, new_celllist, &
 cell_energy_writeparameters => writeparameters
 use energy, only: totalenergy
 use pt
@@ -46,7 +47,7 @@ integer, save :: pwunit
 character(len = 80), save :: rngfile = 'mt-state.'
 character(len = 9), save :: idchar
 type(cylformatter), save :: cf
-type(list), save :: nbrlist
+type(poly_nbrlist), save :: nbrlist
 
 contains
   
@@ -103,18 +104,18 @@ subroutine mce_init
       call getparameter(parameterreader, 'i_sweep', isweep)
       call getparameter(parameterreader, 'adjusting_period', adjustingperiod)
       cf = new_cylformatter(statefile)
-      call findlast(cf, isfound)
-      if (.not. isfound) then
-        write(*, *) 'Error: Could not find a configuration from ' // &
-        trim(statefile)
-      end if
+      !call findlast(cf, isfound)
+      !if (.not. isfound) then
+      !  write(*, *) 'Error: Could not find a configuration from ' // &
+      !  trim(statefile)
+      !end if
       call readstate(cf, particles, nparticles, radius, height)
       !! Initialize modules. 
       simbox = new_cylinder(2._dp * radius, height)
       call initptwall(parameterreader)
       call gayberne_init(parameterreader)
       call cell_energy_init(parameterreader)
-      nbrlist = new_list(simbox, particles(1:nparticles))
+      nbrlist = new_celllist(simbox, particles(1:nparticles))
       call mc_sweep_init(parameterreader)
       !call initvlist(particles, nparticles, simbox, parameterreader)
       call initparticle(parameterreader)
@@ -213,8 +214,12 @@ subroutine run
 end subroutine 
   
 subroutine runequilibrationtasks
+  real(dp) :: temperature
   if (mod(isweep, adjustingperiod) == 0) then
-    call updateMaxValues(nparticles, adjustingperiod)
+    !call updatemaxvalues(nparticles, adjustingperiod)
+    temperature = gettemperature()
+    call pt_adjusttemperature(temperature)
+    call settemperature(temperature)
   end if
 end subroutine 
 
