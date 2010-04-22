@@ -12,8 +12,8 @@ use mtmod
 use mpi
 use gayberne
 use configurations
-real(dp) :: beta0 = 0.0_dp
-real(dp) :: beta1 = 1.0_dp
+real(dp) :: beta0 = 0._dp
+real(dp) :: beta1 = 1._dp
 real(dp) :: beta
 real(dp) :: energy
 type(particledat), dimension(2) :: tconf
@@ -23,8 +23,8 @@ integer :: nparticles
 type(poly_box) :: abox
 type(poly_box) :: largebox
 type(poly_box) :: smallbox
-real(dp) :: smallboxside = 10.0_dp
-real(dp) :: largeboxside = 20.0_dp
+real(dp) :: smallboxside = 10._dp
+real(dp) :: largeboxside = 20._dp
 integer :: seed = 123456
 integer :: ntasks
 integer :: id
@@ -38,7 +38,7 @@ real(dp) :: Eparticles
 real(dp) :: Et
 logical :: overlap
   !! Initialize Gay-Berne potential to get the particle configurations right.
-  call init(4.4_dp, 20._dp, 1._dp, 1._dp, 1._dp, 1._dp)
+  call gayberne_init(4.4_dp, 20._dp, 1._dp, 1._dp, 1._dp, 1._dp)
   !! 1. seed rng
   call sgrnd(seed)
   rand0 = grnd()

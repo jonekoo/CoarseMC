@@ -12,6 +12,9 @@ module pt
   public :: pt_move
   public :: pt_finalize
   public :: pt_temperature
+  public :: pt_getacceptedup
+  public :: pt_setacceptedup
+  public :: pt_adjusttemperature
 
   integer, save :: dptype
   integer, save :: particletype
@@ -20,6 +23,7 @@ module pt
   integer, save :: id
   integer, save :: ntasks
   integer, save :: idirection = 0
+  integer, save :: nacceptedup = 0
 
 contains
 
@@ -130,6 +134,9 @@ contains
       particles(1:nparticles) = particlesn(1:nparticles)
       nparticles = nparticlesn
       simbox = simboxn
+      if (destid == idabove) then
+        nacceptedup = nacceptedup + 1
+      end if
     end if
   end subroutine
 
@@ -186,6 +193,21 @@ contains
     call setz(simbox, msg(6))
   end subroutine pt_exchange
 
+  !! Returns the number of accepted pt exchange moves between thisid and
+  !! thisid + 1.
+  !! 
+  pure function pt_getacceptedup() result(naccepted)
+    integer :: naccepted 
+    naccepted = nacceptedup
+  end function
+
+  !! Resets counter nacceptedup to zero.
+  !!
+  subroutine pt_setacceptedup(naccepted)
+    integer, intent(in) :: naccepted
+    nacceptedup = naccepted
+  end subroutine
+
   real(dp) function pt_temperature(ptlow, pthigh)
     real(dp), intent(in) :: ptlow
     real(dp), intent(in) :: pthigh
@@ -197,5 +219,64 @@ contains
     pt_temperature = ptlow + (pthigh - ptlow) * real(id, dp)/ &
     real(ntasks - 1, dp)
   end function
+
+subroutine pt_adjusttemperatures(temperatures, nswaps)
+  real(dp), dimension(:), intent(inout) :: temperatures
+  integer, dimension(:), intent(in) :: nswaps
+  real(dp) :: avgnswaps
+  integer :: i
+  real(dp) :: shift
+    !! Calculate average number of accepted moves
+    avgnswaps = real(sum(nswaps(1:ntasks - 1)), dp) / real(ntasks - 1, dp)   
+    !! Keep endpoint temperatures id == 0 and id == ntasks - 1 fixed.
+    do i = 1, ntasks - 1
+      shift = 0.1_dp * (temperatures(i + 1) - temperatures(i))
+      !! Shift temperatures further apart from each other or
+      if (real(nswaps(i), dp) < avgnswaps) then 
+        !! Shift temperatures closer to each other.
+        shift = -shift
+      end if
+      if (i > 1) then
+        temperatures(i) = temperatures(i) - shift
+      end if
+      if (i + 1 < ntasks) then
+        temperatures(i + 1) = temperatures(i + 1) + shift
+      end if
+    end do
+end subroutine
+
+subroutine pt_adjusttemperature(temperature)
+!! Adjusting constant could be for example 1/10th of the interval between 
+!! initial or instantaneous temperatures. Using interval of instantaneous 
+!! temperatures would ensure that the temperatures never cross each other or 
+!! overlap. The constant could also be based on distance between averages of 
+!! enthalpy, but that would complicate things a lot. 
+!! 
+  real(dp), intent(inout) :: temperature
+  real(dp), dimension(:), allocatable :: temperatures
+  integer, dimension(:), allocatable :: nswaps
+  integer :: rc
+  integer :: astat
+!  call mpi_comm_rank(mpi_comm_world, id, rc)
+!  call mpi_comm_rank(mpi_comm_world, ntasks, rc)
+  if (id == 0) then
+    allocate(temperatures(0:ntasks - 1), nswaps(0:ntasks - 1), stat = astat)
+    if (astat /= 0) then 
+      stop 'Memory allocation failed in module pt.'
+    end if
+  end if
+  call mpi_gather(pt_getacceptedup(), 1, mpi_integer, nswaps(0:ntasks - 1), &
+  1, mpi_integer, 0, mpi_comm_world, rc)
+  call mpi_gather(temperature, 1, dptype, temperatures(0:ntasks - 1), &
+  1, dptype, 0, mpi_comm_world, rc)
+  !! Make adjustment calculations in id == 0
+  if (id == 0) then
+    call pt_adjusttemperatures(temperatures(0:ntasks - 1), &
+    nswaps(0:ntasks - 1))
+  end if
+  call mpi_scatter(temperatures(0:ntasks - 1), 1, dptype, temperature,&
+  1, dptype, 0, mpi_comm_world, rc) 
+  call pt_setacceptedup(0)
+end subroutine
 
 end module pt
