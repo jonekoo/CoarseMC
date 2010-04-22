@@ -24,6 +24,7 @@ module particle
   public :: move
   public :: setmaxmoves
   public :: setposition
+  public :: setorientation
   public :: maxtrans
   
   type particledat
@@ -122,6 +123,14 @@ module particle
     aparticle%x = vec(1)
     aparticle%y = vec(2)
     aparticle%z = vec(3)
+  end subroutine
+
+  pure subroutine setorientation(aparticle, vec)
+    type(particledat), intent(inout) :: aparticle
+    real(dp), dimension(3), intent(in) :: vec
+    aparticle%ux = vec(1)
+    aparticle%uy = vec(2)
+    aparticle%uz = vec(3)
   end subroutine
 
   subroutine move1(aparticle)
