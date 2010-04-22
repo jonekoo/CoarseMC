@@ -5,7 +5,7 @@ module gayberne
   implicit none
   private
 
-  public :: init
+  public :: gayberne_init
   public :: potential
   public :: sigma
   public :: getsigma0
@@ -31,7 +31,7 @@ module gayberne
     module procedure potentials
   end interface
 
-  interface init
+  interface gayberne_init
     module procedure initparameterizer, initold
   end interface
 
@@ -54,13 +54,13 @@ module gayberne
   end subroutine
 
   subroutine initold(kappasigmain, kappaepsilonin, muin, nuin, sigma0in, epsilon0in)
-  implicit none
-  real(dp), intent(in) :: kappasigmain
-  real(dp), intent(in) :: kappaepsilonin
-  real(dp), intent(in) :: muin
-  real(dp), intent(in) :: nuin
-  real(dp), intent(in) :: sigma0in
-  real(dp), intent(in) :: epsilon0in
+    implicit none
+    real(dp), intent(in) :: kappasigmain
+    real(dp), intent(in) :: kappaepsilonin
+    real(dp), intent(in) :: muin
+    real(dp), intent(in) :: nuin
+    real(dp), intent(in) :: sigma0in
+    real(dp), intent(in) :: epsilon0in
     kappasigma = kappasigmain
     kappaepsilon = kappaepsilonin
     mu = muin

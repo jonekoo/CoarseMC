@@ -16,7 +16,7 @@ test zero_at_cross_contact
   real(dp) :: e_gb
   logical :: overlap
   rij = (/0.0_dp, 0.0_dp, sigma_0/)
-  call init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
+  call gayberne_init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
   call potential(ui, uj, rij, e_gb, overlap)
   assert_real_equal(0._dp, e_gb)
   assert_false(overlap)
@@ -39,7 +39,7 @@ test kappa_sigma_defined
   real(dp), dimension(3) :: urij_ss = (/0._dp, 1._dp, 0._dp/) 
   uj = ui 
   urij_ee = ui
-  call init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
+  call gayberne_init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
   assert_real_equal(kappa_sigma, sigma(ui, uj, urij_ee)/sigma(ui, uj, urij_ss))
 end test
 
@@ -59,7 +59,7 @@ test kappa_epsilon_defined
   real(dp), dimension(3) :: urij_ss = (/0._dp, 1._dp, 0._dp/) 
   uj = ui 
   urij_ee = ui
-  call init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
+  call gayberne_init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
   assert_real_equal(kappa_epsilon, epsilon(ui, uj, urij_ss)/epsilon(ui, uj, urij_ee))  
 end test
 
@@ -81,7 +81,7 @@ test reduces_to_lennard_jones
   rij = (/-r_absolute, 0._dp, 0._dp/)
   lj_6 = (sigma_0 / r_absolute)**6
   lj_potential = 4._dp * epsilon_0 * lj_6 * (lj_6 - 1._dp)
-  call init(1._dp, 1._dp, 6.234_dp, 2.84687_dp, sigma_0, epsilon_0)
+  call gayberne_init(1._dp, 1._dp, 6.234_dp, 2.84687_dp, sigma_0, epsilon_0)
   call potential(ui, uj, rij, e_gb, overlap)
   assert_real_equal(lj_potential, e_gb)
   assert_false(overlap)
@@ -109,7 +109,7 @@ test small_separation
   real(dp) :: hard_core = 0.6_dp
   small_number = 1.e-9_dp
   r_absolute = hard_core - small_number
-  call init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
+  call gayberne_init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
   uj = ui
   rij = (/0.0_dp, r_absolute, 0.0_dp/)
   call potential(ui, uj, rij, e_gb, overlap)
