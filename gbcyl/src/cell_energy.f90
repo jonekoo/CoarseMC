@@ -19,7 +19,7 @@ public :: advance
 public :: isdone
 public :: value
 public :: cell_energy_init
-public :: writeparameters
+public :: cell_energy_writeparameters
 public :: update
 
 real(dp), save :: this_minlength = 7.5_dp
@@ -161,7 +161,7 @@ subroutine initwtparameters(minlength, iseven)
   this_iseven = iseven
 end subroutine
 
-subroutine writeparameters(writer)
+subroutine cell_energy_writeparameters(writer)
   type(parameter_writer), intent(in) :: writer
   call writecomment(writer, 'cell_energy parameters')
   call writeparameter(writer, 'cellminlength', this_minlength)
