@@ -61,7 +61,6 @@ contains
 function freeunit() result(unitnr)
   integer :: unitnr
   logical :: isunitfree = .false.
-  logical :: isopened
   unitnr = 0
   do while(.not. isunitfree)
     unitnr = unitnr + 1
