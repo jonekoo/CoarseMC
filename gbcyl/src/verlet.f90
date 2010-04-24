@@ -17,7 +17,6 @@ module verlet
   public :: verletlist
   public :: update
   public :: delete
-  public :: writeparameters
  
   real(dp), save :: rlist = 6.8_dp
   integer, save :: nneighboursmax = 500
@@ -40,10 +39,6 @@ module verlet
 
   interface delete
     module procedure verlet_delete
-  end interface
-
-  interface writeparameters
-    module procedure verlet_writeparameters
   end interface
 
   interface update
