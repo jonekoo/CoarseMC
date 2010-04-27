@@ -2,17 +2,17 @@ module energy
   use nrtype, only: dp
   use particle, only: particledat
   use particlewall
-!  use cell, only: list
-!  use cell_energy
-  !use all_pairs
-  !use verlet
   use class_poly_nbrlist
   use class_poly_box
   implicit none
   private
  
-  public :: totalenergy
+
   public :: potentialenergy
+
+  interface potentialenergy
+    module procedure totalenergy, singleenergy
+  end interface
 
   contains
  
@@ -58,7 +58,7 @@ module energy
   !! vuorovaikutusenergian seinän ja muiden hiukkasten 
   !! kanssa. 
   !!
-  subroutine potentialenergy(simbox, particles, nbrlist, i, Vitot, overlap)
+  subroutine singleenergy(simbox, particles, nbrlist, i, Vitot, overlap)
     type(poly_box), intent(in) :: simbox
     type(particledat), dimension(:), intent(in) :: particles
     type(poly_nbrlist), intent(in) :: nbrlist
