@@ -5,6 +5,7 @@ use utils
 use class_parameter_writer
 use class_parameterizer
 use class_poly_box
+use m_fileunit
 implicit none
 private
 
@@ -23,9 +24,6 @@ private
 public :: cylformatter
 public :: readstate
 public :: writestate
-public :: init
-!!public :: finalizeOutput
-!!public :: io_writeparameters
 public :: findlast
 public :: beginmark
 public :: endmark
@@ -35,14 +33,10 @@ public :: delete
 type cylformatter
   private
   character(len = 200) :: file = 'simdata.out'
-  integer :: unit = 19
+  integer :: unit 
   character(len = 3) :: beginmark = '$R:'
   character(len = 3) :: endmark = 'EOF'
 end type
-
-interface init
-  module procedure initwith, initmolfile
-end interface
 
 interface findlast
   module procedure generalfindlast, cf_findlast
@@ -63,7 +57,7 @@ function new_cylformatter(statefile) result(cf)
   type(cylformatter) :: cf
   integer :: ios
   cf%file = statefile
-  cf%unit = 17
+  cf%unit = fileunit_getfreeunit()
   open(file = cf%file, unit = cf%unit, status = 'old', action = 'readwrite', &
   iostat = ios)
   if (ios /= 0) then
@@ -77,42 +71,6 @@ subroutine cf_delete(cf)
   cf%file = ''
   close(cf%unit)
 end subroutine
-
-subroutine initmolfile(cf, statefile)
-  type(cylformatter), intent(inout) :: cf
-  character(len = *), intent(in) :: statefile
-  cf%file = statefile
-  call openoutput(cf)
-end subroutine
-
-subroutine initwith(cf, reader)
-  type(cylformatter), intent(inout) :: cf
-  type(parameterizer), intent(in) :: reader
-  call getparameter(reader, 'molecule_file', cf%file)
-  call openoutput(cf)
-end subroutine
-
-subroutine io_writeparameters(cf, writer)
-  type(cylformatter), intent(in) :: cf
-  type(parameter_writer), intent(in) :: writer
-  call writeparameter(writer, 'molecule_file', cf%file)
-end subroutine
-
-subroutine finalizeOutput(cf)
-  type(cylformatter), intent(in) :: cf
-  close(cf%unit) 
-end subroutine finalizeOutput
-
-subroutine openoutput(cf)
-  type(cylformatter), intent(in) :: cf
-  integer :: ios
-  open(UNIT = cf%unit, FILE = cf%file, & 
-    & POSITION = 'APPEND', FORM = 'FORMATTED', IOSTAT = ios) 
-  if (ios /= 0) then
-    write (*, *) 'Could not open file ', cf%file, '.'
-    stop;
-  end if
-end subroutine openoutput
 
 !! Writes the coordinates of @p particles and the dimensions of the 
 !! cylindrical simulation cell to the file specified by @p cf.
@@ -282,37 +240,6 @@ subroutine readstateunit(readunit, simbox, particles, nparticles)
     particleread = createparticle(particlestring)
     particles(i) = particleread 
   end do
-end subroutine
-
-!! Reads the last state of @p particles and @p simbox written in @p filename.
-!! 
-!! @p filename the name of the file to be read from
-!! @p simbox the simulation box to be read.
-!! @p particles the dynamic array to which particles will be read
-!! @p nparticles the number of particles in @p particles
-!!
-!! :NOTE: it may be better to discard this routine and use the two routines
-!! findlast and readstate when needed. This only aggregates those two and
-!! file opening/closing.
-!!
-subroutine readlaststate(filename, begin, end, simbox, particles, nparticles)
-  character(len = *), intent(in) :: filename
-  character(len = *), intent(in) :: begin
-  character(len = *), intent(in) :: end
-  type(particledat), dimension(:), pointer :: particles
-  integer, intent(out) :: nparticles
-  integer, parameter :: readunit = 17   
-  integer :: ios
-  logical :: isfound
-  type(poly_box), intent(out) :: simbox
-  open(readunit, file = filename, status = 'old', iostat = ios)
-  if (ios /= 0) then
-    write(6, *) 'Error: Could not open file ', filename, '. Stopping.'
-    stop 
-  end if
-  call findlast(readunit, begin, end, isfound)
-  call readstate(readunit, simbox, particles, nparticles)
-  close(readunit) 
 end subroutine
 
 subroutine cf_findlast(cf, isfound)
