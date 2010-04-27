@@ -1,6 +1,7 @@
-This is gbcyl-2.0 A Parallel-tempering constant NPT Metropolis Monte Carlo 
-simulation program for a Gay-Berne(4.4, 20.0, 1, 1) model liquid crystal in a 
-cylindrical mesocavity.
+This is ptgbcyl A Parallel-tempering, constant NPT Metropolis Monte Carlo 
+simulation program for a Gay-Berne liquid crystal in a cylindrical mesocavity.
+The copyright belongs to Jouni Karjalainen for most of the code but there are
+routines some modules and subroutines that have different copyright ownership.
 
 
 Compiling
@@ -29,30 +30,19 @@ installed to yourinstallationpath/share/
 Usage
 -----
 
-
 A new simulation:
 
 You need the following files:
-1. program binary: ptgbcyl
-2. parameter file: gbcyl.in
-3. file to read the starting configuration from: eg. r9-n1290-cr.gb
-
-Starting configuration file must be the same as set in the parameter file. So 
-you may need to edit the parameter file. 
+1. program binary: ptgbcyl (default)
+2. parameter files for each cpu: fin-kgb.0.pms, fin-kgb.1.pms, ...  
+3. file to read the starting configuration for each cpu: fin-kgb.0.mol, fin-kgb.1.mol, ...
 
 Copy parameter file and starting configuration to the directory where you want 
 to run the program and have the program output files.
 
-
 Running with 8 cores:
 mpirun -np 8 ./ptgbcyl
 
-
 If your simulation gets interrupted you may want to restart it. To restart in
-the same directory where the simulation was run set variable is_restart to 
-true in gbcyl.in by: 
-$is_restart T
-
-Now the parameters will be read from files parameters.out.* written by the last
-run. Running the restarted simulation can now be done exactly like a normal 
-simulation. 
+the same directory where the simulation was run make sure the fin-kgb.*.mol and
+fin-kgb.*.pms files as wall as mt-state.* files are present. 
