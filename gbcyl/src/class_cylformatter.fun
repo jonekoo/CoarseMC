@@ -1,4 +1,4 @@
-test_suite class_cylformatter
+atest_suite class_cylformatter
 
 test reading
   use particle
@@ -69,9 +69,11 @@ test readlast
 end test
 
 test generalfindlast
-  integer :: readunit = 13
+  use m_fileunit
+  integer :: readunit 
   character(len = 5) :: line
   logical :: isfound
+  readunit = fileunit_getfreeunit()
   open(file = 'findlasttest.txt', unit = readunit, action = 'read')
   call findlast(readunit, 'geometry', 'end geometry', isfound)
   assert_true(isfound)
@@ -81,6 +83,7 @@ test generalfindlast
   assert_equal('Jonne', line)
   close(readunit)
   !! Test EOF ending
+  readunit = fileunit_getfreeunit()
   open(file = 'findlasttest.txt', unit = readunit, action = 'read')
   call findlast(readunit, 'geometry', 'EOF', isfound)
   assert_true(isfound)
