@@ -28,7 +28,7 @@ real(dp), dimension(3) :: writtenposition
 real(dp), dimension(3) :: readposition
 open(file = 'test_write.tmp', unit = particleunit, action = 'READWRITE')
 particlewritten = new_particle()
-call writeparticle(particleunit, particlewritten) 
+call writeparticle(particlewritten, particleunit) 
 rewind(particleunit)
 read(particleunit, '(A150)') particlestring
 particleread = createparticle(particlestring)
