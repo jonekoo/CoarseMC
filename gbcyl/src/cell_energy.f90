@@ -127,9 +127,9 @@ function new_lists(simbox, particles) result(cl)
   integer :: iparticle
   real(dp), dimension(3, size(particles)) :: rs
   integer :: nx, ny, nz
-  nx = ncells(getx(simbox), this_minlength)
-  ny = ncells(gety(simbox), this_minlength)
-  nz = ncells(getz(simbox), this_minlength)
+  nx = max(ncells(getx(simbox), this_minlength), 1)
+  ny = max(ncells(gety(simbox), this_minlength), 1)
+  nz = max(ncells(getz(simbox), this_minlength), 1)
   if (this_iseven) then
     nx = (nx / 2) * 2
     ny = (ny / 2) * 2
