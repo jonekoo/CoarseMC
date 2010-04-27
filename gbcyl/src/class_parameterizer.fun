@@ -8,6 +8,7 @@ test stringparameter
   p = new_parameterizer('test_parameters.in')
   call getparameter(p, key, value)
   assert_equal(value, 'molecules.in') 
+  call delete(p)
 end test
 
 test realparameter
@@ -18,6 +19,7 @@ test realparameter
   p = new_parameterizer('test_parameters.in')
   call getparameter(p, key, value)
   assert_real_equal(value, 4.4_dp) 
+  call delete(p)
 end test
 
 test integerparameter
@@ -27,9 +29,7 @@ test integerparameter
   p = new_parameterizer('test_parameters.in')
   call getparameter(p, key, value)
   assert_equal(value, 1123)
+  call delete(p)
 end test
-
-!test parameternotfound
-!end test
 
 end test_suite
