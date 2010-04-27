@@ -5,68 +5,59 @@ implicit none
 
 contains 
 
-  subroutine nvec(nx, ny, nz)
-    intrinsic sqrt
-    ! Aliohjelma satunnaisen yksikkÃ¶vektorin muodostamista varten
-    ! Understanding Mol. Sim. 2nd Ed.  Frenkel, Smit
-    ! s.  578
-    double precision, intent(out) :: nx, ny, nz
-    double precision :: l, u1, u2, s
-    l = 0.0_dp
-    do
-       u1 = 1._dp - 2._dp * grnd()
-       u2 = 1._dp - 2._dp * grnd()
-       l = u1 * u1 + u2 * u2
-       if(l <= 1._dp) exit
-    end do
-    s = 2.0_dp * sqrt(1._dp - l)
-    nx = u1 * s
-    ny = u2 * s
-    nz = 1._dp - 2._dp * l
-  end subroutine
-
-  pure SUBROUTINE XVEC2(X, Y, Z, NX, NY, NZ, PHI, XP, YP, ZP)
-    intrinsic cos
-    intrinsic sin
-    intrinsic dot_product
-    !
-    ! rotates the vector (X,Y,Z) into (XP,YP,ZP) around axis
-    ! (NX,NY,NZ) [unit vector of the direction] through angle PHI
-    ! Goldstein: Classical Mechanics 2nd ed., p. 165
-    !
-    REAL(DP), intent(in) :: X, Y, Z
-    real(dp), intent(in) :: NX, NY, NZ 
-    real(dp), intent(in) :: PHI
-    real(dp), intent(out) :: XP, YP, ZP
-    REAL(DP) :: DOTP
-    DOTP = dot_product((/NX, NY, NZ/), (/X, Y, Z/))
-    CALL CROSSP(X, Y, Z, NX, NY, NZ, XP, YP, ZP)
-    XP = X * COS(PHI) + NX * DOTP * (1._dp - COS(PHI)) + XP * SIN(PHI)
-    YP = Y * COS(PHI) + NY * DOTP * (1._dp - COS(PHI)) + YP * SIN(PHI)
-    ZP = Z * COS(PHI) + NZ * DOTP * (1._dp - COS(PHI)) + ZP * SIN(PHI)
-  END SUBROUTINE
-
-  pure SUBROUTINE CROSSP(AX,AY,AZ,BX,BY,BZ,CX,CY,CZ)
-    !
-    ! calculates (AX,AY,AZ) x (BX,BY,BZ) = (CZ,CY,CZ)
-    !
-    REAL(DP), intent(in) :: AX, AY, AZ, BX, BY, BZ
-    real(dp), intent(out) :: CX, CY, CZ
-    !
-    CX = AY * BZ - AZ * BY
-    CY = AZ * BX - AX * BZ
-    CZ = AX * BY - AY * BX
-  END SUBROUTINE
-
-function freeunit() result(unitnr)
-  integer :: unitnr
-  logical :: isunitfree = .false.
-  unitnr = 0
-  do while(.not. isunitfree)
-    unitnr = unitnr + 1
-    inquire(unit = unitnr, opened = isunitfree)    
+subroutine nvec(nx, ny, nz)
+  !!
+  !! Forms a random unit vector. 
+  !!
+  !! @see Understanding Mol. Sim. 2nd Ed.  Frenkel, Smit p. 578
+  !!
+  intrinsic sqrt
+  double precision, intent(out) :: nx, ny, nz
+  double precision :: l, u1, u2, s
+  l = 0.0_dp
+  do
+     u1 = 1._dp - 2._dp * grnd()
+     u2 = 1._dp - 2._dp * grnd()
+     l = u1 * u1 + u2 * u2
+     if(l <= 1._dp) exit
   end do
-end function
+  s = 2.0_dp * sqrt(1._dp - l)
+  nx = u1 * s
+  ny = u2 * s
+  nz = 1._dp - 2._dp * l
+end subroutine
+
+pure SUBROUTINE XVEC2(X, Y, Z, NX, NY, NZ, PHI, XP, YP, ZP)
+  intrinsic cos
+  intrinsic sin
+  intrinsic dot_product
+  !!
+  !! rotates the vector (X,Y,Z) into (XP,YP,ZP) around axis
+  !! (NX,NY,NZ) [unit vector of the direction] through angle PHI
+  !! Goldstein: Classical Mechanics 2nd ed., p. 165
+  !!
+  REAL(DP), intent(in) :: X, Y, Z
+  real(dp), intent(in) :: NX, NY, NZ 
+  real(dp), intent(in) :: PHI
+  real(dp), intent(out) :: XP, YP, ZP
+  REAL(DP) :: DOTP
+  DOTP = dot_product((/NX, NY, NZ/), (/X, Y, Z/))
+  CALL CROSSP(X, Y, Z, NX, NY, NZ, XP, YP, ZP)
+  XP = X * COS(PHI) + NX * DOTP * (1._dp - COS(PHI)) + XP * SIN(PHI)
+  YP = Y * COS(PHI) + NY * DOTP * (1._dp - COS(PHI)) + YP * SIN(PHI)
+  ZP = Z * COS(PHI) + NZ * DOTP * (1._dp - COS(PHI)) + ZP * SIN(PHI)
+END SUBROUTINE
+
+pure SUBROUTINE CROSSP(AX,AY,AZ,BX,BY,BZ,CX,CY,CZ)
+  !!
+  !! calculates (AX,AY,AZ) x (BX,BY,BZ) = (CZ,CY,CZ)
+  !!
+  REAL(DP), intent(in) :: AX, AY, AZ, BX, BY, BZ
+  real(dp), intent(out) :: CX, CY, CZ
+  CX = AY * BZ - AZ * BY
+  CY = AZ * BX - AX * BZ
+  CZ = AX * BY - AY * BX
+END SUBROUTINE
 
 pure function fmt_char_int() result(format_char)
   character(len = 50) :: format_char
