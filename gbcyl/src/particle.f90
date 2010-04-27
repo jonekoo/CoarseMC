@@ -28,9 +28,14 @@ module particle
   public :: maxtrans
   
   type particledat
-     real(dp) :: x, y, z, ux, uy, uz
-     logical :: rod
-  end type particledat
+     real(dp) :: x = 0._dp
+     real(dp) :: y = 0._dp
+     real(dp) :: z = 0._dp
+     real(dp) :: ux = 0._dp
+     real(dp) :: uy = 0._dp
+     real(dp) :: uz = 1._dp
+     logical :: rod = .true.
+  end type
 
   real(dp), save :: dthetamax = -1._dp
   real(dp), save :: maxdr = -1._dp
@@ -97,7 +102,7 @@ module particle
     end if
   end function
 
-  subroutine writeparticle(writeunit, aparticle)
+  subroutine writeparticle(aparticle, writeunit)
     integer, intent(in) :: writeunit
     type(particledat), intent(in) :: aparticle
     write(writeunit, '(A, 6' // fmt_char_dp() // ')', advance='no') &
@@ -152,27 +157,27 @@ module particle
   
   subroutine transmove(xo, yo, zo, xn, yn, zn)
     implicit none
-    real(dp), intent(in) :: xo,yo,zo
-    real(dp), intent(out) :: xn,yn,zn
+    real(dp), intent(in) :: xo, yo, zo
+    real(dp), intent(out) :: xn, yn, zn
     real(dp) :: max1d 
     max1d = maxdr/sqrt(3._dp)
-    xn = xo + (2.0_dp*grnd()-1.0_dp)*max1d
-    yn = yo + (2.0_dp*grnd()-1.0_dp)*max1d
-    zn = zo + (2.0_dp*grnd()-1.0_dp)*max1d
+    xn = xo + (2._dp * grnd() - 1._dp) * max1d
+    yn = yo + (2._dp * grnd() - 1._dp) * max1d
+    zn = zo + (2._dp * grnd() - 1._dp) * max1d
   end subroutine
 
   !Palauttaa partikkelin orientaatiovektorin komponentit
   !sylinterikoordinaatistossa. 
-  subroutine unitvec(particle, uro, utheta, uz)
+  subroutine unitvec(aparticle, uro, utheta, uz)
     intrinsic atan2
-    type(particledat), intent(in) :: particle
+    type(particledat), intent(in) :: aparticle
     real(dp), intent(out) :: uro,utheta,uz
     real(dp) :: nx, ny, nz, uxn, uyn, uzn, theta
-    theta = -atan2(particle%y, particle%x)
+    theta = -atan2(aparticle%y, aparticle%x)
     nx = 0.0_dp
     ny = 0.0_dp
     nz = 1.0_dp
-    call xvec2(particle%ux, particle%uy, particle%uz, nx, ny, nz, theta, &
+    call xvec2(aparticle%ux, aparticle%uy, aparticle%uz, nx, ny, nz, theta, &
       uxn, uyn, uzn)
     uro = uxn
     utheta = uyn
@@ -202,10 +207,10 @@ module particle
     angle = dthetamax
   end subroutine 
 
-  pure function maxtransf(particle) result(mtr)
-    type(particledat), intent(in) :: particle
+  pure function maxtransf(aparticle) result(mtr)
+    type(particledat), intent(in) :: aparticle
     real(dp) :: mtr
     mtr = maxdr
   end function
   
-end module particle
+end module
