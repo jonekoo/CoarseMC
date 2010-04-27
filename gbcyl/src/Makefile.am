@@ -4,6 +4,7 @@ printpotentials_SOURCES = \
   nrtype.f90 \
   mtfort90.f90 \
   utils.f90 \
+  m_fileunit.f90 \
   class_parameterizer.f90 \
   class_parameter_writer.f90 \
   gayberne.f90 \
@@ -32,6 +33,7 @@ common_src = \
   nr.f90 \
   mtfort90.f90 \
   utils.f90 \
+  m_fileunit.f90 \
   class_parameterizer.f90 \
   class_parameter_writer.f90 \
   particle.f90 \
