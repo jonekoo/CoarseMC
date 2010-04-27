@@ -116,6 +116,28 @@ test small_separation
   assert_true(overlap)
 end test
 
-
+test normalop
+  use nrtype
+  real(dp) :: kappa_sigma = 4.4_dp
+  real(dp) :: kappa_epsilon = 20._dp
+  real(dp) :: mu = 1._dp
+  real(dp) :: nu = 1._dp
+  real(dp) :: sigma_0 = 1._dp
+  real(dp) :: epsilon_0 = 1._dp
+  real(dp), dimension(3) :: rij = (/1._dp, 1._dp, 0._dp/)
+  real(dp), dimension(3) :: ui = (/0._dp, 0._dp, 1._dp/)
+  real(dp) :: r_absolute
+  real(dp) :: e_gb
+  real(dp) :: expected
+  logical :: overlap
+  real(dp) :: khi
+  call gayberne_init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
+  call potential(ui, ui, rij, e_gb, overlap)
+  expected = 4._dp * (dot_product(rij, rij)**(-6) - dot_product(rij, rij)**(-3))
+  khi = (kappa_sigma**2 - 1._dp)/(kappa_sigma**2 + 1._dp)
+  expected = expected/sqrt(1._dp - khi**2)
+  !write(*, *) 'expected = ', expected
+  assert_real_equal(expected, e_gb)
+end test
 
 end test_suite
