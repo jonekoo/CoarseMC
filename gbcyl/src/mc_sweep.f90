@@ -4,13 +4,11 @@ module mc_sweep
   use class_poly_box
   use particle
   use mtmod
-!  use verlet
-!  use cell
-!  use cell_energy, only: update, pairinteractions  
   use class_poly_nbrlist
   use pt
   use class_parameterizer
   use class_parameter_writer
+  use mpi
   implicit none  
   private 
 
@@ -87,18 +85,15 @@ module mc_sweep
     integer :: i
     logical :: overlap
     integer :: ivolmove
-    real(dp) :: etotalold
     !! Trial moves of particles and one particle move replaced with volume move
     ivolmove = int(grnd() * real(size(particles), dp)) + 1
-    etotalold = etotal   
     call update(nbrlist, simbox, particles)
-    call totalenergy(simbox, particles, nbrlist, etotal, overlap)
+    call potentialenergy(simbox, particles, nbrlist, etotal, overlap)
     if(overlap) then 
       stop 'Overlap when entering sweep! Stopping.'
     end if
     do i = 1, size(particles)
       if (i == ivolmove) then
-        !! Replace random particle update with a volume update.
         call movevol(simbox, particles, nbrlist)
       else
         call moveparticle(simbox, particles, nbrlist, i)
@@ -129,33 +124,32 @@ module mc_sweep
   subroutine moveparticle(simbox, particles, nbrlist, i)
     type(poly_box), intent(in) :: simbox
     type(particledat), dimension(:), intent(inout) :: particles
-    type(poly_nbrlist), intent(inout) :: nbrlist
+    type(poly_nbrlist), intent(in) :: nbrlist
     integer, intent(in) :: i
     type(particledat) :: newparticle
     type(particledat) :: oldparticle
     logical :: overlap
     real(dp) :: enew
     real(dp) :: eold
-    logical :: isaccepted
     enew = 0._dp
     eold = 0._dp
     overlap = .false.
     !! :TODO: Change moving of particles for a separate object which 
     !! :TODO: gets the whole particle array.
-    call move(particles(i), newparticle)
+    newparticle = particles(i)
+    call move(newparticle)
     call setposition(newparticle, minimage(simbox, &
     (/0._dp, 0._dp, 0._dp/), position(newparticle)))
     oldparticle = particles(i) 
     particles(i) = newparticle
     call potentialenergy(simbox, particles, nbrlist, i, enew, overlap)
+    particles(i) = oldparticle
     if(.not. overlap) then 
-      particles(i) = oldparticle
       call potentialenergy(simbox, particles, nbrlist, i, eold, overlap)
       if (overlap) then
         stop 'sweep: overlap with old particle'
       end if
-      isaccepted = acceptchange(eold, enew)       
-      if(isaccepted) then
+      if(acceptchange(eold, enew)) then
         particles(i) = newparticle
         etotal = etotal + (enew - eold)
         nacceptedmoves = nacceptedmoves + 1
@@ -172,38 +166,6 @@ module mc_sweep
     real(dp), intent(in) :: temperaturein
     temperature = temperaturein
   end subroutine
-
-  !subroutine moveparticleinsystem(simbox, particles, i)
-  !  type(poly_box), intent(in) :: simbox
-  !  type(particledat), dimension(:), intent(inout) :: particles
-  !  integer, intent(in) :: i
-  !  type(particledat) :: newparticle
-  !  type(particledat) :: oldparticle
-  !  logical :: overlap
-  !  real(dp) :: enew
-  !  real(dp) :: eold
-  !  logical :: isaccepted
-  !  enew = 0._dp
-  !  eold = 0._dp
-  !  overlap = .false.
-    !! :TODO: Change moving of particles for a separate object which 
-    !! :TODO: gets the whole particle array.
-    !call moveparticle(particleiterator) 
-    !call potentialenergy(particleiterator, enew, overlap) 
-    !if(.not. overlap) then 
-    !  call undomove(particleiterator)
-    !  call potentialenergy(particleiterator, eold, overlap)
-    !  if (overlap) then
-    !    stop 'sweep: overlap with old particle'
-    !  end if
-    !  isaccepted = acceptchange(eold, enew)       
-    !  if (isaccepted) then
-    !    call redomove(particleiterator)
-    !    etotal = etotal + (enew - eold) !! :TODO: Remove this.
-    !    nacceptedmoves = nacceptedmoves + 1
-    !  end if
-    !end if 
-  !end subroutine
 
   subroutine movevol(simbox, particles, nbrlist)
     type(poly_box), intent(inout) :: simbox
@@ -225,7 +187,7 @@ module mc_sweep
     scaling = scale(simbox, maxscaling, grnd)
     call scalepositions(oldbox, simbox, particles, nparticles) 
     Vn = volume(simbox)
-    call totalenergy(simbox, particles, nbrlist, totenew, overlap)
+    call potentialenergy(simbox, particles, nbrlist, totenew, overlap)
     call scalepositions(simbox, oldbox, particles, nparticles)
     if (overlap) then
       simbox = oldbox  
