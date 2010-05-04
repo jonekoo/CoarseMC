@@ -79,6 +79,9 @@ nodist_TESTS = TestRunner parRestartTest1.sh parRestartTest2.sh
 #dist_data_DATA = testconfiguration.txt
 #dist_check_DATA = testconfiguration.txt   ../data/ptgbcyl.in ../data/r9-n1290-cr.gb
 check_PROGRAMS = TestRunner
+
+dist_SCRIPTS = pt.sh createinput.sh
+
 TestRunner_SOURCES = \
   ${common_src} \
   ${mpi_src} \
