@@ -149,9 +149,6 @@ subroutine writerestart
   status = 'REPLACE', IOSTAT = ios) 
   writer = new_parameter_writer(pwunit)
   call writecomment(writer, 'mc engine parameters')
-  call writeparameter(writer, 'is_restart', .true.)
-  call writeparameter(writer, 'initstate', '\"simdata.out.' // idchar &
-  //'\"')  
   call writeparameter(writer, 'n_equilibration_sweeps', &
   nequilibrationsweeps)
   call writeparameter(writer, 'n_production_sweeps', nproductionsweeps)
@@ -240,4 +237,4 @@ subroutine writethermodynamics
   volume(simbox) 
 end subroutine 
 
-end module mc_engine
+end module
