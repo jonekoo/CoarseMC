@@ -74,9 +74,9 @@ pure function fmt_char_dp() result(format_char)
   integer :: w
   integer :: d
   real(dp) :: u 
-  character(len = 50) :: w_char
-  character(len = 50) :: d_char
-  character(len = 50) :: e_char
+  character(len = 50) :: w_char !! Width of field
+  character(len = 50) :: d_char !! Width of decimal field
+  character(len = 50) :: e_char !! width of exponent
   character(len = 50) :: format_char
   e = int(log10(real(range(u)))) + 1
   d = precision(u)
