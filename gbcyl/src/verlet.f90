@@ -110,6 +110,7 @@ module verlet
     integer :: nparticles
     integer :: i, j
     real(dp) :: rij
+    real(dp), dimension(3) :: rijvec
     nparticles = size(particles)
     do i = 1, nparticles
       vl%neighbourcounts(i) = 0
@@ -119,8 +120,11 @@ module verlet
     end do 
     do i = 1, nparticles - 1
       do j = i + 1, nparticles
-        rij = mindistance(simbox, position(particles(i)), &
-        position(particles(j)))
+        !rijvec = minimage(simbox, position(particles(i)), &
+        !position(particles(j)))
+        rijvec = minimage(simbox, position(particles(j)) - &
+        position(particles(i)))
+        rij = sqrt(dot_product(rijvec, rijvec))
         if(rij < rlist ) then
           vl%neighbourcounts(i) = vl%neighbourcounts(i) + 1
           vl%neighbourcounts(j) = vl%neighbourcounts(j) + 1 
