@@ -1,7 +1,8 @@
-bin_PROGRAMS = ptgbcyl printpotentials #tracer #gbcyl
+bin_PROGRAMS = ptgbcyl printpotentials createbox cutcylinder
 
 printpotentials_SOURCES = \
   nrtype.f90 \
+  nr.f90 \
   mtfort90.f90 \
   utils.f90 \
   m_fileunit.f90 \
@@ -18,6 +19,31 @@ printpotentials_SOURCES = \
   rf_s.f90 \
   rd_s.f90 \
   printpotentials.f90
+
+createbox_SOURCES = \
+  nrtype.f90 \
+  utils.f90 \
+  m_fileunit.f90 \
+  class_parameter_writer.f90 \
+  class_parameterizer.f90 \
+  mtfort90.f90 \
+  particle.f90 \
+  createbox.f90 
+
+cutcylinder_SOURCES = \
+  nrtype.f90 \
+  utils.f90 \
+  mtfort90.f90 \
+  m_fileunit.f90 \
+  class_parameterizer.f90 \
+  class_parameter_writer.f90 \
+  particle.f90 \
+  box.f90 \
+  cylinder.f90 \
+  class_poly_box.f90 \
+  io.f90 \
+  class_cylformatter.f90 \
+  tightpack.f90 
 
 #tracer_SOURCES = \
   ${common_src} \
@@ -59,7 +85,6 @@ common_src = \
 
 mpi_src = \
   mpi.f90 \
-  io.f90 \
   pt.f90 \
   mc_sweep.f90 \
   mc_engine.f90 
@@ -80,7 +105,7 @@ nodist_TESTS = TestRunner parRestartTest1.sh parRestartTest2.sh
 #dist_check_DATA = testconfiguration.txt   ../data/ptgbcyl.in ../data/r9-n1290-cr.gb
 check_PROGRAMS = TestRunner
 
-dist_SCRIPTS = pt.sh createinput.sh
+dist_bin_SCRIPTS = pt.sh createinput.sh
 
 TestRunner_SOURCES = \
   ${common_src} \
@@ -96,12 +121,12 @@ TestRunner_SOURCES = \
   box_fun.f90 \
   mtmod_fun.f90 \
   gayberne_fun.f90 \
-  io_fun.f90 \
   cell_fun.f90 \
   cylinder_fun.f90 \
   pt_fun.f90 \
   class_nbrcelliterator_fun.f90 \
   class_poly_nbrlist_fun.f90 \
+  class_poly_box_fun.f90 \
   TestRunner.f90
 
 MODEXT = @MODEXT@
