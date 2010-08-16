@@ -35,12 +35,11 @@ type(poly_box), save :: simbox
 integer, save :: nequilibrationsweeps = 0
 integer, save :: nproductionsweeps = 0
 integer, save :: productionperiod = 1
-integer, save :: adjustingperiod = 1
+integer, save :: adjustingperiod = 100
 integer, save :: isweep = 0
-integer, save :: thermounit
 integer, save :: rngunit
 integer, save :: pwunit
-character(len = 80), save :: rngfile = 'mt-state.'
+character(len = 80), save :: rngfile = 'mtstate.'
 character(len = 9), save :: idchar
 type(cylformatter), save :: cf
 type(poly_nbrlist), save :: nbrlist
@@ -74,8 +73,8 @@ subroutine mce_init
   isrestart = .false.
   do i = 0, ntasks - 1
     if ( i == id) then
-      parameterreader = new_parameterizer('fin-kgb.' // &
-      trim(adjustl(idchar)) // '.pms')
+      parameterreader = new_parameterizer('parameters.in.' // &
+      trim(adjustl(idchar)))
       rngfile = trim(adjustl(rngfile)) // trim(adjustl(idchar))
       rngunit = fileunit_getfreeunit()
       open(unit = rngunit, file = trim(adjustl(rngfile)), &
@@ -89,7 +88,7 @@ subroutine mce_init
         call mtget(rngunit, 'f')
         close(rngunit)
       end if
-      statefile = 'fin-kgb.' // trim(adjustl(idchar)) // '.mol'
+      statefile = 'configurations.' // trim(adjustl(idchar))
       call getparameter(parameterreader, 'n_equilibration_sweeps', &
       nequilibrationsweeps)
       call getparameter(parameterreader, 'n_production_sweeps', &
@@ -107,13 +106,13 @@ subroutine mce_init
       call readstate(cf, particles, nparticles, radius, height)
       !! Initialize modules. 
       simbox = new_cylinder(2._dp * radius, height)
+      call setid(simbox, id)
       call initptwall(parameterreader)
       call gayberne_init(parameterreader)
       call poly_nbrlist_init(parameterreader)
       nbrlist = create_nbrlist(simbox, particles)
       call mc_sweep_init(parameterreader)
       call initparticle(parameterreader)
-      call openenergyfile
       call pt_init()
       call potentialenergy(simbox, particles(1:nparticles), nbrlist, etot, overlap)
       if (overlap) then
@@ -127,18 +126,6 @@ subroutine mce_init
   end do
 end subroutine 
 
-subroutine openenergyfile
-  integer :: filestatus
-  character(len = 30) :: energyfile
-  energyfile = 'thermodynamics.dat.' // idchar
-  thermounit = fileunit_getfreeunit()
-  open(unit = thermounit, file = energyfile, action = 'WRITE', &
-   & status = 'REPLACE', delim='QUOTE', iostat = filestatus)
-  if (filestatus /= 0) then
-    stop 'Could not open energy file for writing! Stopping.'
-  end if
-end subroutine 
-
 subroutine writerestart
   type(parameter_writer) :: writer
   character(len = 80) :: parameterfilename
@@ -146,7 +133,7 @@ subroutine writerestart
   pwunit = fileunit_getfreeunit()
   parameterfilename = 'parameters.out.' // idchar
   open(UNIT = pwunit, FILE = parameterfilename, action = 'WRITE', & 
-  status = 'REPLACE', IOSTAT = ios) 
+  position = 'APPEND', IOSTAT = ios) 
   writer = new_parameter_writer(pwunit)
   call writecomment(writer, 'mc engine parameters')
   call writeparameter(writer, 'n_equilibration_sweeps', &
@@ -154,6 +141,7 @@ subroutine writerestart
   call writeparameter(writer, 'n_production_sweeps', nproductionsweeps)
   call writeparameter(writer, 'i_sweep', isweep)
   call writeparameter(writer, 'production_period', productionperiod)
+  call writeparameter(writer, 'adjusting_period', adjustingperiod)
   rngunit = fileunit_getfreeunit()
   open(unit = rngunit, file = rngfile, action = 'WRITE', &
   status = 'REPLACE', form = 'FORMATTED', iostat = ios)
@@ -162,12 +150,12 @@ subroutine writerestart
   else
     call mtsave(rngunit, 'f')
   end if
-  !! Initialize modules. 
   call particlewall_writeparameters(writer)
   call gb_writeparameters(writer)
   call mc_sweep_writeparameters(writer)
   call poly_nbrlist_writeparameters(writer)
   call particle_writeparameters(writer)
+  call pt_writeparameters(writer)
   call delete(writer)
   close(rngunit)
 end subroutine
@@ -186,7 +174,6 @@ subroutine finalize()
   call MPI_COMM_RANK(MPI_COMM_WORLD, myid, rc)
   call MPI_BARRIER(MPI_COMM_WORLD, rc)
   if (myid == 0) write (*, *) 'End of program gbcyl.'
-  close(thermounit)
   call pt_finalize()
 end subroutine 
   
@@ -208,7 +195,7 @@ end subroutine
 subroutine runequilibrationtasks
   real(dp) :: temperature
   if (mod(isweep, adjustingperiod) == 0) then
-    !call updatemaxvalues(nparticles, adjustingperiod)
+    call updatemaxvalues(nparticles, adjustingperiod)
     temperature = gettemperature()
     call pt_adjusttemperature(temperature)
     call settemperature(temperature)
@@ -219,22 +206,9 @@ subroutine runproductiontasks
   if (mod(isweep, productionperiod) == 0) then
     !! :TODO: Make i/o compatible to poly_box   
     call writestate(cf, particles, nparticles, getx(simbox)/2._dp, &
-    getz(simbox))
-    call writethermodynamics
+    getz(simbox), getid(simbox))
     call writerestart
   end if
 end subroutine
   
-subroutine writethermodynamics
-  real(dp) :: etot
-  logical :: overlap
-  call potentialenergy(simbox, particles(1:nparticles), nbrlist, etot, overlap)
-  if (overlap) then 
-    stop 'Writing statistics with an overlapping configuration!'
-  end if
-  write(thermounit, '(' // fmt_char_int() // ', 3' // fmt_char_dp() // &
-  ')') isweep, etot, volume(simbox), etot + getpressure() * &
-  volume(simbox) 
-end subroutine 
-
 end module
