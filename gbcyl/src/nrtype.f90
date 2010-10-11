@@ -6,10 +6,10 @@ module nrtype
   integer, parameter :: I4B=selected_int_kind(9)
 
 
-  integer, parameter :: sp=selected_real_kind(6)
+  integer, parameter :: sp=selected_real_kind(12)
   integer, parameter :: dp=selected_real_kind(12)
 
-  integer, parameter :: spc=selected_real_kind(6)
+  integer, parameter :: spc=selected_real_kind(12)
   integer, parameter :: dpc=selected_real_kind(12)
   
   integer, parameter :: lgt=kind(.true.)
