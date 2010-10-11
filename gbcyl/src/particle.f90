@@ -168,21 +168,21 @@ module particle
 
   !Palauttaa partikkelin orientaatiovektorin komponentit
   !sylinterikoordinaatistossa. 
-  subroutine unitvec(aparticle, uro, utheta, uz)
-    intrinsic atan2
-    type(particledat), intent(in) :: aparticle
-    real(dp), intent(out) :: uro,utheta,uz
-    real(dp) :: nx, ny, nz, uxn, uyn, uzn, theta
-    theta = -atan2(aparticle%y, aparticle%x)
-    nx = 0.0_dp
-    ny = 0.0_dp
-    nz = 1.0_dp
-    call xvec2(aparticle%ux, aparticle%uy, aparticle%uz, nx, ny, nz, theta, &
-      uxn, uyn, uzn)
-    uro = uxn
-    utheta = uyn
-    uz = uzn
-  end subroutine
+  !subroutine unitvec(aparticle, uro, utheta, uz)
+  !  intrinsic atan2
+  !  type(particledat), intent(in) :: aparticle
+  !  real(dp), intent(out) :: uro,utheta,uz
+  !  real(dp) :: nx, ny, nz, uxn, uyn, uzn, theta
+  !  theta = -atan2(aparticle%y, aparticle%x)
+  !  nx = 0.0_dp
+  !  ny = 0.0_dp
+  !  nz = 1.0_dp
+  !  call xvec2(aparticle%ux, aparticle%uy, aparticle%uz, nx, ny, nz, theta, &
+  !    uxn, uyn, uzn)
+  !  uro = uxn
+  !  utheta = uyn
+  !  uz = uzn
+  !end subroutine
     
   subroutine rotate(uxo, uyo, uzo, uxn, uyn, uzn)
     real(dp), intent(in) :: uxo,uyo,uzo
@@ -195,8 +195,8 @@ module particle
 
   subroutine setmaxmoves(distance, angle)
     implicit none
-    real(dp) :: distance, angle
-    maxdr = distance/sqrt(3._dp)
+    real(dp), intent(in) :: distance, angle
+    maxdr = distance
     dthetamax = angle
   end subroutine
 
