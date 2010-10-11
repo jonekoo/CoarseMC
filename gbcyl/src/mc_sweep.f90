@@ -19,6 +19,7 @@ module mc_sweep
   public :: gettemperature
   public :: mc_sweep_writeparameters
   public :: settemperature
+  public :: resetcounters
 
   integer, save :: nacceptedmoves
   integer, save :: nacceptedscalings
@@ -37,7 +38,10 @@ module mc_sweep
   real(dp), save :: pthigh
   integer, save :: ptratio = 10
   real(dp), save :: etotal = 0._dp
- 
+  real(dp), save :: currentvolume = 0._dp
+  integer, save :: nmovetrials = 0
+  integer, save :: nscalingtrials = 0
+
   interface init
     module procedure initparameterizer
   end interface
@@ -57,6 +61,9 @@ module mc_sweep
     call getparameter(reader, 'smallest_rotation', smallestrotation)
     call getparameter(reader, 'max_scaling', maxscaling)
     call getparameter(reader, 'pt_ratio', ptratio)
+    call getparameter(reader, 'nmovetrials', nmovetrials)
+    call getparameter(reader, 'nscalingtrials', nscalingtrials)
+    call getparameter(reader, 'nacceptedscalings', nacceptedscalings)
     !! The initializations below may affect restart so that it does not result
     !! in the same simulation. 
     nacceptedmoves = 0
@@ -67,15 +74,28 @@ module mc_sweep
     type(parameter_writer), intent(in) :: writer
     call writecomment(writer, 'MC sweep parameters')
     call writeparameter(writer, 'volume_change_type', volumechangetype)
-    call writeparameter(writer, 'pt_low', ptlow)
-    call writeparameter(writer, 'pt_high', pthigh)
-    call writeparameter(writer, 'pressure', pressure)
-    call writeparameter(writer, 'temperature', temperature)
     call writeparameter(writer, 'move_ratio', moveratio)
     call writeparameter(writer, 'scaling_ratio', scalingratio)
     call writeparameter(writer, 'largest_translation', largesttranslation)
     call writeparameter(writer, 'max_scaling', maxscaling)
     call writeparameter(writer, 'pt_ratio', ptratio)
+    call writeparameter(writer, 'nmovetrials', nmovetrials)
+    call writeparameter(writer, 'nacceptedmoves', nacceptedmoves)
+    call writeparameter(writer, 'current_move_ratio', real(nacceptedmoves, dp)/real(nmovetrials))
+    call writeparameter(writer, 'nscalingtrials', nscalingtrials)
+    call writeparameter(writer, 'nacceptedscalings', nacceptedscalings)
+    call writeparameter(writer, 'current_scaling_ratio', real(nacceptedscalings, dp)/real(nscalingtrials))
+    call writeparameter(writer, 'adjusttype', adjusttype)
+    call writeparameter(writer, 'smallesttranslation', smallesttranslation)
+    call writeparameter(writer, 'largestrotation', largestrotation)
+    call writeparameter(writer, 'smallestrotation', smallestrotation)
+    call writeparameter(writer, 'pressure', pressure)
+    call writeparameter(writer, 'temperature', temperature)
+    call writeparameter(writer, 'volume', currentvolume)
+    call writeparameter(writer, 'enthalpy', etotal + currentvolume * pressure)
+    call writeparameter(writer, 'etotal', etotal)
+    !call writeparameter(writer, 'measured_move_ratio', mratio) 
+    !call writeparameter(writer, 'measured_scaling_ratio', vratio) 
   end subroutine
 
   subroutine sweep(simbox, particles, nbrlist)
@@ -95,13 +115,16 @@ module mc_sweep
     do i = 1, size(particles)
       if (i == ivolmove) then
         call movevol(simbox, particles, nbrlist)
+        call update(nbrlist, simbox, particles)
       else
         call moveparticle(simbox, particles, nbrlist, i)
       end if
       if (mod(i, ptratio) == 0) then
         call makeptmove(simbox, particles, nbrlist)
+        call update(nbrlist, simbox, particles)
       end if 
     end do
+    currentvolume = volume(simbox)
   end subroutine
 
   subroutine makeptmove(simbox, particles, nbrlist)
@@ -118,7 +141,6 @@ module mc_sweep
     etotal = enthalpy - pressure * volume(simbox)
     !! One way to get rid of explicit list update would be to use some kind 
     !! of observing system between the particlearray and the neighbour list. 
-    call update(nbrlist, simbox, particles)
   end subroutine
 
   subroutine moveparticle(simbox, particles, nbrlist, i)
@@ -134,12 +156,11 @@ module mc_sweep
     enew = 0._dp
     eold = 0._dp
     overlap = .false.
-    !! :TODO: Change moving of particles for a separate object which 
-    !! :TODO: gets the whole particle array.
+    !! :TODO: Change moving of particles to a separate object which 
+    !! :TODO: gets the whole particle array (and possibly the box too).
     newparticle = particles(i)
     call move(newparticle)
-    call setposition(newparticle, minimage(simbox, &
-    (/0._dp, 0._dp, 0._dp/), position(newparticle)))
+    call setposition(newparticle, minimage(simbox, position(newparticle)))
     oldparticle = particles(i) 
     particles(i) = newparticle
     call potentialenergy(simbox, particles, nbrlist, i, enew, overlap)
@@ -155,6 +176,7 @@ module mc_sweep
         nacceptedmoves = nacceptedmoves + 1
       end if
     end if 
+    nmovetrials = nmovetrials + 1
   end subroutine
 
   pure function gettemperature() result(temp)
@@ -206,6 +228,7 @@ module mc_sweep
         simbox = oldbox
       end if 
     end if
+    nscalingtrials = nscalingtrials + 1
   end subroutine
 
   !! Funktio, joka uuden ja vanhan energian perusteella
@@ -226,73 +249,45 @@ module mc_sweep
     end if  
   end function
 
-  !! Palauttaa hyväksymisuhteet siirron ja kierron yhdistelmälle,
-  !! sekä tilavuuden muutokselle
+  !! Adjusts the maximum values for trial moves of particles and trial scalings
+  !! of the simulation volume.
   !! 
-  subroutine ratios(Nparticles, period, movratio, volratio)
-    real(dp), intent(out) :: movratio, volratio
-    integer, intent(in) :: Nparticles, period
-    movratio = real(nacceptedmoves, dp)/real(Nparticles*period, dp)
-    volratio = real(nacceptedscalings, dp)/real(period, dp)   
-  end subroutine
+  subroutine updatemaxvalues
+    real(dp) :: newdthetamax
+    real(dp) :: newdximax
+    !! Adjust scaling
+    maxscaling = newmaxvalue(nscalingtrials, nacceptedscalings, scalingratio, maxscaling)
 
-  !! Päivittää maksimimuutosarvot koordinaateille/kulmille ja 
-  !! sylinterin säteelle.
-  !!
-  subroutine updatemaxvalues(Nparticles, period)
-    real(dp) :: mratio, vratio
-    real(dp) :: olddximax, olddthetamax
-    real(dp) :: newdximax, newdthetamax
-    integer, intent(in) :: Nparticles, period
-    !real(dp), save :: lastmratio = 0._dp
-    !real(dp), save :: dmacceptance = 0._dp
-    !real(dp) :: dtransrot
-    call ratios(Nparticles, period, mratio, vratio)      
-    !! Jos tilavuuden muutoksista on hyväksytty yli 25%,
-    !! kasvatetaan säteen maksimimuutosarvoa. Vastaavasti
-    !! siirrolle/kierrolle rajana 33%.
-    !! Nollataan hyväksyntälaskurit
-    nacceptedscalings = 0
-    nacceptedmoves = 0
-    maxscaling = newmaxvalue(vratio > scalingratio, maxscaling)
-    call getmaxmoves(olddximax, olddthetamax)
-    !if(adjusttype == 1 .or. adjusttype == 2) then
-      newdthetamax = newmaxvalue(mratio > moveratio, olddthetamax)
-      newdximax = newmaxvalue(mratio > moveratio, olddximax)
-    !end if
-    !if (adjusttype == 2) then
-       !! adjust ratio maxtranslation/maxrotation
-    !  dmacceptance = mratio - lastmratio
-    !  if (dmacceptance*dtransrot > 0._dp) then
-    !    newdximax = 1.05_dp*newdximax
-    !    dtransrot = 1._dp
-    !  else
-    !    newdximax = newdximax/1.05_dp
-    !    dtransrot = -1._dp
-    !  end if
-    !  lastmratio = mratio
-    !end if
-    !! :TODO: write to log if trying to increase max move too much
-    !! :TODO: add also smallest possible newdximax? 
-    !! :TODO: write to log if trying to decrease below smallest newdximax
+    call getmaxmoves(newdximax, newdthetamax)
+
+    !! Adjust translation
+    newdximax = newmaxvalue(nmovetrials, nacceptedmoves, moveratio, newdximax)
     if (newdximax > largesttranslation) then
       !write(*, *) 'Tried to increase maxtrans above largesttranslation.'
       newdximax = largesttranslation
-      newdthetamax = largestrotation
     else if(newdximax < smallesttranslation) then
       !write(*, *) 'Tried to decrease maxtrans below smallesttranslation.'
       newdximax = smallesttranslation
+    end if
+
+    !! Adjust rotation
+    newdthetamax = newmaxvalue(nmovetrials, nacceptedmoves, moveratio, newdthetamax)
+    if (newdthetamax > largestrotation) then 
+      newdthetamax = largestrotation
+    else if (newdthetamax < smallestrotation) then
       newdthetamax = smallestrotation
     end if
     call setmaxmoves(newdximax, newdthetamax)
   end subroutine
   
-  function newmaxvalue(increase, oldvalue) result(newvalue)
-    logical, intent(in) :: increase
+  function newmaxvalue(ntrials, naccepted, desiredratio, oldvalue) result(newvalue)
+    integer, intent(in) :: ntrials
+    integer, intent(in) :: naccepted
+    real(dp), intent(in) :: desiredratio
     real(dp), intent(in) :: oldvalue
     real(dp) :: newvalue
     real(dp), parameter :: multiplier = 1.05_dp
-    if (increase) then
+    if (real(naccepted, dp) / real(ntrials, dp) > desiredratio) then
       newvalue = oldvalue * multiplier
     else 
       newvalue = oldvalue / multiplier
@@ -303,6 +298,14 @@ module mc_sweep
     real(dp) :: getpressure
     getpressure = pressure
   end function
+
+  subroutine resetcounters
+    nacceptedmoves = 0
+    nmovetrials = 0
+    nscalingtrials = 0 
+    nacceptedscalings = 0
+    call pt_resetcounters
+  end subroutine
 
   subroutine scalepositions(oldbox, newbox, particles, nparticles)
     implicit none
