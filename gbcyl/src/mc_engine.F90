@@ -9,7 +9,8 @@ use particle, only: particledat, initParticle, particle_writeparameters
 use class_poly_box
 use cylinder, only: new_cylinder
 use mc_sweep, only: mc_sweep_init => init, updatemaxvalues, sweep, &
-getpressure, gettemperature, settemperature, mc_sweep_writeparameters
+getpressure, gettemperature, settemperature, mc_sweep_writeparameters, &
+resetcounters
 use class_poly_nbrlist
 use energy
 use pt
@@ -35,7 +36,8 @@ type(poly_box), save :: simbox
 integer, save :: nequilibrationsweeps = 0
 integer, save :: nproductionsweeps = 0
 integer, save :: productionperiod = 1
-integer, save :: adjustingperiod = 100
+integer, save :: moveadjustperiod = 100
+integer, save :: ptadjustperiod = 100
 integer, save :: isweep = 0
 integer, save :: rngunit
 integer, save :: pwunit
@@ -96,7 +98,8 @@ subroutine mce_init
       call getparameter(parameterreader, 'production_period', &
       productionperiod)
       call getparameter(parameterreader, 'i_sweep', isweep)
-      call getparameter(parameterreader, 'adjusting_period', adjustingperiod)
+      call getparameter(parameterreader, 'move_adjusting_period', moveadjustperiod)
+      call getparameter(parameterreader, 'pt_adjusting_period', ptadjustperiod)
       cf = new_cylformatter(statefile)
       !call findlast(cf, isfound)
       !if (.not. isfound) then
@@ -141,7 +144,8 @@ subroutine writerestart
   call writeparameter(writer, 'n_production_sweeps', nproductionsweeps)
   call writeparameter(writer, 'i_sweep', isweep)
   call writeparameter(writer, 'production_period', productionperiod)
-  call writeparameter(writer, 'adjusting_period', adjustingperiod)
+  call writeparameter(writer, 'move_adjusting_period', moveadjustperiod)
+  call writeparameter(writer, 'pt_adjusting_period', ptadjustperiod)
   rngunit = fileunit_getfreeunit()
   open(unit = rngunit, file = rngfile, action = 'WRITE', &
   status = 'REPLACE', form = 'FORMATTED', iostat = ios)
@@ -185,7 +189,7 @@ subroutine run
   do while (isweep < nequilibrationsweeps + nproductionsweeps)
     isweep = isweep + 1 
     call sweep(simbox, particles(1:nparticles), nbrlist)
-    if (isweep .le. nequilibrationsweeps) then
+    if (isweep <= nequilibrationsweeps) then
       call runequilibrationtasks
     end if
     call runproductiontasks
@@ -194,11 +198,17 @@ end subroutine
   
 subroutine runequilibrationtasks
   real(dp) :: temperature
-  if (mod(isweep, adjustingperiod) == 0) then
-    call updatemaxvalues(nparticles, adjustingperiod)
-    temperature = gettemperature()
-    call pt_adjusttemperature(temperature)
-    call settemperature(temperature)
+  if (moveadjustperiod /= 0) then
+    if (mod(isweep, moveadjustperiod) == 0) then
+      call updatemaxvalues
+    end if
+  end if
+  if (ptadjustperiod /= 0) then
+    if (mod(isweep, ptadjustperiod) == 0) then
+      temperature = gettemperature()
+      call pt_adjusttemperature(temperature)
+      call settemperature(temperature)
+    end if
   end if
 end subroutine 
 
@@ -208,6 +218,7 @@ subroutine runproductiontasks
     call writestate(cf, particles, nparticles, getx(simbox)/2._dp, &
     getz(simbox), getid(simbox))
     call writerestart
+    call resetcounters
   end if
 end subroutine
   
