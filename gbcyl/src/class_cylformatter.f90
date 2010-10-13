@@ -32,8 +32,9 @@ public :: delete
 
 type cylformatter
   private
-  character(len = 200) :: file = 'simdata.out'
-  integer :: unit 
+  character(len = 200) :: file = ''
+  integer :: inunit = 5
+  integer :: outunit = 6
   character(len = 3) :: beginmark = '$R:'
   character(len = 3) :: endmark = 'EOF'
 end type
@@ -53,23 +54,32 @@ end interface
 contains
 
 function new_cylformatter(statefile) result(cf)
-  character(len = *), intent(in) :: statefile
+  character(len = *), intent(in), optional :: statefile
   type(cylformatter) :: cf
   integer :: ios
-  cf%file = statefile
-  cf%unit = fileunit_getfreeunit()
-  open(file = cf%file, unit = cf%unit, status = 'old', action = 'readwrite', &
-  iostat = ios)
-  if (ios /= 0) then
-    write(*, *) 'Could not open file:', cf%file
-    stop
+  if (present(statefile)) then
+    cf%file = statefile
+    cf%inunit = fileunit_getfreeunit()
+    cf%outunit= cf%inunit
+    open(file = cf%file, unit = cf%inunit, action = 'readwrite', &
+    iostat = ios)
+    if (ios /= 0) then
+      write(*, *) 'Could not open file: ', cf%file
+      stop
+    end if
   end if
 end function
+
+!function new_cylformattertounit(stateunit) result(cf)
+!  integer, intent(in) :: stateunit
+!  type(cylformatter) :: cf
+!  cf%unit = stateunit
+!end function
 
 subroutine cf_delete(cf)
   type(cylformatter), intent(inout) :: cf
   cf%file = ''
-  close(cf%unit)
+  close(cf%inunit)
 end subroutine
 
 !! Writes the coordinates of @p particles and the dimensions of the 
@@ -81,12 +91,13 @@ end subroutine
 !! @p radius the radius of the cylinder.
 !! @p height the height of the cylinder.
 !! 
-subroutine writestate(cf, particles, nparticles, radius, height)
+subroutine writestate(cf, particles, nparticles, radius, height, confid)
   type(cylformatter), intent(in) :: cf
   type(particledat), dimension(:), intent(in) :: particles
   integer, intent(in) :: nparticles    
   real(dp), intent(in) :: radius
   real(dp), intent(in) :: height
+  integer, intent(in) :: confid
   integer :: GB = 0, Xe = 0, astat, i
   integer, dimension(:), allocatable :: help
   allocate(help(nparticles), stat = astat)
@@ -101,24 +112,24 @@ subroutine writestate(cf, particles, nparticles, radius, height)
       help(i)=0
     end if
   end do 
-  write(cf%unit, '(A3, 1X,' // fmt_char_dp() // ', 1X, A4, 1X, ' // &
-  fmt_char_dp() // ')') '$R:', radius, '$Lz:', height
-  write(cf%unit, '(A3, 1X, I7, 1X, A4, 1X, I7, 1X, A4, 1X, I7)') '$N:', &
+  write(cf%outunit, '(A3, 1X,' // fmt_char_dp() // ', 1X, A4, 1X, ' // &
+  fmt_char_dp() // ', A8, I7)') '$R:', radius, '$Lz:', height, '$confid:', confid
+  write(cf%outunit, '(A3, 1X, I7, 1X, A4, 1X, I7, 1X, A4, 1X, I7)') '$N:', &
   nparticles, '$GB:', GB, '$Xe:', Xe
-  write(cf%unit, *) '$x:'
-  write(cf%unit, '(' // fmt_char_dp() // ')') particles(1:nparticles)%x
-  write(cf%unit, *) '$y:'
-  write(cf%unit, '(' // fmt_char_dp() // ')') particles(1:nparticles)%y
-  write(cf%unit, *) '$z:'
-  write(cf%unit, '(' // fmt_char_dp() // ')') particles(1:nparticles)%z
-  write(cf%unit, *) '$rod:'
-  write(cf%unit, *) help(1:nparticles)
-  write(cf%unit, *) '$ux:'
-  write(cf%unit, '(' // fmt_char_dp() // ')') particles(1:nparticles)%ux
-  write(cf%unit, *) '$uy:'
-  write(cf%unit, '(' // fmt_char_dp() // ')') particles(1:nparticles)%uy
-  write(cf%unit, *) '$uz:'
-  write(cf%unit, '(' // fmt_char_dp() // ')') particles(1:nparticles)%uz
+  write(cf%outunit, *) '$x:'
+  write(cf%outunit, '(' // fmt_char_dp() // ')') particles(1:nparticles)%x
+  write(cf%outunit, *) '$y:'
+  write(cf%outunit, '(' // fmt_char_dp() // ')') particles(1:nparticles)%y
+  write(cf%outunit, *) '$z:'
+  write(cf%outunit, '(' // fmt_char_dp() // ')') particles(1:nparticles)%z
+  write(cf%outunit, *) '$rod:'
+  write(cf%outunit, *) help(1:nparticles)
+  write(cf%outunit, *) '$ux:'
+  write(cf%outunit, '(' // fmt_char_dp() // ')') particles(1:nparticles)%ux
+  write(cf%outunit, *) '$uy:'
+  write(cf%outunit, '(' // fmt_char_dp() // ')') particles(1:nparticles)%uy
+  write(cf%outunit, *) '$uz:'
+  write(cf%outunit, '(' // fmt_char_dp() // ')') particles(1:nparticles)%uz
   deallocate(help)
 end subroutine writestate
 
@@ -174,33 +185,34 @@ function endmark(cf) result(mark)
   mark = cf%endmark
 end function endmark
 
-subroutine cf_readstate(cf, particles, nparticles, radius, height)
+subroutine cf_readstate(cf, particles, nparticles, radius, height, iostatus)
   type(cylformatter), intent(in) :: cf
   type(particledat), dimension(:), pointer :: particles
   integer, intent(out) :: nparticles
   real(dp), intent(out) :: radius, height
+  integer, intent(out), optional :: iostatus
   integer :: astat
   integer :: i
   character(len = 3) :: charvar
   integer, dimension(:), allocatable :: help
-  read(cf%unit, *) charvar, radius, charvar, height
-  read(cf%unit, *) charvar, nparticles
-  read(cf%unit, *) charvar
+  read(cf%inunit, *, iostat = iostatus) charvar, radius, charvar, height
+  read(cf%inunit, *, iostat = iostatus) charvar, nparticles
+  read(cf%inunit, *, iostat = iostatus) charvar
   allocate(particles(nparticles), help(nparticles), stat = astat)
   if (astat /= 0) then
     write(*,*) 'readstate: Virhe varattaessa muistia: particles, help'     
     stop
   end if   
-  read(cf%unit, *) particles(1:nparticles)%x
-  read(cf%unit, *) charvar
-  read(cf%unit, *) particles(1:nparticles)%y
-  read(cf%unit, *) charvar,particles(1:nparticles)%z
-  read(cf%unit, *) charvar
-  read(cf%unit, *) help(1:nparticles)
-  read(cf%unit, *) charvar
-  read(cf%unit, *) particles(1:nparticles)%ux
-  read(cf%unit, *) charvar,particles(1:nparticles)%uy
-  read(cf%unit, *) charvar,particles(1:nparticles)%uz
+  read(cf%inunit, *, iostat = iostatus) particles(1:nparticles)%x
+  read(cf%inunit, *, iostat = iostatus) charvar
+  read(cf%inunit, *, iostat = iostatus) particles(1:nparticles)%y
+  read(cf%inunit, *, iostat = iostatus) charvar,particles(1:nparticles)%z
+  read(cf%inunit, *, iostat = iostatus) charvar
+  read(cf%inunit, *, iostat = iostatus) help(1:nparticles)
+  read(cf%inunit, *, iostat = iostatus) charvar
+  read(cf%inunit, *, iostat = iostatus) particles(1:nparticles)%ux
+  read(cf%inunit, *, iostat = iostatus) charvar,particles(1:nparticles)%uy
+  read(cf%inunit, *, iostat = iostatus) charvar,particles(1:nparticles)%uz
   do i = 1, nparticles
     if(help(i) == 1) then
       particles(i)%rod = .true.
@@ -245,7 +257,7 @@ end subroutine
 subroutine cf_findlast(cf, isfound)
   type(cylformatter), intent(in) :: cf
   logical, intent(out), optional :: isfound
-  call findlast(cf%unit, beginmark(cf), endmark(cf), isfound)
+  call findlast(cf%inunit, beginmark(cf), endmark(cf), isfound)
 end subroutine
 
 
