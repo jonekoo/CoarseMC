@@ -42,8 +42,8 @@ module state_reader
     character(len = 3) :: charvar
     integer, dimension(:), allocatable :: help
     logical :: readOpened
-    R = 0.0
-    Lz = 0.0 
+    R = 0._dp
+    Lz = 0._dp
     iostatus = 0
     inquire(UNIT = readunit, OPENED = readOpened)
     if (.not. readOpened) stop 'readunit not open'
