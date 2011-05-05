@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(gbcyl, 4.0.0, jouni.karjalainen@oulu.fi)
+AC_INIT(gbcyl, 4.0.4, jouni.karjalainen@oulu.fi)
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_PROG_FC
 # Checks for programs.
