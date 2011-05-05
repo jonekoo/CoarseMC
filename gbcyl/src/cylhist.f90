@@ -1,0 +1,258 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! Divides the system in to cylindrical bins and calculates the smctau1, 
+!! psi6, smcpsi6 parameters and density for each bin.
+!!
+!! Usage: The output files for different quantities are given in the file 
+!! cylhist.in in the namelist format, e.g.:   
+!! &inputnml [binwidth=2.25,] [smctau1file='smctau1.hist',]\
+!! [smcpsi6file='smcpsi6.hist',] [densityfile='density.hist',]" \
+!! [psi6file='psi6.hist',]/
+!!
+!! The input configuration(s) are given in the standard input to the program.
+!!
+!! :TODO: Get rid of magic numbers.
+!!
+program particlehistogram
+  use state_reader
+  use nrtype
+  use particle
+  use orientational_ordering
+  use tau1_module
+  use xfunc_module, only: xfunc => rho
+  use histogram
+  use utils
+  use class_factory
+  use class_poly_box
+  use psi6_module
+  use layernormal
+  implicit none
+
+  type(particledat), dimension(:), pointer :: particles
+  integer :: io_status
+  integer :: n_particles
+  
+  real(dp) :: binwidth = 0.5_dp
+  integer :: binningdirection = 1
+
+  !! Cutoff distance for the particles j that are included in the local 
+  !! normal of layer around particle i.
+  real(dp) :: cutoff = 2._dp 
+
+  !! Only observables which are given a file to write to are 
+  !! calculated/written. By default the filenames should be empty
+  !! strings.
+  character(len=200) :: smcpsi6file = ''
+  character(len=200) :: smctau1file = ''
+  character(len=200) :: psi6file = ''
+  character(len=200) :: layerp2file = ''
+  character(len=200) :: ofile = ''
+  character(len=200) :: tfile = ''
+  character(len=200) :: dfile = ''
+
+  integer, parameter :: psi6unit = 18 
+  integer, parameter :: layerp2unit = 19
+  integer, parameter :: smctau1unit = 20
+  integer, parameter :: smcpsi6unit = 21
+  integer, parameter :: parameterunit = 22
+  integer, parameter :: ounit = 23
+  integer, parameter :: tunit = 24
+  integer, parameter :: dunit = 25
+
+
+  namelist /inputnml/ binwidth, cutoff, psi6file, smcpsi6file, smctau1file, layerp2file, binningdirection, ofile, tfile, dfile
+
+  integer, dimension(:), allocatable :: indices
+  integer :: max_index
+  integer :: i_bin
+  integer :: allocstat
+  integer :: n_bin_particles
+  real(dp) :: p2
+  real(dp), dimension(3) :: director
+  real(sp) :: smctau1
+  real(sp) :: tau1
+  real(dp) :: binvolume
+  real(sp) :: layerdistance
+
+  !! Parameters to control which observables are calculated and written.
+  logical :: writepsi6 = .false.
+  logical :: writesmcpsi6 = .false.
+  logical :: writesmctau1 = .false.
+  logical :: writelayerp2 = .false.
+  logical :: writeorientation = .false.
+  logical :: writedensity = .false.
+  logical :: writetau1 = .false.
+
+  type(poly_box) :: simbox
+  type(factory) :: afactory
+  integer, parameter :: stdin = 5
+ 
+  !! Read input parameters
+  open(unit=parameterunit, file='cylhist.in', action='READ', status='OLD')
+  read(parameterunit, NML = inputnml) 
+  close(parameterunit)
+
+!  write(*,nml=inputnml)
+
+  if (trim(psi6file) /= '') then
+    call open_write_unit(psi6file, psi6unit)
+    writepsi6 = .true.
+  end if
+  if (trim(layerp2file) /= '') then
+    call open_write_unit(layerp2file, layerp2unit)
+    writelayerp2 = .true.
+  end if
+  if (trim(smctau1file) /= '') then
+    call open_write_unit(smctau1file, smctau1unit)
+    writesmctau1 = .true.
+  end if
+  if (trim(smcpsi6file) /= '') then
+    call open_write_unit(smcpsi6file, smcpsi6unit)
+    writesmcpsi6 = .true.
+  end if
+  if (trim(ofile) /= '') then
+    call open_write_unit(ofile, ounit)
+    writeorientation = .true.
+  end if
+  if (trim(tfile) /= '') then
+    call open_write_unit(tfile, tunit)
+    writetau1 = .true.
+  end if
+  if (trim(dfile) /= ' ') then
+    call open_write_unit(dfile, dunit)
+    writedensity = .true.
+  end if
+  do  
+    !! Read configuration from standard input
+    !call readstate(cf, simbox, particles, io_status)
+    call readstate(afactory, stdin, simbox, particles, io_status)
+    if (io_status < 0) then
+      call finalize
+      exit
+    end if
+    n_particles = size(particles)
+    if(size(indices) /= n_particles) then
+      if(allocated(indices)) deallocate(indices)
+      allocate(indices(n_particles), stat=allocstat)
+      if(allocstat /= 0) stop 'Allocation of indices failed.'
+    end if
+
+    !! Solve bin indices for all the particles
+    if (binningdirection == -1) then
+      call bin_indices(particles, n_particles, xfunc, binwidth, indices, getx(simbox)/2._dp, binningdirection)
+    else 
+      call bin_indices(particles, n_particles, xfunc, binwidth, indices)
+    end if
+    max_index = maxval(indices)
+    do i_bin = 1, max_index
+       n_bin_particles = count(indices == i_bin)
+      if(n_bin_particles == 0) stop '0 particles in bin!'
+      
+      if (writepsi6) then
+        !! Calculate and write psi6 profile
+        call orientation_parameter(pack(particles, (indices == i_bin)), &
+        n_bin_particles, p2, director) 
+        write(psi6unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') &
+        psi6_bulk_masked(simbox, particles, (indices == i_bin), director) 
+      end if
+
+      if (writesmcpsi6 .or. writesmctau1 .or. writelayerp2) then
+        !! Calculate layer normal for i_bin
+        call globalnormal(simbox, pack(particles(1:n_particles), &
+        indices == i_bin), cutoff, p2, director)
+      end if
+
+      if (writelayerp2) then
+        !! Write the orientation parameter for layer normals.
+        write(layerp2unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') p2
+      end if
+
+      if (writesmcpsi6) then
+        !! Calculate and write psi6 profile with respect to averaged layer 
+        !! normal for i_bin.
+        write(smcpsi6unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') &
+        psi6_bulk_masked(simbox, particles, (indices == i_bin), director) 
+      end if
+
+      if (writesmctau1) then
+        !! Calculate and write smctau1 profile        
+        call tau1_routine(pack(particles(1:n_particles), indices == i_bin), real(director, sp), smctau1, layerdistance)
+        write(smctau1unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') smctau1
+      end if
+    
+      if (writedensity) then
+        !! Calculate and write density profile
+        binvolume = 4._dp * atan(1._dp) * getz(simbox) * ((real(i_bin, dp) * binwidth)**2 - (real(i_bin-1, dp) * binwidth)**2)
+        write(dunit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') real(n_bin_particles, dp)/binvolume
+      end if
+
+      if (writeorientation) then
+        !! Calculate and write orientation parameter profile
+        call orientation_parameter(pack(particles(1:n_particles), &
+        indices == i_bin), n_bin_particles, p2, director)
+        write(ounit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') p2 
+      end if
+
+      if (writetau1) then
+        !! Calculate and write tau1 profile        
+        call tau1_routine(pack(particles(1:n_particles), indices == i_bin), real(director, sp), tau1, layerdistance)
+        write(tunit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') tau1
+      end if
+
+
+    end do
+
+    !! Append a newline after each row of bins
+    if (writepsi6) then
+      write(psi6unit, *) ''
+    end if
+    if (writesmctau1) then
+      write(smctau1unit, *) ''
+    end if
+    if (writesmcpsi6) then
+      write(smcpsi6unit, *) ''
+    end if
+    if (writelayerp2) then
+      write(layerp2unit, *) ''
+    end if
+    !! Append a newline after each row of bins
+    if (writeorientation) then
+      write(ounit, *) ''
+    end if
+    if (writetau1) then
+      write(tunit, *) ''
+    end if
+    if (writedensity) then
+      write(dunit, *) ''
+    end if
+  end do
+  call finalize
+
+  contains
+
+  subroutine finalize
+    if(associated(particles)) deallocate(particles)
+    if (writepsi6) then
+      close(psi6unit)
+    end if
+    if (writesmctau1) then
+      close(smctau1unit)
+    end if
+    if (writesmcpsi6) then
+      close(smcpsi6unit)
+    end if
+    if (writelayerp2) then
+      close(layerp2unit)
+    end if
+  end subroutine
+
+  subroutine open_write_unit(file_name, write_unit)
+  implicit none
+  character(len = *), intent(in) :: file_name
+  integer, intent(in) :: write_unit
+  integer :: opened
+    open(write_unit, FILE = file_name, status = 'replace', &
+      position = 'append', iostat = opened)
+    if(opened/=0) stop 'Opening of output file failed.'
+  end subroutine open_write_unit
+end program
+
