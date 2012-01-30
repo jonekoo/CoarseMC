@@ -2,9 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(gbcyl, 4.3.2, jouni.karjalainen@oulu.fi)
+AC_INIT(gbcyl, 4.9.0, jouni.karjalainen@oulu.fi)
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_PROG_FC
+AC_PROG_CC
 # Checks for programs.
 AC_PROG_RANLIB
 
@@ -20,7 +21,7 @@ AC_SUBST(MODEXT, [$ax_f90_modext])
 
 AC_CONFIG_FILES([
 Makefile
-mt_stream_f90-1.00/Makefile
+mt_stream_f90-1.11/Makefile
 ftnunit/Makefile
 src/Makefile
 data/Makefile
