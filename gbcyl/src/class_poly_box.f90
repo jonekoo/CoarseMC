@@ -18,6 +18,7 @@ public :: setxperiodicity, setyperiodicity, setzperiodicity
 public :: volume
 public :: writetostdio
 public :: write
+public :: binwrite
 public :: read
 
 private
@@ -118,6 +119,10 @@ interface write
   module procedure pbox_write
 end interface
 
+interface binwrite
+  module procedure pbox_binwrite
+end interface
+
 interface read
   module procedure pbox_read
 end interface
@@ -200,6 +205,13 @@ contains
     bp%lx, bp%ly, bp%lz, bp%xperiodic, bp%yperiodic, bp%zperiodic
     !write(line, '(A, 3' // fmt_char_dp() // ')') typeid, bp%lx, bp%ly, bp%lz
     !write(*, *) trim(line)
+  end subroutine
+
+  subroutine pbox_binwrite(unit, bp)
+    type(poly_box), intent(in) :: bp
+    integer, intent(in) :: unit
+    write(unit) bp%typeid, bp%lx, bp%ly, bp%lz, bp%xperiodic, bp%yperiodic,&
+    bp%zperiodic
   end subroutine
 
   function pbox_istypeid(string) result(isvalid)
@@ -334,13 +346,29 @@ contains
     !! Make periodic transformations
     pbox_minimage = r
     if (simbox%xperiodic) then
-      pbox_minimage(1) = r(1) - simbox%lx * anint(r(1)/simbox%lx)
+      !pbox_minimage(1) = r(1) - simbox%lx * anint(r(1)/simbox%lx)
+      if (pbox_minimage(1) < -0.5_dp*simbox%lx) then
+        pbox_minimage(1)=pbox_minimage(1)+simbox%lx 
+      else if(pbox_minimage(1) >= 0.5_dp*simbox%lx) then
+        pbox_minimage(1)=pbox_minimage(1)-simbox%lx
+      end if
     end if
     if (simbox%yperiodic) then
-      pbox_minimage(2) = r(2) - simbox%ly * anint(r(2)/simbox%ly)
+      !pbox_minimage(2) = r(2) - simbox%ly * anint(r(2)/simbox%ly)
+      if (pbox_minimage(2) < -0.5_dp*simbox%ly) then
+        pbox_minimage(2)=pbox_minimage(2)+simbox%ly 
+      else if(pbox_minimage(2) >= 0.5_dp*simbox%ly) then
+        pbox_minimage(2)=pbox_minimage(2)-simbox%ly
+      end if
     end if
     if (simbox%zperiodic) then
-      pbox_minimage(3) = r(3) - simbox%lz * anint(r(3)/simbox%lz)
+      !pbox_minimage(3) = r(3) - simbox%lz * anint(r(3)/simbox%lz)
+      !! This is faster than the solution above:
+      if (pbox_minimage(3) < -0.5_dp*simbox%lz) then
+        pbox_minimage(3)=pbox_minimage(3)+simbox%lz 
+      else if(pbox_minimage(3) >= 0.5_dp*simbox%lz) then
+        pbox_minimage(3)=pbox_minimage(3)-simbox%lz
+      end if
     end if
     ! This seems to be slower when optimized:
     !pbox_minimage(1) = r(1) - simbox%lx * count((/simbox%xperiodic/)) * anint(r(1)/simbox%lx) 
