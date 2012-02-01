@@ -7,7 +7,6 @@ public :: poly_box
 public :: new_box
 public :: new_cylinder
 public :: makebox
-public :: createbox
 public :: minimage
 public :: mindistance
 public :: gettype
@@ -111,10 +110,6 @@ interface makebox
   module procedure pbox_makebox, pbox_copy
 end interface
 
-interface createbox
-  module procedure pbox_createbox
-end interface
-
 interface write
   module procedure pbox_write
 end interface
@@ -184,21 +179,7 @@ contains
     copy = simbox
   end subroutine
 
-  subroutine pbox_createbox(bp, boxstring)
-    type(poly_box), intent(inout) :: bp
-    character(len = *), intent(in) :: boxstring
-    character(len = 5) :: typeid
-    integer :: ios
-    read(boxstring, *, iostat = ios) typeid, bp%lx, bp%ly, bp%lz, bp%xperiodic, bp%yperiodic, bp%zperiodic
-    if (ios /= 0) then
-      write(6, *) 'pbox_createbox: failed to read box with iostat = ', ios, '. Stopping.'
-      stop 
-    else if('box' /= typeid) then
-      write(6, *) 'pbox_createbox: Warning converting from ', trim(adjustl(typeid)), 'to box!'
-    end if
-  end subroutine
-
-  subroutine pbox_write(unit, bp)
+   subroutine pbox_write(unit, bp)
     type(poly_box), intent(in) :: bp
     integer, intent(in) :: unit
     write(unit, '(A15, 3' // fmt_char_dp() // ',3L3)', advance='no') bp%typeid, &
@@ -338,42 +319,42 @@ contains
     pbox_mindistance = sqrt(dot_product(rij, rij))
   end function 
 
-  pure recursive function pbox_minimage(simbox, r)
+  pure recursive function pbox_minimage(simbox, r) result(mi)
     implicit none
-    real(dp), dimension(3) :: pbox_minimage
+    real(dp), dimension(3) :: mi
     type(poly_box), intent(in) :: simbox
     real(dp), dimension(3), intent(in) :: r
     !! Make periodic transformations
-    pbox_minimage = r
+    mi = r
     if (simbox%xperiodic) then
-      !pbox_minimage(1) = r(1) - simbox%lx * anint(r(1)/simbox%lx)
-      if (pbox_minimage(1) < -0.5_dp*simbox%lx) then
-        pbox_minimage(1)=pbox_minimage(1)+simbox%lx 
-      else if(pbox_minimage(1) >= 0.5_dp*simbox%lx) then
-        pbox_minimage(1)=pbox_minimage(1)-simbox%lx
+      !mi(1) = r(1) - simbox%lx * anint(r(1)/simbox%lx)
+      if (mi(1) < -0.5_dp*simbox%lx) then
+        mi(1)=mi(1)+simbox%lx 
+      else if(mi(1) >= 0.5_dp*simbox%lx) then
+        mi(1)=mi(1)-simbox%lx
       end if
     end if
     if (simbox%yperiodic) then
-      !pbox_minimage(2) = r(2) - simbox%ly * anint(r(2)/simbox%ly)
-      if (pbox_minimage(2) < -0.5_dp*simbox%ly) then
-        pbox_minimage(2)=pbox_minimage(2)+simbox%ly 
-      else if(pbox_minimage(2) >= 0.5_dp*simbox%ly) then
-        pbox_minimage(2)=pbox_minimage(2)-simbox%ly
+      !mi(2) = r(2) - simbox%ly * anint(r(2)/simbox%ly)
+      if (mi(2) < -0.5_dp*simbox%ly) then
+        mi(2)=mi(2)+simbox%ly 
+      else if(mi(2) >= 0.5_dp*simbox%ly) then
+        mi(2)=mi(2)-simbox%ly
       end if
     end if
     if (simbox%zperiodic) then
-      !pbox_minimage(3) = r(3) - simbox%lz * anint(r(3)/simbox%lz)
+      !mi(3) = r(3) - simbox%lz * anint(r(3)/simbox%lz)
       !! This is faster than the solution above:
-      if (pbox_minimage(3) < -0.5_dp*simbox%lz) then
-        pbox_minimage(3)=pbox_minimage(3)+simbox%lz 
-      else if(pbox_minimage(3) >= 0.5_dp*simbox%lz) then
-        pbox_minimage(3)=pbox_minimage(3)-simbox%lz
+      if (mi(3) < -0.5_dp*simbox%lz) then
+        mi(3)=mi(3)+simbox%lz 
+      else if(mi(3) >= 0.5_dp*simbox%lz) then
+        mi(3)=mi(3)-simbox%lz
       end if
     end if
     ! This seems to be slower when optimized:
-    !pbox_minimage(1) = r(1) - simbox%lx * count((/simbox%xperiodic/)) * anint(r(1)/simbox%lx) 
-    !pbox_minimage(2) = r(2) - simbox%ly * count((/simbox%yperiodic/)) * anint(r(2)/simbox%ly) 
-    !pbox_minimage(3) = r(3) - simbox%lz * count((/simbox%zperiodic/)) * anint(r(3)/simbox%lz) 
+    !mi(1) = r(1) - simbox%lx * count((/simbox%xperiodic/)) * anint(r(1)/simbox%lx) 
+    !mi(2) = r(2) - simbox%ly * count((/simbox%yperiodic/)) * anint(r(2)/simbox%ly) 
+    !mi(3) = r(3) - simbox%lz * count((/simbox%zperiodic/)) * anint(r(3)/simbox%lz) 
   end function
 
   subroutine pbox_writetostdio(simbox)
