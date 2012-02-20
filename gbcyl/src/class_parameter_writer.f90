@@ -52,11 +52,18 @@ subroutine pw_writestring(p, key, value)
   type(parameter_writer), intent(in) :: p
   character(len = *), intent(in) :: key
   character(len = *), intent(in) :: value
+  call pw_writeparameter(p, key, '"'//trim(adjustl(value))//'"')  
+end subroutine
+
+subroutine pw_writeparameter(p, key, value)
+  type(parameter_writer), intent(in) :: p
+  character(len = *), intent(in) :: key
+  character(len = *), intent(in) :: value
   character(len = 30) :: keyfield
   character(len = 50) :: valuefield
   write(keyfield, *) "$" // adjustl(key)
   write(valuefield, '(A50)') value
-  write(p%unit, '(A30, A50)') adjustl(keyfield), adjustr(valuefield)
+  write(p%unit, '(A30, A50)') adjustl(keyfield), adjustl(valuefield)
 end subroutine
 
 subroutine pw_writereal(p, key, value)
@@ -65,7 +72,7 @@ subroutine pw_writereal(p, key, value)
   real(dp), intent(in) :: value
   character(len = 50) :: valuestring
   write(valuestring, '(' // fmt_char_dp() // ')') value
-  call writeparameter(p, key, valuestring) 
+  call pw_writeparameter(p, key, valuestring) 
 end subroutine
 
 subroutine pw_writeint(p, key, value)
@@ -74,7 +81,7 @@ subroutine pw_writeint(p, key, value)
   integer, intent(in) :: value
   character(len = 50) :: valuestring
   write(valuestring, '(' // fmt_char_int() // ')') value 
-  call writeparameter(p, key, valuestring)
+  call pw_writeparameter(p, key, valuestring)
 end subroutine
 
 subroutine pw_writelogical(p, key, value)
@@ -83,7 +90,7 @@ subroutine pw_writelogical(p, key, value)
   logical, intent(in) :: value
   character(len = 50) :: valuestring
   write(valuestring, *) value
-  call writeparameter(p, key, valuestring)
+  call pw_writeparameter(p, key, valuestring)
 end subroutine
 
 end module
