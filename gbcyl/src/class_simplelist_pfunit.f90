@@ -73,6 +73,57 @@ subroutine test_new_simplelist
   !!sl=new_simplelist(simbox, particles) !! Will cause a Fortran STOP
 end subroutine
 
+subroutine test_updatesingle
+  integer, parameter :: n=2
+  type(particledat), dimension(n) :: particles
+  type(poly_box) :: simbox
+  type(simplelist) :: sl
+  real(dp), parameter :: minlength=5._dp
+  real(dp), parameter :: boxside=4._dp*(minlength+tiny(minlength))
+  simbox=new_box(boxside,boxside,boxside)
+  !! Put one particle in (0,0,0) and another in (0,0,0)
+  particles(1)%x=-1.5_dp*minlength
+  particles(1)%y=-1.5_dp*minlength
+  particles(1)%z=-1.5_dp*minlength
+  particles(2)%x=0.5_dp*minlength
+  particles(2)%y=0.5_dp*minlength
+  particles(2)%z=0.5_dp*minlength
+  !! Make a list of eight cells
+  call simplelist_init(minlength, iseven=.false., updatethreshold=0.5_dp)
+  sl=new_simplelist(simbox, particles)
+  call AssertEqual(n,sum(sl%counts), "Count of particle indices in cell list&
+  & does not match particle count.")
+  call AssertEqual(1,sl%counts(0,0,0), "More or less than one particle in cell&
+  & 0,0,0")
+  call AssertEqual(1,sl%counts(2,2,2), "More or less than one particle in cell&
+  & 2,2,2")
+  !! Move first particle to (0,1,0)
+  particles(1)%y=-0.5_dp*minlength
+  call update(sl, simbox, particles, 1)
+  call AssertEqual(n,sum(sl%counts), "Count of particle indices in cell list&
+  & does not match particle count after update.")
+  call AssertEqual(1,sl%counts(0,1,0), "More or less than one particle in cell&
+  & 0,1,0")
+  call AssertTrue(all(minimage(simbox, &
+  &-1.5_dp*minlength*(/1._dp, 1._dp, 1._dp/)-position(particles(1)))<=0))
+  call AssertEqual(0,sl%counts(0,0,0), "More or less than zero particles in&
+  &cell 0,0,0")
+
+  !! Move second particle to (2,2,1)
+  particles(2)%z=-0.5_dp*minlength
+  call update(sl, simbox, particles, 2)
+  !! Check positions.
+  call AssertEqual(n,sum(sl%counts), "Count of particle indices in cell list&
+  & does not match particle count after update.")
+  call AssertEqual(0,sl%counts(2,2,2), "Old cell 2,2,2 has more or less than& 
+  & zero particles.")
+  call AssertTrue(all(minimage(simbox, 0.5_dp*minlength*(/1._dp, 1._dp, 1._dp/)-position(particles(2)))>=0))
+  !!!!call AssertTrue(all(minimage(simbox, (/0.5_dp, 0.5_dp, 0.5_dp/)-position(particles(2)))>=0), al)
+  call AssertEqual(1,sl%counts(2,2,1), "New cell 2,2,1 has more or less than&
+  &one particle.")
+  call simplelist_delete(sl)
+end subroutine
+
 subroutine test_updateall
   integer, parameter :: n=2
   type(particledat), dimension(n) :: particles

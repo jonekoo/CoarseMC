@@ -91,7 +91,6 @@ function new_simplelist(simbox, particles) result(sl)
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
   type(simplelist) :: sl
-  real(dp), dimension(3, size(particles)) :: rs
   sl%nx = max(ncells(getx(simbox), this_minlength), 1)
   sl%ny = max(ncells(gety(simbox), this_minlength), 1)
   sl%nz = max(ncells(getz(simbox), this_minlength), 1)
@@ -122,6 +121,8 @@ subroutine simplelist_delete(sl)
   type(simplelist), intent(inout) :: sl
   deallocate(sl%indices)
   deallocate(sl%counts)
+  deallocate(sl%coords)
+  deallocate(sl%xyzlist)
 end subroutine
 
 subroutine simplelist_update(sl, simbox, particles)
@@ -154,7 +155,7 @@ subroutine simplelist_singleupdate(sl, simbox, particles, i)
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
   integer, intent(in) :: i
-  if (any(minimage(simbox, position(particles(i))-sl%xyzlist(i,:)) > this_updatethreshold)) then
+  if (any(abs(minimage(simbox, position(particles(i))-sl%xyzlist(i,:))) > this_updatethreshold)) then
     call update(sl, simbox, particles)
   end if
 end subroutine
