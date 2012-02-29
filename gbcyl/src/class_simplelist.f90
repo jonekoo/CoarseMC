@@ -91,31 +91,59 @@ function new_simplelist(simbox, particles) result(sl)
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
   type(simplelist) :: sl
-  sl%nx = max(ncells(getx(simbox), this_minlength), 1)
-  sl%ny = max(ncells(gety(simbox), this_minlength), 1)
-  sl%nz = max(ncells(getz(simbox), this_minlength), 1)
+  call calculate_dimensions(simbox, sl%nx, sl%ny, sl%nz)
+  call simplelist_allocate(sl, size(particles))
+  !! :TODO: Make the indices list size parameterizable or optimizable
+  call simplelist_populate(sl, simbox, particles)
+end function
+
+subroutine simplelist_allocate(sl, n)
+  type(simplelist), intent(inout) :: sl
+  integer, intent(in) :: n
+  allocate(sl%indices(n, 0:sl%nx-1, 0:sl%ny-1, 0:sl%nz-1))
+  allocate(sl%counts(0:sl%nx-1,0:sl%ny-1,0:sl%nz-1))
+  allocate(sl%coords(n,3))
+  allocate(sl%xyzlist(n,3))
+end subroutine
+
+subroutine calculate_dimensions(simbox, nx, ny, nz)
+  type(poly_box), intent(in) :: simbox
+  integer, intent(out) :: nx, ny, nz
+  nx = max(ncells(getx(simbox), this_minlength), 1)
+  ny = max(ncells(gety(simbox), this_minlength), 1)
+  nz = max(ncells(getz(simbox), this_minlength), 1)
   if (this_iseven) then
-    if (sl%nx < 2 .or. sl%ny < 2 .or. sl%nz < 2) then
+    if (nx < 2 .or. ny < 2 .or. nz < 2) then
       stop 'Could not create a cell list with even number of cells in'//& 
       &' all directions'
     end if
-    sl%nx = (sl%nx / 2) * 2
-    sl%ny = (sl%ny / 2) * 2
-    sl%nz = (sl%nz / 2) * 2
+    nx = (nx / 2) * 2
+    ny = (ny / 2) * 2
+    nz = (nz / 2) * 2
   end if 
-  if (sl%nx < 3) sl%nx=1
-  if (sl%ny < 3) sl%ny=1
-  if (sl%nz < 3) sl%nz=1
-  if (sl%nx < 4 .and. isxperiodic(simbox)) sl%nx=1
-  if (sl%ny < 4 .and. isyperiodic(simbox)) sl%ny=1
-  if (sl%nz < 4 .and. iszperiodic(simbox)) sl%nz=1
-  !! :TODO: Make the indices list size parameterizable or optimizable
-  allocate(sl%indices(size(particles), 0:sl%nx-1, 0:sl%ny-1, 0:sl%nz-1))
-  allocate(sl%counts(0:sl%nx-1,0:sl%ny-1,0:sl%nz-1))
-  allocate(sl%coords(size(particles),3))
-  allocate(sl%xyzlist(size(particles),3))
-  call simplelist_update(sl, simbox, particles)
-end function
+  if (nx < 3) nx=1
+  if (ny < 3) ny=1
+  if (nz < 3) nz=1
+  if (nx < 4 .and. isxperiodic(simbox)) nx=1
+  if (ny < 4 .and. isyperiodic(simbox)) ny=1
+  if (nz < 4 .and. iszperiodic(simbox)) nz=1
+end subroutine
+
+subroutine simplelist_update(sl, simbox, particles)
+  type(simplelist), intent(inout) :: sl
+  type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:), intent(in) :: particles
+  integer :: nx, ny, nz
+  call calculate_dimensions(simbox, nx, ny, nz)
+  if (nx/=sl%nx .or. ny/=sl%ny .or. nz/=sl%nz) then
+    call delete(sl)
+    sl%nx=nx
+    sl%ny=ny
+    sl%nz=nz
+    call simplelist_allocate(sl, size(particles))
+  end if
+  call simplelist_populate(sl, simbox, particles)
+end subroutine
 
 subroutine simplelist_delete(sl)
   type(simplelist), intent(inout) :: sl
@@ -125,14 +153,16 @@ subroutine simplelist_delete(sl)
   deallocate(sl%xyzlist)
 end subroutine
 
-subroutine simplelist_update(sl, simbox, particles)
+subroutine simplelist_populate(sl, simbox, particles)
   type(simplelist), intent(inout) :: sl
   type(poly_box), intent(in) :: simbox
-  type(particledat), dimension(:) :: particles
+  type(particledat), dimension(:), intent(in) :: particles
   integer :: ix,iy,iz
   integer :: iparticle
   sl%indices=0
   sl%counts=0
+  !call delete(sl) 
+  !sl=new_simplelist(simbox, particles)
   do iparticle = 1, size(particles)
     !! calculate cell index assuming centered coordinates
     ix=int(((particles(iparticle)%x/getx(simbox)+0.5_dp)*sl%nx))
@@ -156,44 +186,64 @@ subroutine simplelist_singleupdate(sl, simbox, particles, i)
   type(particledat), dimension(:), intent(in) :: particles
   integer, intent(in) :: i
   if (any(abs(minimage(simbox, position(particles(i))-sl%xyzlist(i,:))) > this_updatethreshold)) then
+    !write(*, *) 'called update from singleupdate'
+    !write(*, *) abs(minimage(simbox, position(particles(i))-sl%xyzlist(i,:))) > this_updatethreshold
     call update(sl, simbox, particles)
   end if
 end subroutine
 
-
-subroutine simplelist_updatei(sl, simbox, particles, i)
-  type(simplelist), intent(inout) :: sl
-  type(poly_box), intent(in) :: simbox
-  type(particledat), dimension(:), intent(in) :: particles
+function maskarray(n, periodic, i)
+  integer, intent(in) :: n
+  logical, intent(in) :: periodic 
   integer, intent(in) :: i
-  integer :: ix, iy, iz
-  integer :: ixold, iyold, izold
-  integer :: iincell
-  ix=int(((particles(i)%x/getx(simbox)+0.5_dp)*sl%nx))
-  iy=int(((particles(i)%y/gety(simbox)+0.5_dp)*sl%ny))
-  iz=int(((particles(i)%z/getz(simbox)+0.5_dp)*sl%nz))
-  if (all((/ix,iy,iz/)==sl%coords(i,:))) then
-    return
-  else
-    !! Find position in old cell
-    ixold=sl%coords(i,1)
-    iyold=sl%coords(i,2)
-    izold=sl%coords(i,3)
-    iincell=1
-    do while (sl%indices(iincell,ixold,iyold,izold) /= i)
-      iincell=iincell+1
+  logical, dimension(0:n-1) :: maskarray
+  integer :: j
+  if (periodic) then
+    do j=i+2, i+n-2
+       maskarray(mod(i,n))=.false.
     end do
-    !! Remove from old cell
-    sl%indices(iincell,ixold,iyold,izold)=sl%indices(sl%counts(ixold,iyold,izold),&
-    & ixold,iyold,izold)
-    sl%indices(sl%counts(ixold,iyold,izold),ixold,iyold,izold)=0
-    sl%counts(ixold,iyold,izold)=sl%counts(ixold,iyold,izold)-1
-    !! Add to new cell
-    sl%counts(ix,iy,iz)=sl%counts(ix,iy,iz)+1
-    sl%indices(sl%counts(ix,iy,iz),ix,iy,iz)=i
-    sl%coords(i,:)=(/ix,iy,iz/)
+  else
+    maskarray(:i-2)=.false.
+    maskarray(i+2:)=.false.
   end if
-end subroutine
+end function
+
+function maskcells(nx, ny, nz, xperiodic, yperiodic, zperiodic, ix, iy, iz)
+  integer, intent(in) :: nx, ny, nz
+  logical, intent(in) :: xperiodic, yperiodic, zperiodic
+  integer, intent(in) :: ix, iy, iz
+  logical, dimension(0:nx-1, 0:ny-1, 0:nz-1) :: maskcells
+  integer :: x, y, z
+  maskcells=.true.
+  
+  if (xperiodic) then
+    do x=ix+2, ix+nx-2
+       maskcells(mod(ix,nx), :, :)=.false.
+    end do
+  else
+    maskcells(:ix-2,:,:)=.false.
+    maskcells(ix+2:,:,:)=.false.
+  end if
+
+  if (yperiodic) then
+    do y=iy+2, iy+ny-2
+       maskcells(:, mod(iy,ny), :)=.false.
+    end do
+  else
+    maskcells(:,:iy-2,:)=.false.
+    maskcells(:,iy+2:,:)=.false.
+  end if
+
+  if (zperiodic) then
+    do z=iz+2, iz+nz-2
+       maskcells(:, :, mod(iz,nz))=.false.
+    end do
+  else
+    maskcells(:,:,:iz-2)=.false.
+    maskcells(:,:,iz+2:)=.false.
+  end if
+
+end function
 
 function simplelist_nbrmask(sl, simbox, particles, i)
   type(simplelist), intent(in) :: sl
