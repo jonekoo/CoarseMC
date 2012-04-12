@@ -28,6 +28,9 @@ program createbox
 
   !Muuttujat alkutilojen luomista varten
   type(particledat),dimension(:),allocatable :: particles 
+  logical,dimension(:),allocatable :: cutmask
+  integer :: i
+  real(dp) :: diameter
   integer,external :: iargc
   real(dp) :: Lx,Ly,Lz
   integer :: ios
@@ -37,6 +40,7 @@ program createbox
   type(poly_box) :: simbox
   type(factory) :: thefactory
   character(len=200) :: filename
+  character(len=15) :: boxtype
   Npx=13
   Npy=13
   Npz=6
@@ -44,17 +48,35 @@ program createbox
   read(*, *) npx
   read(*, *) npy
   read(*, *) npz
+  write(*, *) 'Give type of box: cylinder or rectangular'
+  read(*, *) boxtype 
   n=npx*npy*npz
   allocate(particles(n))
+  allocate(cutmask(n))
+  cutmask=.true.
   call createcrystal(npx, npy, npz, particles, lx, ly, lz)
-  write(filename, '(3(A2,I0),A3)') 'nx', npx, 'ny', npy, 'nz', npz, '.gb' 
+  if(boxtype=='rectangular') then 
+    simbox = new_box(lx, ly, lz)
+  else if (boxtype=='cylinder') then
+    write(*,*) 'Give diameter of the cylinder:'
+    read(*,*) diameter
+    simbox = new_cylinder(diameter, lz)
+    do i=1,n
+      if (particles(i)%x**2+particles(i)%y**2 >= (0.5*(diameter-1.0))**2) then
+        cutmask(i)=.false.
+      end if
+    end do
+    n=count(cutmask)
+  end if
+  !write(filename, '(3(A2,I0),A3)') 'nx', npx, 'ny', npy, 'nz', npz, '.gb' 
+  write(filename, '(I0,A3)') n,'.gb' 
+  filename=trim(adjustl(boxtype))//filename
   open(20,file=trim(adjustl(filename)),status='new',form='formatted',iostat=ios)
   if(ios/=0) then
     write(6, *) 'Virhe tiedoston ', trim(adjustl(filename)), ' luomisessa!'
     stop 
   end if
-  simbox = new_box(lx, ly, lz)
-  call writestate(thefactory, 20, simbox, particles) 
+  call writestate(thefactory, 20, simbox, pack(particles,cutmask)) 
   close(20)
 
 contains
