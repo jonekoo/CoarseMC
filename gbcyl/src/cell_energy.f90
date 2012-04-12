@@ -3,7 +3,6 @@ use cell
 use nrtype
 use particle
 use class_poly_box
-use class_pair_potential
 use class_nbrcelliterator
 use class_parameter_writer
 use class_parameterizer
@@ -11,7 +10,6 @@ implicit none
 private
 
 public :: new_celllist
-public :: pairinteractions
 public :: new_nbriterator
 public :: scaledposition
 public :: nbriterator
@@ -21,6 +19,7 @@ public :: value
 public :: cell_energy_init
 public :: cell_energy_writeparameters
 public :: update
+public :: nbrmask
 
 real(dp), save :: this_minlength = 7.5_dp
 logical, save :: this_iseven = .false.
@@ -34,11 +33,7 @@ interface new_celllist
 end interface
 
 interface update
-  module procedure cell_energy_update
-end interface
-
-interface pairinteractions
-  module procedure cell_energy_pairinteractionss, cell_energy_pairinteractionsit
+  module procedure cell_energy_update, cell_energy_updatei
 end interface
 
 !! Iterator to iterate through neighbours of a position (a particle).
@@ -61,6 +56,10 @@ end interface
 
 interface isdone
   module procedure nbrit_isdone
+end interface
+
+interface nbrmask
+  module procedure cell_energy_nbrmask
 end interface
 
 contains
@@ -131,6 +130,11 @@ function new_lists(simbox, particles) result(cl)
   ny = max(ncells(gety(simbox), this_minlength), 1)
   nz = max(ncells(getz(simbox), this_minlength), 1)
   if (this_iseven) then
+    if (nx < 2 .or. ny < 2 .or. nz < 2) then
+      write(*, *) 'Could not create a cell list with even number of cells in' 
+      write(*, *) 'all directions'
+      stop 
+    end if
     nx = (nx / 2) * 2
     ny = (ny / 2) * 2
     nz = (nz / 2) * 2
@@ -145,7 +149,24 @@ subroutine cell_energy_update(cl, simbox, particles)
   type(list), intent(inout) :: cl
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:) :: particles
-  cl = new_celllist(simbox, particles)
+  real(dp), dimension(3, size(particles)) :: rs
+  integer :: iparticle
+  !call delete(cl)
+  !cl = new_celllist(simbox, particles)
+  do iparticle = 1, size(particles)
+    rs(1:3, iparticle) = scaledposition(simbox, particles(iparticle))
+  end do
+  call update(cl, rs)
+end subroutine
+
+subroutine cell_energy_updatei(cl, simbox, particles, i)
+  type(list), intent(inout) :: cl
+  type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:) :: particles
+  integer, intent(in) :: i
+  !call delete(cl)
+  !cl = new_celllist(simbox, particles)
+  call cell_energy_update(cl, simbox, particles)
 end subroutine
 
 subroutine initwtreader(parameterreader)
@@ -168,55 +189,21 @@ subroutine cell_energy_writeparameters(writer)
   call writeparameter(writer, 'isdivisioneven', this_iseven) 
 end subroutine
 
-subroutine cell_energy_pairinteractionss(cl, simbox, particles, i, vpairtot, overlap)
+function cell_energy_nbrmask(cl, simbox, particles, i)
   type(list), intent(in) :: cl
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
-  integer, intent(in) :: i
-  real(dp), intent(out) :: vpairtot
-  logical, intent(out) :: overlap
+  integer, intent(in) :: i 
+  logical, dimension(size(particles)) :: cell_energy_nbrmask
   type(nbriterator) :: nbrit
-  real(dp) :: energy
+  cell_energy_nbrmask(:) = .false.
   nbrit = new_nbriterator(cl, scaledposition(simbox, particles(i)))
-  vpairtot = 0._dp
-  overlap = .false.
   do 
     if (isdone(nbrit)) exit
-    if (value(nbrit) /= i) then
-      call pairv(particles(i), particles(value(nbrit)), simbox, energy, &
-      overlap)
-      if (overlap) return
-      vpairtot = vpairtot + energy
-    end if
+    if (value(nbrit) /= i) cell_energy_nbrmask(value(nbrit)) = .true.
     call advance(nbrit)
-  end do
-end subroutine
-
-subroutine cell_energy_pairinteractionsit(cl, simbox, particles, vpairtot, overlap)
-  type(list), intent(in) :: cl
-  type(poly_box), intent(in) :: simbox
-  type(particledat), dimension(:), intent(in) :: particles
-  real(dp), intent(out) :: vpairtot
-  logical, intent(out) :: overlap
-  real(dp) :: energy
-  integer :: i
-  type(nbriterator) :: nbrit
-  vpairtot = 0._dp
-  overlap = .false.
-  do i = 2, size(particles)
-    nbrit = new_nbriterator(cl, scaledposition(simbox, particles(i)))
-    do 
-      if (isdone(nbrit)) exit
-      if (value(nbrit) < i) then
-        call pairv(particles(i), particles(value(nbrit)), simbox, energy, &
-        overlap)
-        if (overlap) return
-        vpairtot = vpairtot + energy
-      end if
-      call advance(nbrit)
-    end do
-  end do
-end subroutine
+  end do  
+end function 
 
 pure function scaledposition(simbox, particle) result(s)
   type(poly_box), intent(in) :: simbox
