@@ -24,17 +24,18 @@ character(len=3) :: idchar = '0'
 real(dp) :: temperature
 integer :: i, j, k, l
 real(dp), dimension(3, 3) :: w
-real(dp), dimension(3) :: rij, deriv 
+real(dp), dimension(3) :: rij, deriv
+real(dp) :: cutoff
 read(*, *) idchar
-reader = new_parameterizer('parameters.in.' // trim(adjustl(idchar)))
+reader = new_parameterizer('inputparameters.'//trim(adjustl(idchar)))
 !! Initialize the modules needed
 call gayberne_init(reader)
 call getparameter(reader, 'temperature', temperature)
+call getparameter(reader, 'r_cutoff', cutoff)
 coordinateunit = fileunit_getfreeunit()
 open(unit=coordinateunit, file='configurations.' //trim(adjustl(idchar)), action='READ', status='OLD')
 do
   w(:,:) = 0._dp 
-  !! Read particle coordinates
   call readstate(coordinatereader, coordinateunit, simbox, particles, ios)
   if (ios /= 0) then
     exit
@@ -44,6 +45,7 @@ do
     do j=i+1, nparticles
       !! Calculate the intermolecular position vector and
       rij = minimage(simbox, position(particles(i))-position(particles(j)))
+      if (dot_product(rij, rij) > cutoff**2) cycle
       !! the gradient of the intermolecular potential (force)
       forall(k=1:3) deriv(k) = d_potential(orientation(particles(i)), &
         orientation(particles(j)), rij, k)
@@ -54,11 +56,8 @@ do
   w(:,:) = -w(:,:)/volume(simbox)
   forall(k=1:3) w(k, k) = w(k, k) + &
     real(nparticles,dp)*temperature/volume(simbox) 
-  !! the above line may be sensitive to changes in epsilon0
-  write(*, *) w(1, :)
-  write(*, *) w(2, :)
-  write(*, *) w(3, :)
-  write(*, *) ''
+    !! the above line may be sensitive to changes in epsilon0
+  write(*, '(9('// fmt_char_dp() //',1X))') w(1, :), w(2, :), w(3, :)
 end do
 
 
