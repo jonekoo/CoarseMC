@@ -140,6 +140,7 @@ end subroutine
     call writeparameter(writer, 'Kw', Kw)
     call writeparameter(writer, 'LJ_dist', LJdist) 
     call writeparameter(writer, 'is_uniform_alignment', isuniformalignment)
+    call writeparameter(writer, 'sigwall', sig)
     !call writeparameter(writer, 'radius', radius)
   end subroutine
 
@@ -159,8 +160,7 @@ end subroutine
     real(dp), intent(out) :: Eptwall
     logical, intent(out) :: ovrlp
     real(dp) :: rsiteA, rsiteB
-    real(dp) :: repulA, attracA, repulB, attracB, fu, Rc
-    real(dp) :: rAperR, rBperR
+    real(dp) :: fu, Rc
     ovrlp = .false.
     Eptwall = 0._dp
     !! :TODO: Remove this dependency by making a cylinder wall object.
