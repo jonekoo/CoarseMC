@@ -2,20 +2,13 @@
 module mc_engine
 use nrtype
 use utils
-!use class_cylformatter
 use class_factory
-!use particlewall, only: initptwall, particlewall_writeparameters
-!use gayberne, only: gayberne_init, gb_writeparameters
-!use mtmod, only: sgrnd, mtsave, mtget, mts
 use mt_stream
 use particle, only: particledat, initParticle, particle_writeparameters
 use class_poly_box
-use openmpsweep, only: ompsweep => sweep, ompsweep_init
+use openmpsweep, only: ompsweep => sweep, ompsweep_init, ompsweep_writeparameters
 use mc_sweep, only: mc_sweep_init => init, updatemaxvalues, sweep, &
 mc_sweep_writeparameters, resetcounters, gettemperature, settemperature 
-!, getpressure
-!use class_poly_nbrlist
-!use energy
 use pt
 use m_fileunit
 use class_parameterizer
@@ -33,24 +26,55 @@ interface init
 end interface
   
 type(particledat), dimension(:), pointer, save :: particles
+!! is the pointer to the array where the particles are stored throughout the
+!! simulation.
+
 type(poly_box), save :: simbox
+!! stores the simulation box that is used. 
+
 integer, save :: nequilibrationsweeps = 0
 integer, save :: nproductionsweeps = 0
+!! define the number of equilibration and production MC sweeps in the 
+!! simulation. total no. sweeps is nequilibrationsweeps + nproductionsweeps.
+!! Equilibration sweeps may not obey detailed balance. 
+
 integer, save :: productionperiod = 1
+!! defines the period of writing the configuration of molecules and simulation
+!! parameters on the disk. If productionperiod=400, every 400th MC sweep the 
+!! configuration and parameters are written to the disk. 
+
 integer, save :: moveadjustperiod = 100
+!! defines the period of adjusting maximum trial move sizes during the
+!! equilibration MC sweeps.
+
 integer, save :: ptadjustperiod = 100
+!! if adjusting of temperatures in the temperature series for parallel 
+!! tempering is used defines the period for these actions.
+
 integer, save :: restartperiod = 10000
+!! defines the period of writing a restart point on the disk. This includes the
+!! configuration of molecules, the simulation parameters and the random number
+!! generator state. 
+
 integer, save :: isweep = 0
-integer, save :: rngunit
+!! the sweep counter.
+
 integer, save :: pwunit
-character(len = 80), save :: rngfile = 'mtstate.'
-character(len = 9), save :: idchar
-type(factory), save :: coordinatereader
+character(len=80), save :: parameterfilename
+!! output unit and filename for the para
+
 integer, save :: coordinateunit
+!! The input and output unit used for reading and writing the geometry of 
+!! molecules and the simulation box.
+
+character(len = 9), save :: idchar
+!! The (MPI) id of this process formatted to a character.
+
 logical :: isopenmp = .false.
 type(mt_state), save :: mts
 type(mt_state), save :: mts_new
-character(len=80), save :: parameterfilename
+
+integer, save :: seed = 123456
 
 contains
   
@@ -59,29 +83,33 @@ contains
 !! pre-condition: state must not be initialized by other means. 
 !! pre-condition: MPI_INIT has been called.
 !! post-condition: simulation can be run.  
+!!
+!! @p the process id for an MPI process.
+!! @p ispt True if a parallel tempering simulation is initialized.
+!!
 subroutine mce_init(id, ispt)
   integer, intent(in) :: id 
   logical, intent(in) :: ispt
   logical :: isrestart 
   character(len = 50) :: statefile 
-  integer :: seed
-  type(parameterizer) :: parameterreader
   integer :: ios
-  type(parameter_writer) :: writer
+  type(factory) :: coordinatereader
   character(len=80) :: parameterinputfile
+
+  integer, save :: rngunit
+  character(len = 80), save :: rngfile = 'mtstate.'
+  !! output unit and file for saving the random number generator state for a 
+  !! restart.
+
+  type(parameterizer) :: parameterreader
   write(idchar, '(I9)') id 
   idchar = trim(adjustl(idchar))
   isrestart = .false.
-  parameterinputfile='restartparameters.'//trim(adjustl(idchar))
-  parameterreader = new_parameterizer(parameterinputfile, ios=ios)
+  parameterinputfile='inputparameters.'//trim(adjustl(idchar))
+  parameterreader = new_parameterizer(parameterinputfile, iostat=ios)
   if (ios/=0) then
-    write(*, *) 'Could not open ', parameterinputfile
-    parameterinputfile='parameters.in.'//trim(adjustl(idchar))
-    parameterreader = new_parameterizer(parameterinputfile, ios=ios)
-    if (ios/=0) then
-      write(*,*) 'Could not open ', parameterinputfile, '. Stopping.'
-      stop
-    end if
+    write(*,*) 'Could not open ', parameterinputfile, '. Stopping.'
+    stop
   end if
   rngfile = trim(adjustl(rngfile)) // trim(adjustl(idchar))
   rngunit = fileunit_getfreeunit()
@@ -119,29 +147,22 @@ subroutine mce_init(id, ispt)
   call getparameter(parameterreader, 'move_adjusting_period', &
   moveadjustperiod)
   call getparameter(parameterreader, 'pt_adjusting_period', ptadjustperiod)
-  !coordinatereader = new_cylformatter(statefile)
   call getparameter(parameterreader, 'isopenmp', isopenmp)
   call getparameter(parameterreader, 'restartperiod', restartperiod)
-  !! Find last configuration written in the statefile.
-  !call findlast(coordinatereader, isfound)
-  !if (.not. isfound) then
-  !  write(*, *) 'Error: Could not find a configuration from ' // &
-  !  trim(statefile)
-  !end if
+
+  !! Read geometry
   coordinateunit = fileunit_getfreeunit()
-  statefile = 'restartconfiguration.'//trim(adjustl(idchar))
-  open(file=statefile, unit=coordinateunit, action='READWRITE', iostat=ios)
-  if (ios /= 0) then 
-    write(*, *) statefile, ' not found'
-    statefile = 'configurations.' // trim(adjustl(idchar))
-    open(file=statefile, unit=coordinateunit, action='READWRITE', iostat=ios)
-    if (ios /= 0) stop 'Could not open coordinate file'
-  end if
+  statefile = 'inputconfiguration.'//trim(adjustl(idchar))
+  !! In any case the output should be appended to configurations.(id) and restartfile
+  !! should be used only for reading once and then overwriting the file.
+  open(file=statefile, unit=coordinateunit, action='READ', status='OLD', iostat=ios)
   call readstate(coordinatereader, coordinateunit, simbox, particles, ios)
-  if (ios > 0) then
-    write(*, *) 'Error ', ios,' reading', statefile 
+  if (0/=ios) then 
+    write(*, *) 'Error ', ios,' reading ', statefile, ' Stopping.' 
     stop
   end if
+  close(coordinateunit)
+
   !! Initialize modules. 
   if (isopenmp) then 
     call ompsweep_init(parameterreader, simbox, particles)
@@ -151,20 +172,17 @@ subroutine mce_init(id, ispt)
   call initparticle(parameterreader)
   if (ispt) call pt_init(parameterreader)
   call delete(parameterreader)
-
-  !! Write initial parameters to parameters.out.(id)
-  !! replacing old parameters.out.(id) file.
-  pwunit = fileunit_getfreeunit()
-  parameterfilename = 'parameters.out.' // idchar
-  open(UNIT=pwunit, FILE = parameterfilename, action = 'WRITE', IOSTAT = ios)
-  if (ios/=0) then 
-    write(*, *) 'mce_init: error opening', parameterfilename
+ 
+  !! Open output for geometries
+  coordinateunit = fileunit_getfreeunit()
+  statefile='configurations.'//trim(adjustl(idchar))
+  open(file=statefile,unit=coordinateunit,action='WRITE',position='APPEND',&
+  status='UNKNOWN',form='formatted',iostat=ios)
+  if (0/=ios) then
+    write(*,*) 'mce_init: Failed opening ',statefile, ' for writing. Stopping.'
     stop
   end if
-  writer = new_parameter_writer(pwunit)
-  call mce_writeparameters(writer)
-  call delete(writer)
-  close(pwunit)
+  call makerestartpoint
 end subroutine 
 
 !> Writes the parameters and observables of this module and its children
@@ -173,7 +191,6 @@ end subroutine
 !!
 subroutine mce_writeparameters(writer)
   type(parameter_writer), intent(in) :: writer
-  integer :: ios
   call writecomment(writer, 'mc engine parameters')
   call writeparameter(writer, 'n_equilibration_sweeps', &
   nequilibrationsweeps)
@@ -184,30 +201,20 @@ subroutine mce_writeparameters(writer)
   call writeparameter(writer, 'pt_adjusting_period', ptadjustperiod)
   call writeparameter(writer, 'isopenmp', isopenmp)
   call writeparameter(writer, 'restartperiod', restartperiod)
-  rngunit = fileunit_getfreeunit()
-  open(unit = rngunit, file = rngfile, action = 'WRITE', &
-  status = 'REPLACE', form = 'UNFORMATTED', iostat = ios)
-  if(0 /= ios) then
-    write(*, *) 'Warning: Could not open rng file for writing!'
+  call writeparameter(writer, 'seed', seed)
+  if (isopenmp) then
+    call ompsweep_writeparameters(writer)
   else
-    !call mtsave(rngunit, 'f')
-    call save(mts, rngunit)
-  end if
-  !if (isopenmp) then
-  !  call ompsweep_writeparameters(writer)
-  !else
     call mc_sweep_writeparameters(writer)
-  !end if
+  end if
   call particle_writeparameters(writer)
   call pt_writeparameters(writer)
-  close(rngunit)
 end subroutine
 
 !> Finalizes the simulation.
 !!
 !! pre-condition: simulation must be initialized.
 !! post-conditions: 1. memory allocated by this program is freed.
-!!                  2. program ends.
 !!
 subroutine finalize(id)
   integer, intent(in) :: id
@@ -240,34 +247,61 @@ subroutine run
   end do
 end subroutine 
 
+
+!> Subroutine that gathers all the tasks related to making a restart point. 
+!! These include opening (and closing) the appropriate files for molecule
+!! configurations, simulation parameters and the random number generator 
+!! state.
+!!
+!! pre-condition: simulation state has to be initialized with mce_init.
+!! post-condition: restart files have been updated on disk or warning messages
+!! have been written to standard output if something fails.
+!!
 subroutine makerestartpoint
   type(factory) :: restartwriter
   integer :: configurationunit
   integer :: parameterunit
   type(parameter_writer) :: pwriter
-  character(len=80) :: parameterfilename
-  character(len=80) :: configurationfilename
+  character(len=80) :: parameterfile
+  character(len=80) :: configurationfile
+
+  integer :: rngunit
+  character(len=80) :: rngfile
+
   integer :: ios
 
   !! Write parameters to a restartfile
   parameterunit = fileunit_getfreeunit()
-  open(UNIT=pwunit, FILE ='restartparameters.'//idchar, action='WRITE', &
-  iostat=ios)
+  open(UNIT=parameterunit,FILE='restartparameters.'//idchar,action='WRITE',&
+  status='REPLACE', DELIM='QUOTE', iostat=ios)
   if (ios/=0) write(*, *) 'makerestartpoint: Warning: Failed opening', &
-  parameterfilename
+  parameterfile
   pwriter = new_parameter_writer(parameterunit)
   call mce_writeparameters(pwriter)
   close(parameterunit)
 
   !! Write configurations to a restartfile
   configurationunit = fileunit_getfreeunit()
-  configurationfilename='restartconfiguration.'//idchar
-  open(file=configurationfilename, unit=configurationunit, &
-  action='WRITE', iostat=ios)
+  configurationfile='restartconfiguration.'//idchar
+  open(file=configurationfile, unit=configurationunit, &
+  action='WRITE', status='REPLACE', iostat=ios)
   if (ios/=0) write(*, *) 'makerestartpoint: Warning: Failed opening', &
-  configurationfilename
+  configurationfile
   call writestate(restartwriter, configurationunit, simbox, particles)
   close(configurationunit)
+
+  !! Write random number generator state to a file.
+  rngunit = fileunit_getfreeunit()
+  rngfile='restartmtstate.'//trim(adjustl(idchar))
+  open(unit=rngunit, file=rngfile, action='WRITE', status='REPLACE',&
+  form='UNFORMATTED', iostat=ios)
+  if(0 /= ios) then
+    write(*, *) 'makerestartpoint: Warning: Failed opening ', rngfile
+  else
+    !call mtsave(rngunit, 'f')
+    call save(mts, rngunit)
+    close(rngunit)
+  end if
 end subroutine
 
 
@@ -295,14 +329,17 @@ end subroutine
 !! 
 subroutine runproductiontasks
   integer :: ios
+  character(len=80) :: parameterfile
   type(parameter_writer) :: writer
+  type(factory) :: coordinatewriter
+  parameterfile='parameters.'//trim(adjustl(idchar))
   if (mod(isweep, productionperiod) == 0) then
-    call writestate(coordinatereader, coordinateunit, simbox, particles) 
+    call writestate(coordinatewriter, coordinateunit, simbox, particles) 
     pwunit = fileunit_getfreeunit()
-    open(UNIT = pwunit, FILE = parameterfilename, action = 'WRITE', & 
-    position = 'APPEND', IOSTAT = ios) 
+    open(UNIT=pwunit, FILE=parameterfile, action='WRITE', position='APPEND',&
+    DELIM='QUOTE', IOSTAT=ios) 
     if (ios/=0) then
-      write(*, *) 'runproductiontasks: error opening', parameterfilename
+      write(*, *) 'runproductiontasks: error opening', parameterfile
       stop
     end if
     writer = new_parameter_writer(pwunit)
