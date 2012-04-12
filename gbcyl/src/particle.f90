@@ -5,10 +5,10 @@
 
 module particle
   use nrtype
-  use mtmod
   use utils
   use class_parameterizer
   use class_parameter_writer
+  include 'rng.inc'
   implicit none
   private
 
@@ -16,7 +16,9 @@ module particle
   public :: initparticle
   public :: new_particle
   public :: createparticle
-  public :: writeparticle
+  public :: binwrite
+  public :: write
+  public :: read
   public :: position
   public :: orientation
   public :: particle_writeparameters
@@ -27,6 +29,18 @@ module particle
   public :: setorientation
   public :: maxtrans
   
+  !> Holds data of a cylindrically symmetric particle, e.g. Gay-Berne 
+  !! particle. Using the rod variable one can use the same datatype to describe
+  !! two diffrent particles.
+  !! 
+  !! x, y, z are the cartesian positional coordinates of the particle.
+  !! ux, uy, uz are the components of the vector that describes the 
+  !! orientation of the particle.
+  !! rod tells if the particle is a rodlike particle or e.g. spherically
+  !! symmetric.
+  !!
+  !! :TODO: Remove rod variable. This module should only describe GB particles.
+  !!
   type particledat
      real(dp) :: x = 0._dp
      real(dp) :: y = 0._dp
@@ -41,20 +55,43 @@ module particle
   real(dp), save :: maxdr = -1._dp
   character(len = *), parameter :: typeid = 'gb'
 
+  interface read
+    module procedure readparticle
+  end interface
+ 
+  interface write
+    module procedure writeparticle
+  end interface
+
+  interface binwrite
+    module procedure binwriteparticle
+  end interface
+
+  !! Generic interface for initialization of the module..
+  !! 
   interface initparticle
     module procedure init_particleold, init_particleparameterizer
   end interface
 
+  !! This interface is unnecessary. Could be removed.
+  !! 
   interface maxtrans
     module procedure maxtransf
   end interface
 
+  !! Interface for creating trial moves for the particle.. 
+  !!
   interface move
     module procedure move1, move2
   end interface
 
   contains
 
+  !! Initializes this module using a parameterizer object.
+  !! 
+  !! @p reader the parameterizer object which gives (reads) the parameters to
+  !! this module.
+  !! 
   subroutine init_particleparameterizer(reader)
     type(parameterizer), intent(in) :: reader
     call getparameter(reader, 'max_translation', maxdr)
@@ -63,6 +100,8 @@ module particle
     if(dthetamax < 0._dp) stop 'No max_rotation given. Stopping.'
   end subroutine
 
+  !! Initializes the module parameters maxdr and dthetamax.
+  !!
   subroutine init_particleold(maxTranslation, maxRotation)
     implicit none
     real(dp), intent(in) :: maxTranslation 
@@ -71,6 +110,10 @@ module particle
     maxdr = maxTranslation
   end subroutine
 
+  !! Saves the module parameters. The method for saving is defined by @p writer.
+  !! 
+  !! @p writer the object that implements the saving method for parameters.
+  !!
   subroutine particle_writeparameters(writer)
     type(parameter_writer), intent(in) :: writer
     call writecomment(writer, 'Particle parameters')
@@ -102,12 +145,32 @@ module particle
     end if
   end function
 
-  subroutine writeparticle(aparticle, writeunit)
+  subroutine writeparticle(writeunit, aparticle)
     integer, intent(in) :: writeunit
     type(particledat), intent(in) :: aparticle
-    write(writeunit, '(A, 6' // fmt_char_dp() // ')', advance='no') &
+    write(writeunit, '(A,1X,6(' // fmt_char_dp() // ',1X))', advance='no') &
     typeid, aparticle%x, aparticle%y, aparticle%z, aparticle%ux, &
     aparticle%uy, aparticle%uz 
+  end subroutine
+
+  subroutine binwriteparticle(writeunit, aparticle)
+    integer, intent(in) :: writeunit
+    type(particledat), intent(in) :: aparticle
+    write(writeunit) &
+    typeid, aparticle%x, aparticle%y, aparticle%z, aparticle%ux, &
+    aparticle%uy, aparticle%uz 
+  end subroutine
+
+  subroutine readparticle(readunit, aparticle, ios)
+    type(particledat), intent(out) :: aparticle
+    integer, intent(in) :: readunit
+    integer, intent(out) :: ios
+    character(len = len(typeid)) :: temp
+    read(readunit, fmt=*, iostat=ios) &
+    temp, aparticle%x, aparticle%y, aparticle%z, aparticle%ux, &
+    aparticle%uy, aparticle%uz 
+    if (temp /= typeid) ios = 999
+    if (ios /= 0) backspace readunit
   end subroutine
 
   pure function position(aparticle)
@@ -138,32 +201,34 @@ module particle
     aparticle%uz = vec(3)
   end subroutine
 
-  subroutine move1(aparticle)
+  subroutine move1(aparticle, genstate)    
     type(particledat), intent(inout) :: aparticle
+    type(rngstate), intent(inout) :: genstate
     type(particledat) :: temp
-    call move(aparticle, temp)
+    call move(aparticle, temp, genstate)
     aparticle = temp
   end subroutine
 
-  subroutine move2(oldp, newp)
+  subroutine move2(oldp, newp, genstate)
     type(particledat), intent(in) :: oldp
     type(particledat), intent(out) :: newp
+    type(rngstate), intent(inout) :: genstate
     newp = oldp
-    call transmove(oldp%x,oldp%y,oldp%z,newp%x,newp%y,newp%z)
+    call transmove(oldp%x,oldp%y,oldp%z,newp%x,newp%y,newp%z, genstate)
     if (oldp%rod) then
-      call rotate(oldp%ux,oldp%uy,oldp%uz,newp%ux,newp%uy,newp%uz)
+      call rotate(oldp%ux,oldp%uy,oldp%uz,newp%ux,newp%uy,newp%uz, genstate)
     end if
   end subroutine
   
-  subroutine transmove(xo, yo, zo, xn, yn, zn)
-    implicit none
+  subroutine transmove(xo, yo, zo, xn, yn, zn, genstate)
     real(dp), intent(in) :: xo, yo, zo
     real(dp), intent(out) :: xn, yn, zn
+    type(rngstate), intent(inout) :: genstate
     real(dp) :: max1d 
     max1d = maxdr/sqrt(3._dp)
-    xn = xo + (2._dp * grnd() - 1._dp) * max1d
-    yn = yo + (2._dp * grnd() - 1._dp) * max1d
-    zn = zo + (2._dp * grnd() - 1._dp) * max1d
+    xn = xo + (2._dp * rng(genstate) - 1._dp) * max1d
+    yn = yo + (2._dp * rng(genstate) - 1._dp) * max1d
+    zn = zo + (2._dp * rng(genstate) - 1._dp) * max1d
   end subroutine
 
   !Palauttaa partikkelin orientaatiovektorin komponentit
@@ -184,12 +249,13 @@ module particle
   !  uz = uzn
   !end subroutine
     
-  subroutine rotate(uxo, uyo, uzo, uxn, uyn, uzn)
+  subroutine rotate(uxo, uyo, uzo, uxn, uyn, uzn, genstate)
     real(dp), intent(in) :: uxo,uyo,uzo
     real(dp), intent(out) :: uxn,uyn,uzn
+    type(rngstate), intent(inout) :: genstate
     real(dp) :: theta, nx, ny, nz
-    call nvec(nx, ny, nz)
-    theta = (2._dp * grnd() - 1._dp) * dthetamax
+    call nvec(nx, ny, nz, genstate)
+    theta = (2._dp * rng(genstate) - 1._dp) * dthetamax
     call XVEC2(uxo, uyo, uzo, nx, ny, nz, theta, uxn, uyn, uzn)
   end subroutine
 
