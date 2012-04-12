@@ -12,7 +12,7 @@
 !!
 !! :TODO: Get rid of magic numbers.
 !!
-program particlehistogram
+program cylhist
   use state_reader
   use nrtype
   use particle
@@ -25,6 +25,7 @@ program particlehistogram
   use class_poly_box
   use psi6_module
   use layernormal
+  use m_fileunit
   implicit none
 
   type(particledat), dimension(:), pointer :: particles
@@ -41,6 +42,7 @@ program particlehistogram
   !! Only observables which are given a file to write to are 
   !! calculated/written. By default the filenames should be empty
   !! strings.
+  character(len=200) :: configurationfile = ''
   character(len=200) :: smcpsi6file = ''
   character(len=200) :: smctau1file = ''
   character(len=200) :: psi6file = ''
@@ -49,19 +51,19 @@ program particlehistogram
   character(len=200) :: tfile = ''
   character(len=200) :: dfile = ''
 
-  integer, parameter :: psi6unit = 18 
-  integer, parameter :: layerp2unit = 19
-  integer, parameter :: smctau1unit = 20
-  integer, parameter :: smcpsi6unit = 21
-  integer, parameter :: parameterunit = 22
-  integer, parameter :: ounit = 23
-  integer, parameter :: tunit = 24
-  integer, parameter :: dunit = 25
+  integer :: configurationunit
+  integer :: psi6unit 
+  integer :: layerp2unit
+  integer :: smctau1unit
+  integer :: smcpsi6unit
+  integer :: ounit
+  integer :: tunit
+  integer :: dunit
 
+  namelist /inputnml/ binwidth, cutoff, psi6file, smcpsi6file, smctau1file, &
+  & layerp2file, binningdirection, ofile, tfile, dfile, configurationfile
 
-  namelist /inputnml/ binwidth, cutoff, psi6file, smcpsi6file, smctau1file, layerp2file, binningdirection, ofile, tfile, dfile
-
-  integer, dimension(:), allocatable :: indices
+  integer, dimension(:), pointer :: indices 
   integer :: max_index
   integer :: i_bin
   integer :: allocstat
@@ -70,7 +72,6 @@ program particlehistogram
   real(dp), dimension(3) :: director
   real(sp) :: smctau1
   real(sp) :: tau1
-  real(dp) :: binvolume
   real(sp) :: layerdistance
 
   !! Parameters to control which observables are calculated and written.
@@ -87,11 +88,16 @@ program particlehistogram
   integer, parameter :: stdin = 5
  
   !! Read input parameters
-  open(unit=parameterunit, file='cylhist.in', action='READ', status='OLD')
-  read(parameterunit, NML = inputnml) 
-  close(parameterunit)
+  read(stdin, NML = inputnml) 
 
-!  write(*,nml=inputnml)
+  !! Open configurationfile
+  if (trim(configurationfile) /= '') then
+    configurationunit=fileunit_getfreeunit()
+    open(unit=configurationunit, file=configurationfile, action='READ', status='OLD')
+  else 
+    write(*, *) 'Set configurationfile!' 
+    stop
+  end if
 
   if (trim(psi6file) /= '') then
     call open_write_unit(psi6file, psi6unit)
@@ -122,23 +128,26 @@ program particlehistogram
     writedensity = .true.
   end if
   do  
-    !! Read configuration from standard input
-    !call readstate(cf, simbox, particles, io_status)
-    call readstate(afactory, stdin, simbox, particles, io_status)
+    call readstate(afactory, configurationunit, simbox, particles, io_status)
     if (io_status < 0) then
-      call finalize
       exit
     end if
     n_particles = size(particles)
-    if(size(indices) /= n_particles) then
-      if(allocated(indices)) deallocate(indices)
+    if (associated(indices)) then
+      if(size(indices) /= n_particles) then
+        if(associated(indices)) deallocate(indices)
+        allocate(indices(n_particles), stat=allocstat)
+        if(allocstat /= 0) stop 'Allocation of indices failed.'
+      end if
+    else 
       allocate(indices(n_particles), stat=allocstat)
       if(allocstat /= 0) stop 'Allocation of indices failed.'
     end if
 
     !! Solve bin indices for all the particles
     if (binningdirection == -1) then
-      call bin_indices(particles, n_particles, xfunc, binwidth, indices, getx(simbox)/2._dp, binningdirection)
+      call bin_indices(particles, n_particles, xfunc, binwidth, indices,&
+      getx(simbox)/2._dp, binningdirection)
     else 
       call bin_indices(particles, n_particles, xfunc, binwidth, indices)
     end if
@@ -175,14 +184,16 @@ program particlehistogram
 
       if (writesmctau1) then
         !! Calculate and write smctau1 profile        
-        call tau1_routine(pack(particles(1:n_particles), indices == i_bin), real(director, sp), smctau1, layerdistance)
+        call tau1_routine(pack(particles(1:n_particles), indices == i_bin), &
+        real(director, sp), smctau1, layerdistance)
         write(smctau1unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') smctau1
       end if
     
       if (writedensity) then
         !! Calculate and write density profile
-        binvolume = 4._dp * atan(1._dp) * getz(simbox) * ((real(i_bin, dp) * binwidth)**2 - (real(i_bin-1, dp) * binwidth)**2)
-        write(dunit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') real(n_bin_particles, dp)/binvolume
+        write(dunit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') &
+        real(n_bin_particles, dp)/binvolume(i_bin, getx(simbox)/2._dp, &
+        getz(simbox), binningdirection)
       end if
 
       if (writeorientation) then
@@ -194,7 +205,8 @@ program particlehistogram
 
       if (writetau1) then
         !! Calculate and write tau1 profile        
-        call tau1_routine(pack(particles(1:n_particles), indices == i_bin), real(director, sp), tau1, layerdistance)
+        call tau1_routine(pack(particles(1:n_particles), indices == i_bin), &
+        real(director, sp), tau1, layerdistance)
         write(tunit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') tau1
       end if
 
@@ -229,8 +241,25 @@ program particlehistogram
 
   contains
 
+  function binvolume(i_bin, maxr, height, binningdirection)
+    integer, intent(in) :: i_bin
+    real(dp), intent(in) :: maxr
+    real(dp), intent(in) :: height
+    integer, intent(in) :: binningdirection
+    real(dp) :: binvolume
+    if (binningdirection == -1) then
+      binvolume = 4._dp * atan(1._dp) * height * (maxr - real(i_bin-1, dp) * &
+      binwidth)**2 - (max(maxr - real(i_bin, dp) * binwidth, 0._dp)**2)    
+    else
+      binvolume = 4._dp * atan(1._dp) * height * ((max(real(i_bin, dp) * &
+      binwidth, maxr))**2 - (real(i_bin-1, dp) * binwidth)**2)    
+    end if    
+  end function 
+
   subroutine finalize
     if(associated(particles)) deallocate(particles)
+    if(associated(indices)) deallocate(indices)
+    close(configurationunit)
     if (writepsi6) then
       close(psi6unit)
     end if
@@ -246,10 +275,11 @@ program particlehistogram
   end subroutine
 
   subroutine open_write_unit(file_name, write_unit)
-  implicit none
-  character(len = *), intent(in) :: file_name
-  integer, intent(in) :: write_unit
-  integer :: opened
+    implicit none
+    character(len = *), intent(in) :: file_name
+    integer, intent(out) :: write_unit
+    integer :: opened
+    write_unit=fileunit_getfreeunit()
     open(write_unit, FILE = file_name, status = 'replace', &
       position = 'append', iostat = opened)
     if(opened/=0) stop 'Opening of output file failed.'
