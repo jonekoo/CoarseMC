@@ -3,8 +3,9 @@ module pt
   use mpi
   use particle 
   use class_poly_box
-  use mtmod
+  include 'rng.inc'
   use class_parameter_writer
+  use class_parameterizer
   implicit none
   private
 
@@ -19,8 +20,12 @@ module pt
   public :: pt_writeparameters
   public :: pt_resetcounters
 
+  interface pt_init
+    module procedure pt_initinternal, pt_initwtparameterizer
+  end interface
+
   interface pt_exchange
-    module procedure pt_exchange1, pt_exchange2
+    module procedure pt_exchange !!, pt_exchange2
   end interface
 
   integer, save :: dptype
@@ -32,11 +37,14 @@ module pt
   integer, save :: idirection = 0
   integer, save :: nacceptedup = 0
   integer, save :: ntrialsup = 0
-  integer, save :: confid = 0
+  integer, save :: confid = -1
 
 contains
 
-subroutine pt_init()
+!! Creates the MPI types used by this module for communicating configurations 
+!! from one process to another. 
+!! 
+subroutine pt_initinternal()
   integer :: ierr
   integer :: oldtypes(0:1)
   integer :: blockcounts(0:1)
@@ -47,6 +55,7 @@ subroutine pt_init()
     write(*,*) 'pt_init: This implementation of parallel tempering supports' &
       // ' only an even number of tasks.'
     call MPI_FINALIZE()
+    !! This does not stop the program in vuori. Why?
     stop 'Program stopped by pt_init.'
   end if
   call MPI_COMM_RANK(MPI_COMM_WORLD, id, ierr) 
@@ -54,8 +63,17 @@ subroutine pt_init()
   idbelow = mod(id - 1 + ntasks, ntasks)
   !! :NOTE: Setting id of particle configuration to id of process. 
   !! :TODO: Make exchange of conf id:s working with restarts.
-  confid = id 
-  call MPI_TYPE_CREATE_F90_REAL(dp, MPI_UNDEFINED, dptype, ierr) 
+  if (confid < 0) confid = id
+  !if (precision(nrdouble) == precision(somedouble) .and. range(nrdouble) == range(somedouble)) then
+    dptype = MPI_REAL8
+  !  write(*, *) 'dptype = ', dptype
+  !else if (precision(nrdouble) == precision(somereal) .and. range(nrdouble) == range(somereal)) then
+  !  dptype = MPI_REAL
+  !  write(*, *) 'dptype = ', dptype
+  !else
+  !  call MPI_TYPE_CREATE_F90_REAL(precision(nrdouble), range(nrdouble), dptype, ierr) 
+  !end if
+  !write(*, *) 'dptype = ', dptype
   !! Create particle type 
   !! Set up description of the coordinate variables.
   offsets(0) = 0 
@@ -72,11 +90,33 @@ subroutine pt_init()
   call MPI_TYPE_COMMIT(particletype, ierr) 
 end subroutine
 
+!! Initializes this module using a parameterizer object to get the parameters
+!! for this module. 
+!!
+!! @p reader the object which reads the parameters. 
+!! 
+subroutine pt_initwtparameterizer(reader)
+  type(parameterizer), intent(inout) :: reader
+  call getparameter(reader, 'confid', confid)
+  call getparameter(reader, 'idirection', idirection)
+  call getparameter(reader, 'nacceptedup', nacceptedup)
+  call getparameter(reader, 'ntrialsup', ntrialsup)
+  call pt_init()
+end subroutine
+
+!! Frees the mpi types created by this module. To be called when use of this 
+!! module by the program hass ended.
+!!
 subroutine pt_finalize()
   integer :: ierr
   call mpi_type_free(particletype, ierr)
 end subroutine
 
+!! Saves parameters and observables of this module using a parameter_writer 
+!! object.
+!! 
+!! @p pwriter the parameter writer object to be used. 
+!! 
 subroutine pt_writeparameters(pwriter)
   type(parameter_writer), intent(in) :: pwriter
   call writecomment(pwriter, 'Parallel tempering parameters')
@@ -84,7 +124,8 @@ subroutine pt_writeparameters(pwriter)
   call writeparameter(pwriter, 'idirection', idirection)
   call writeparameter(pwriter, 'nacceptedup', nacceptedup)
   call writeparameter(pwriter, 'ntrialsup', ntrialsup)
-  call writeparameter(pwriter, 'current_ptaccratioup', real(nacceptedup, dp)/real(ntrialsup, dp))
+  call writeparameter(pwriter, 'current_ptaccratioup', &
+  real(nacceptedup, dp)/real(ntrialsup, dp))
 end subroutine
 
 !! Tries to make a parallel tempering Hamiltonian exchange with the process 
@@ -103,12 +144,14 @@ end subroutine
 !!
 !! :TODO: Make pt_move independent of MPI and only pt_exchange dependent
 !!
-subroutine pt_move(beta, energy, particles, nparticles, simbox)
+subroutine pt_move(beta, energy, particles, nparticles, simbox, genstate, isaccepted)
   real(dp), intent(in) :: beta
   real(dp), intent(inout) :: energy
   type(particledat), dimension(:), intent(inout) :: particles
   integer, intent(inout) :: nparticles
   type(poly_box), intent(inout) :: simbox
+  type(rngstate), intent(inout) :: genstate
+  logical, intent(out) :: isaccepted
   real(dp) :: betan
   real(dp) :: energyn
   type(particledat), dimension(nparticles) :: particlesn
@@ -117,6 +160,8 @@ subroutine pt_move(beta, energy, particles, nparticles, simbox)
   integer :: destid
   real(dp) :: rand 
   real(dp) :: randn
+  integer :: confidn
+  isaccepted = .false.
   !! Select communication direction
   idirection = mod(idirection + 1, 2)
   if (mod(id, 2) == 0) then 
@@ -133,7 +178,7 @@ subroutine pt_move(beta, energy, particles, nparticles, simbox)
     end if
   end if 
   !! Calculate random number for accepting the move.
-  rand = grnd()
+  rand = rng(genstate)
   !! Make temporary variables. 
   betan = beta
   energyn = energy
@@ -141,9 +186,10 @@ subroutine pt_move(beta, energy, particles, nparticles, simbox)
   nparticlesn = nparticles
   simboxn = simbox
   randn = rand
+  confidn = confid
   !! Exchange temporary variables
   call pt_exchange(destid, betan, energyn, particlesn, nparticlesn, &
-    simboxn, randn)
+    simboxn, randn, confidn)
   if (mod(id, 2) == 1) rand = randn
   !! :TODO: Check validity of expression below
   if(exp((beta - betan) * (energy - energyn)) > rand ) then
@@ -151,9 +197,11 @@ subroutine pt_move(beta, energy, particles, nparticles, simbox)
     particles(1:nparticles) = particlesn(1:nparticles)
     nparticles = nparticlesn
     simbox = simboxn
+    confid  = confidn
     if (destid == idabove) then
       nacceptedup = nacceptedup + 1
     end if
+    isaccepted = .true.
   end if
   if (destid == idabove) then
     ntrialsup = ntrialsup + 1
@@ -178,61 +226,7 @@ end subroutine
 !! :TODO: different amount of particles. If needed use mpi_get_count 
 !! :TODO: to implement this feature.
 !!
-subroutine pt_exchange1(destid, beta, energy, particles, nparticles, &
-  simbox, rand)
-  integer, intent(in) :: destid
-  real(dp), intent(inout) :: beta
-  real(dp), intent(inout) :: energy
-  type(particledat), dimension(:), intent(inout) :: particles
-  integer, intent(inout) :: nparticles
-  type(poly_box), intent(inout) :: simbox
-  real(dp), intent(inout) :: rand
-  integer, parameter :: firsttag = 50
-  integer, parameter :: secondtag = 52
-  integer, dimension(MPI_STATUS_SIZE) :: status 
-  integer, parameter :: msgsize = 7
-  real(dp), dimension(msgsize) :: msg 
-  integer :: ierr
-  msg(1) = beta 
-  msg(2) = energy 
-  msg(3) = rand
-  msg(4) = getx(simbox)
-  msg(5) = gety(simbox)
-  msg(6) = getz(simbox)
-  msg(7) = real(getid(simbox), dp)
-  call mpi_sendrecv_replace(msg(1:msgsize), msgsize, dptype, destid, &
-    firsttag, destid, firsttag, MPI_COMM_WORLD, status, ierr)   
-  call mpi_sendrecv_replace(particles(1:nparticles), nparticles, &
-    particletype, destid, secondtag, destid, secondtag, MPI_COMM_WORLD, &
-    status, ierr)    
-  beta = msg(1)
-  energy = msg(2)
-  rand = msg(3) 
-  call setx(simbox, msg(4))
-  call sety(simbox, msg(5))
-  call setz(simbox, msg(6))
-  call setid(simbox, int(msg(7) + 0.5_dp))
-end subroutine
-
-!! Exchanges @p beta, @p energy, @p particles, @p nparticles @p simbox 
-!! dimensions and @p rand with task @p destid 
-!!
-!! Currently works only if the communicating processes have the same number 
-!! of particles
-!!
-!! @p destid the task id with which the exchange is made with. 
-!! @p beta the inverse temperature. 
-!! @p energy the total energy (NVT) or total enthalpy (NPT) of the process.
-!! @p particles the array of particles. 
-!! @p nparticles the number of particles. 
-!! @p simbox the simulation cell. 
-!! @p rand a random number for accepting the exchange. 
-!! 
-!! :TODO: Test that the routine is capable of sending and receiving a 
-!! :TODO: different amount of particles. If needed use mpi_get_count 
-!! :TODO: to implement this feature.
-!!
-subroutine pt_exchange2(destid, beta, energy, particles, nparticles, &
+subroutine pt_exchange(destid, beta, energy, particles, nparticles, &
   simbox, rand, confid)
   integer, intent(in) :: destid
   real(dp), intent(inout) :: beta
@@ -294,6 +288,12 @@ real(dp) function pt_temperature(ptlow, pthigh)
   real(ntasks - 1, dp)
 end function
 
+!! Adjusts the temperatures of the replicas to get evenly large exchange rates.
+!! Breaks detailed balance. Do not use during production runs. DEPRECATED.
+!! 
+!! @p temperatures the array of temperatures to adjust.
+!! @p number of accepted swaps between this replica and the replica above it.
+!! 
 subroutine pt_adjusttemperatures(temperatures, nswaps)
   real(dp), dimension(:), intent(inout) :: temperatures
   integer, dimension(:), intent(in) :: nswaps
