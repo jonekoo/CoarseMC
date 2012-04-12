@@ -1,10 +1,63 @@
 module utils
 use nrtype
-use mtmod, only: grnd
-USE nr, only: jacobi_sp => jacobi
 implicit none
+intrinsic index
 
 contains 
+
+!> Returns the number of @param substr occurences in string @param str.
+!!
+!! @param str the string to analyze.
+!! @param substr the substring to be looked for. 
+!! 
+function substrcount(str, substr)
+  character(len=*), intent(in) :: str
+  character(len=*), intent(in) :: substr
+  integer :: substrcount
+  integer :: pos
+  integer :: step
+  substrcount = 0
+  if (len(substr) == 0) then
+    return
+  else 
+    pos = 1
+    do while(.true.)
+      step = index(str(pos:), substr)     
+      if (step == 0) exit
+      substrcount = substrcount + 1 
+      pos = pos + step - 1 + len(substr)
+    end do
+  end if
+end function
+
+!> Splits a given string @param str to the array @param strarr using @param 
+!! delimiterstr as the delimiter. Delimiters are not included in the results.
+!! Result may contain empty strings. 
+!!
+!! @param str the string to be splitted.
+!! @param delimiterstr the delimiter to use in the splitting.
+!! @param strarr the resulting pointer array of strings.
+!!
+subroutine splitstr(str, delimiterstr, strarr)
+  character(len=*), intent(in) :: str
+  character(len=*), intent(in) :: delimiterstr
+  character(len=len(str)), dimension(:), pointer :: strarr
+  integer :: dim, i 
+  integer :: lastpos
+  integer :: step
+  dim = substrcount(str, delimiterstr) + 1
+  allocate(strarr(dim))
+  lastpos = 1
+  do i = 1, dim
+    step = index(str(lastpos:), delimiterstr)
+    if (step /= 0) then
+      strarr(i) = str(lastpos:lastpos + step - 2)
+    else ! last substr
+      strarr(i) = str(lastpos:)
+    end if
+    lastpos = lastpos + step - 1 + len(delimiterstr)
+  end do
+end subroutine
 
 !> Returns the components of the orientation vector in cylindrical coordinates
 !!
@@ -55,24 +108,26 @@ pure subroutine rotate_vector(x, y, z, nx, ny, nz, angle, xp, yp, zp)
   cp = cos(angle)
   sp = sin(angle)
   call crossp(x, y, z, nx, ny, nz, xp, yp, zp)
-  xp = x * cp + nx * dotpr * (1.0 - cp) + xp * sp
-  yp = y * cp + ny * dotpr * (1.0 - cp) + yp * sp
-  zp = z * cp + nz * dotpr * (1.0 - cp) + zp * sp
+  xp = x * cp + nx * dotpr * (1._dp - cp) + xp * sp
+  yp = y * cp + ny * dotpr * (1._dp - cp) + yp * sp
+  zp = z * cp + nz * dotpr * (1._dp - cp) + zp * sp
 end subroutine rotate_vector
 
-subroutine nvec(nx, ny, nz)
+subroutine nvec(nx, ny, nz, genstate)
   !!
   !! Generates a random unit vector (nx, ny, nz). 
   !!
   !! @see Understanding Mol. Sim. 2nd Ed.  Frenkel, Smit p. 578
   !!
+  include 'rng.inc'
   intrinsic sqrt
   double precision, intent(out) :: nx, ny, nz
+  type(rngstate), intent(inout) :: genstate
   double precision :: l, u1, u2, s
   l = 0.0_dp
   do
-     u1 = 1._dp - 2._dp * grnd()
-     u2 = 1._dp - 2._dp * grnd()
+     u1 = 1._dp - 2._dp * rng(genstate)
+     u2 = 1._dp - 2._dp * rng(genstate)
      l = u1 * u1 + u2 * u2
      if(l <= 1._dp) exit
   end do
