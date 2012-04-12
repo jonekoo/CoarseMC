@@ -16,6 +16,7 @@ module cell
   public :: ix, iy, iz  
   public :: delete
   public :: writetostdout
+  public :: update
 
   !! nx, ny and nz are the numbers of cells in x, y and z directions.
   !! ncells is the total number of cells 
@@ -38,6 +39,10 @@ module cell
     type(list), pointer :: list => NULL()
     integer :: current = 0
   end type iterator
+
+  interface update
+    module procedure cl_update
+  end interface
 
   interface delete
     module procedure cl_delete
@@ -157,6 +162,22 @@ contains
     end do
   end function
 
+  !! Assumes the size of @p positions and number of cells stays fixed between updates. 
+  pure subroutine cl_update(cl, positions)
+    type(list), intent(inout) :: cl
+    real(dp), dimension(:, :), intent(in) :: positions
+    integer :: ipos
+    integer :: icell
+    do icell = 1, ncells(cl)
+      cl%heads(icell) = 0
+    end do
+    do ipos = 1, size(positions)/3
+      icell = cellindex(cl, positions(1:3, ipos))
+      cl%links(ipos) = cl%heads(icell)
+      cl%heads(icell) = ipos
+    end do
+  end subroutine
+
   subroutine writetostdout(cl)
     type(list), intent(in) :: cl
     write(*, *) 'nx = ', cl%nx, 'ny = ', cl%ny, 'nz = ', cl%nz
@@ -251,8 +272,7 @@ contains
     integer :: index
     maski(:) = .false.
     index = cl%heads(cellindex(cl, position))
-    do
-      if (index == 0) exit
+    do while(index /= 0)
       maski(index) = .true.
       index = cl%links(index)
     end do  
