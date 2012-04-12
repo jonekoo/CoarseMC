@@ -46,10 +46,9 @@ logical :: overlapt
 logical :: overlapendtoend
 
 !! Read parameters
-reader = new_parameterizer("ptgbcyl.in")
+reader = new_parameterizer("ptgbcyl.in", "parameterizer.log")
 call gayberne_init(reader)
-
-!call gayberne_init(kappasigma, kappaeps, mu, nu, epsilon, sigma)
+call delete(reader)
 do i = 1, n
   rj = real(i, dp) * rmax/real(n-1, dp) * ey
   call potential(ez, ez, rj, esidebyside, overlapsidebyside)
@@ -62,9 +61,10 @@ do i = 1, n
 end do
 
 writeunit = fileunit_getfreeunit()
-open(unit=writeunit, file="printgbgb.log", POSITION="APPEND", ACTION="WRITE", STATUS="UNKNOWN", iostat=ios)
+open(unit=writeunit, file="printgbgb.log", POSITION="APPEND", ACTION="WRITE", &
+STATUS="UNKNOWN", iostat=ios)
 if(ios /= 0) then
-  write(*, *) "printgbgb: Writing log file failed"
+  write(*, *) "printgbgb: Opening log file failed"
 else
   writer = new_parameter_writer(writeunit)
   call gb_writeparameters(writer)
