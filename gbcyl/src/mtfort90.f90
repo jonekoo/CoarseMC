@@ -51,6 +51,11 @@
 ! Period parameters
     integer, parameter :: N = 624, N1 = N + 1
 
+  !! This addition by Jouni Karjalainen to conform with gbcyl-4 interfaces.
+  type mts
+    real :: dumb
+  end type 
+
 ! the array for the state vector
     integer, save, dimension(0:N-1) :: mt
     integer, save                   :: mti = N1
