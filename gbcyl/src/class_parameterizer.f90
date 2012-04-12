@@ -44,14 +44,16 @@ contains
 !! @param parameterfile the file parameters are read from.
 !! @param logfile the optional logfile.
 !!
-function new_parameterizers(parameterfile, logfile, ios) result(p)
+function new_parameterizers(parameterfile, logfile, iostat) result(p)
   character(len = *), intent(in) :: parameterfile
   character(len = *), intent(in), optional :: logfile
+  integer, optional, intent(out) :: iostat
+  integer :: ios
   type(parameterizer) :: p
-  integer, optional, intent(out) :: ios
   integer :: logunit
   p%unit = fileunit_getfreeunit()
   open(file=parameterfile, unit=p%unit, status='OLD', action='READ', iostat=ios)
+  if (present(iostat)) iostat=ios
   if (0/=ios) then 
     write(*, *) 'new_parameterizers: Failed opening ', parameterfile
   else
