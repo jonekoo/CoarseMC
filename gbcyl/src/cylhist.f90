@@ -50,6 +50,7 @@ program cylhist
   character(len=200) :: ofile = ''
   character(len=200) :: tfile = ''
   character(len=200) :: dfile = ''
+  character(len=200) :: nfile = ''
 
   integer :: configurationunit
   integer :: psi6unit 
@@ -59,9 +60,10 @@ program cylhist
   integer :: ounit
   integer :: tunit
   integer :: dunit
+  integer :: nunit
 
   namelist /inputnml/ binwidth, cutoff, psi6file, smcpsi6file, smctau1file, &
-  & layerp2file, binningdirection, ofile, tfile, dfile, configurationfile
+  & layerp2file, binningdirection, ofile, tfile, dfile, nfile, configurationfile
 
   integer, dimension(:), pointer :: indices 
   integer :: max_index
@@ -82,6 +84,7 @@ program cylhist
   logical :: writeorientation = .false.
   logical :: writedensity = .false.
   logical :: writetau1 = .false.
+  logical :: write_particle_count = .false.
 
   type(poly_box) :: simbox
   type(factory) :: afactory
@@ -123,10 +126,17 @@ program cylhist
     call open_write_unit(tfile, tunit)
     writetau1 = .true.
   end if
-  if (trim(dfile) /= ' ') then
+  if (trim(dfile) /= '') then
     call open_write_unit(dfile, dunit)
     writedensity = .true.
   end if
+  if (trim(nfile) /= '') then
+    call open_write_unit(nfile, nunit)
+    write_particle_count = .true.
+  else 
+    stop 'file for particle number not given'
+  end if
+
   do  
     call readstate(afactory, configurationunit, simbox, particles, io_status)
     if (io_status < 0) then
@@ -153,40 +163,61 @@ program cylhist
     end if
     max_index = maxval(indices)
     do i_bin = 1, max_index
-       n_bin_particles = count(indices == i_bin)
-      if(n_bin_particles == 0) stop '0 particles in bin!'
-      
+      n_bin_particles = count(indices == i_bin)
+
+      write(nunit, '('//fmt_char_int()//',1X)', ADVANCE='NO') n_bin_particles
+
       if (writepsi6) then
-        !! Calculate and write psi6 profile
-        call orientation_parameter(pack(particles, (indices == i_bin)), &
-        n_bin_particles, p2, director) 
-        write(psi6unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') &
-        psi6_bulk_masked(simbox, particles, (indices == i_bin), director) 
+        if(n_bin_particles == 0) then         
+          write(psi6unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 0._dp
+        else
+          !! Calculate and write psi6 profile
+          call orientation_parameter(pack(particles, (indices == i_bin)), &
+          n_bin_particles, p2, director) 
+          write(psi6unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') &
+          psi6_bulk_masked(simbox, particles, (indices == i_bin), director) 
+        end if
       end if
 
       if (writesmcpsi6 .or. writesmctau1 .or. writelayerp2) then
-        !! Calculate layer normal for i_bin
-        call globalnormal(simbox, pack(particles(1:n_particles), &
-        indices == i_bin), cutoff, p2, director)
+        if(n_bin_particles == 0) then        
+          write(smcpsi6unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 0._dp
+        else
+          !! Calculate layer normal for i_bin
+          call globalnormal(simbox, pack(particles(1:n_particles), &
+          indices == i_bin), cutoff, p2, director)
+        end if
       end if
 
       if (writelayerp2) then
-        !! Write the orientation parameter for layer normals.
-        write(layerp2unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') p2
+        if(n_bin_particles == 0) then    
+          write(layerp2unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 0._dp
+        else
+          !! Write the orientation parameter for layer normals.
+          write(layerp2unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') p2
+        end if
       end if
 
       if (writesmcpsi6) then
-        !! Calculate and write psi6 profile with respect to averaged layer 
-        !! normal for i_bin.
-        write(smcpsi6unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') &
-        psi6_bulk_masked(simbox, particles, (indices == i_bin), director) 
+        if(n_bin_particles == 0) then    
+          write(smcpsi6unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 0._dp
+        else
+          !! Calculate and write psi6 profile with respect to averaged layer 
+          !! normal for i_bin.
+          write(smcpsi6unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') &
+          psi6_bulk_masked(simbox, particles, (indices == i_bin), director) 
+        end if
       end if
 
       if (writesmctau1) then
-        !! Calculate and write smctau1 profile        
-        call tau1_routine(pack(particles(1:n_particles), indices == i_bin), &
-        real(director, sp), smctau1, layerdistance)
-        write(smctau1unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') smctau1
+        if(n_bin_particles == 0) then    
+          write(smctau1unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 0._dp
+        else
+          !! Calculate and write smctau1 profile        
+          call tau1_routine(pack(particles(1:n_particles), indices == i_bin), &
+          real(director, sp), smctau1, layerdistance)
+          write(smctau1unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') smctau1
+        end if
       end if
     
       if (writedensity) then
@@ -197,19 +228,26 @@ program cylhist
       end if
 
       if (writeorientation) then
-        !! Calculate and write orientation parameter profile
-        call orientation_parameter(pack(particles(1:n_particles), &
-        indices == i_bin), n_bin_particles, p2, director)
-        write(ounit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') p2 
+        if(n_bin_particles == 0) then    
+          write(ounit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 0._dp
+        else
+          !! Calculate and write orientation parameter profile
+          call orientation_parameter(pack(particles(1:n_particles), &
+          indices == i_bin), n_bin_particles, p2, director)
+          write(ounit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') p2 
+        end if
       end if
 
       if (writetau1) then
-        !! Calculate and write tau1 profile        
-        call tau1_routine(pack(particles(1:n_particles), indices == i_bin), &
-        real(director, sp), tau1, layerdistance)
-        write(tunit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') tau1
+        if(n_bin_particles == 0) then    
+          write(tunit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 0._dp
+        else
+          !! Calculate and write tau1 profile        
+          call tau1_routine(pack(particles(1:n_particles), indices == i_bin), &
+          real(director, sp), tau1, layerdistance)
+          write(tunit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') tau1
+        end if
       end if
-
 
     end do
 
@@ -236,7 +274,9 @@ program cylhist
     if (writedensity) then
       write(dunit, *) ''
     end if
+    write(nunit, *) ''
   end do
+
   call finalize
 
   contains
@@ -248,8 +288,8 @@ program cylhist
     integer, intent(in) :: binningdirection
     real(dp) :: binvolume
     if (binningdirection == -1) then
-      binvolume = 4._dp * atan(1._dp) * height * (maxr - real(i_bin-1, dp) * &
-      binwidth)**2 - (max(maxr - real(i_bin, dp) * binwidth, 0._dp)**2)    
+      binvolume = 4._dp * atan(1._dp) * height * ((maxr - real(i_bin-1, dp) * &
+      binwidth)**2 - max(maxr - real(i_bin, dp) * binwidth, 0._dp)**2)    
     else
       binvolume = 4._dp * atan(1._dp) * height * ((max(real(i_bin, dp) * &
       binwidth, maxr))**2 - (real(i_bin-1, dp) * binwidth)**2)    
@@ -282,7 +322,10 @@ program cylhist
     write_unit=fileunit_getfreeunit()
     open(write_unit, FILE = file_name, status = 'replace', &
       position = 'append', iostat = opened)
-    if(opened/=0) stop 'Opening of output file failed.'
+    if(opened/=0) then
+      write(*,*) 'Opening of file ', file_name, ' failed.'
+      stop 
+    end if
   end subroutine open_write_unit
 end program
 
