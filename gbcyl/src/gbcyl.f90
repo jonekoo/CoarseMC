@@ -5,6 +5,7 @@
 program gbcyl
   use mc_engine, only: init, run, finalize
   use mpi
+  use pt
   implicit none
   integer :: ierr
   integer :: id
@@ -18,8 +19,9 @@ program gbcyl
   call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
   do i=0, ntasks-1
     if (i == id) call init(id, ispt = .true.)
-    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    !call MPI_BARRIER(MPI_COMM_WORLD, ierr)
   end do
+  !call pt_test_particle_exchange
   call run 
   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
   call finalize(id)
