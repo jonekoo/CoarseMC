@@ -19,6 +19,7 @@ module pt
   public :: pt_adjusttemperature
   public :: pt_writeparameters
   public :: pt_resetcounters
+  public :: pt_test_particle_exchange
 
   interface pt_init
     module procedure pt_initinternal, pt_initwtparameterizer
@@ -48,8 +49,9 @@ subroutine pt_initinternal()
   integer :: ierr
   integer :: oldtypes(0:1)
   integer :: blockcounts(0:1)
-  integer :: offsets(0:1)
-  integer :: extent
+  integer(KIND=MPI_ADDRESS_KIND) :: offsets(0:1)
+  integer(KIND=MPI_ADDRESS_KIND) :: extent,lb
+  type(particledat) :: aparticle
   call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr) 
   if(mod(ntasks, 2) /= 0) then
     write(*,*) 'pt_init: This implementation of parallel tempering supports' &
@@ -65,29 +67,139 @@ subroutine pt_initinternal()
   !! :TODO: Make exchange of conf id:s working with restarts.
   if (confid < 0) confid = id
   !if (precision(nrdouble) == precision(somedouble) .and. range(nrdouble) == range(somedouble)) then
-    dptype = MPI_REAL8
-  !  write(*, *) 'dptype = ', dptype
-  !else if (precision(nrdouble) == precision(somereal) .and. range(nrdouble) == range(somereal)) then
-  !  dptype = MPI_REAL
-  !  write(*, *) 'dptype = ', dptype
-  !else
-  !  call MPI_TYPE_CREATE_F90_REAL(precision(nrdouble), range(nrdouble), dptype, ierr) 
-  !end if
-  !write(*, *) 'dptype = ', dptype
+  dptype = MPI_REAL8
   !! Create particle type 
   !! Set up description of the coordinate variables.
-  offsets(0) = 0 
-  oldtypes(0) = dptype 
+  call MPI_GET_ADDRESS(aparticle%x, offsets(0), ierr)
+  !offsets(0) =  
+  oldtypes(0) = MPI_REAL8 
   blockcounts(0) = 6
   !! Setup description of the logical rod variable
   !! Need to first figure offset by getting size of dptype 
-  call MPI_TYPE_EXTENT(dptype, extent, ierr) 
-  offsets(1) = 6 * extent 
-  oldtypes(1) = MPI_LOGICAL 
+  !call MPI_TYPE_GET_EXTENT(dptype, lb, extent, ierr) 
+  !if (ierr/=0) stop 'Error: MPI_TYPE_GET_EXTENT failed!!!'
+  call MPI_GET_ADDRESS(aparticle%rod, offsets(1), ierr)
+  offsets(1)=offsets(1)-offsets(0)
+  offsets(0)=0
+  !offsets(1) = 6 * extent 
+  oldtypes(1) = MPI_LOGICAL8 
   blockcounts(1) = 1 
   !! Now define structured type and commit it  
-  call MPI_TYPE_STRUCT(2, blockcounts, offsets, oldtypes, particletype, ierr) 
+  call MPI_TYPE_CREATE_STRUCT(2, blockcounts, offsets, oldtypes, particletype, ierr) 
+  if (ierr/=0) stop 'Error: Could not create struct for particletype!!!'
   call MPI_TYPE_COMMIT(particletype, ierr) 
+  if (ierr/=0) stop 'Error: Could not commit particletype'
+  call MPI_TYPE_GET_EXTENT(particletype, lb, extent, ierr)
+  !call MPI_TYPE_SIZE(particletype, particlesize, ierr)
+  !write(*,*)'Created datatype with extent and size ', extent, sizeof(aparticle)
+end subroutine
+
+subroutine setup_test(particles, id)
+  type(particledat), intent(inout) :: particles(2)
+  integer, intent(in) :: id
+  integer :: i
+  do i=1,2
+    particles(i)%rod=.true.
+  end do
+  if (mod(id,2)==0) then
+    particles(2)%rod=.false.
+  end if
+end subroutine
+
+subroutine pt_test_particle_exchange 
+  integer, parameter :: testtag=77
+  integer :: status(MPI_STATUS_SIZE)
+  integer :: ierr
+  integer :: id
+  type(particledat) :: particles(2)
+  integer, parameter :: n_lots=1000
+  type(particledat) :: lots_of_particles(n_lots)
+  type(particledat) :: particlebuffer(2)
+  integer :: id_other
+  call MPI_COMM_RANK(MPI_COMM_WORLD, id, ierr)
+  if (ierr/=0) write(*, *) 'mpi_comm_rank failed'
+  
+  if (mod(id,2)==0) then
+    id_other=id+1
+  else 
+    id_other=id-1
+  end if
+
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+  !! Test sending and receiving of particles
+  call setup_test(particles, id)
+
+  if (mod(id,2)==0) then
+      call MPI_SEND(particles(2), 1, particletype, id_other, testtag, MPI_COMM_WORLD, ierr)
+  else
+    call MPI_RECV(particles(2), 1, particletype, id_other, testtag, MPI_COMM_WORLD, status, ierr) 
+  end if
+  if (mod(id,2)==1 .and. particles(2)%rod) then
+    write(*,*) 'MPI_SEND(aparticle) + MPI_RECV(aparticle) failed'
+  end if
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+
+
+
+  !! Test sending and receiving an array of particles with the regular 
+  !! MPI_SEND and MPI_RECV
+  call setup_test(particles, id)
+
+  if (mod(id,2)==0) then
+      call MPI_SEND(particles, 2, particletype,id_other, testtag, MPI_COMM_WORLD, ierr)
+  else
+    call MPI_RECV(particles, 2, particletype, id_other, testtag, MPI_COMM_WORLD, status, ierr) 
+  end if
+  if (mod(id,2)==1 .and. particles(2)%rod) then
+    write(*,*) 'MPI_SEND(particles) + MPI_RECV(particles) failed'
+  end if
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+
+
+
+  !! Test sending and receiving an array of particles with MPI_SENDRECV
+  call setup_test(particles, id)
+  particlebuffer=particles
+  call MPI_SENDRECV(particlebuffer, 2, particletype,id_other, testtag,&
+    & particles, 2, particletype,id_other, testtag, MPI_COMM_WORLD, status,&
+    & ierr)
+  if (mod(id,2)==1 .and. particles(2)%rod) then
+    write(*,*) 'MPI_SENDRECV(particles) failed'
+  end if
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+
+
+
+  !! Test sending and receiving an array of particles with MPI_SENDRECV_REPLACE
+  call setup_test(particles, id)
+  call mpi_sendrecv_replace(particles, 2, particletype, &
+      & id_other, testtag, id_other, testtag, MPI_COMM_WORLD, status,&
+      & ierr)
+  if (ierr/=0) then
+    write(*, *) id, 'MPI_SENDRECV_REPLACE(particles) ierr=', ierr
+  end if
+
+  if (mod(id,2)==1 .and. particles(2)%rod) then
+    write(*,*) 'MPI_SENDRECV_REPLACE(particles) failed'
+  !else if(mod(id,2)==1) then
+  !  write(*, *) 'MPI_SENDRECV_REPLACE(particles) succeeded'
+  end if
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+
+  !! Test sending and receiving an large array of particles with 
+  !! MPI_SENDRECV_REPLACE
+  call setup_test(lots_of_particles(1:2), id)
+  write(*, *) 'sizeof(lots_of_particles)=',sizeof(lots_of_particles)
+  call mpi_sendrecv_replace(lots_of_particles, n_lots, particletype, &
+      & id_other, testtag, id_other, testtag, MPI_COMM_WORLD, status,&
+      & ierr)
+  if (ierr/=0) then
+    write(*, *) id, 'MPI_SENDRECV_REPLACE(lots_of_particles) ierr=', ierr
+  end if
+
+  if (mod(id,2)==1 .and. particles(2)%rod) then
+    write(*,*) 'MPI_SENDRECV_REPLACE(lots_of_particles) failed'
+  end if
 end subroutine
 
 !! Initializes this module using a parameterizer object to get the parameters
@@ -250,10 +362,12 @@ subroutine pt_exchange(destid, beta, energy, particles, nparticles, &
   msg(6) = getz(simbox)
   msg(7) = real(confid, dp)
   call mpi_sendrecv_replace(msg(1:msgsize), msgsize, dptype, destid, &
-    firsttag, destid, firsttag, MPI_COMM_WORLD, status, ierr)   
-  call mpi_sendrecv_replace(particles(1:nparticles), nparticles, &
-    particletype, destid, secondtag, destid, secondtag, MPI_COMM_WORLD, &
-    status, ierr)    
+    & firsttag, destid, firsttag, MPI_COMM_WORLD, status, ierr)   
+  if (ierr /= 0) then
+    stop 'pt: first mpi_sendrecv_replace failed' 
+  !else
+  !  write(*, *) 'pt: first mpi_sendrecv_replace succeeded'
+  end if
   beta = msg(1)
   energy = msg(2)
   rand = msg(3) 
@@ -261,6 +375,15 @@ subroutine pt_exchange(destid, beta, energy, particles, nparticles, &
   call sety(simbox, msg(5))
   call setz(simbox, msg(6))
   confid = int(msg(7) + 0.5_dp)
+
+  call mpi_sendrecv_replace(particles, nparticles, &
+    & particletype, destid, secondtag, destid, secondtag, MPI_COMM_WORLD, &
+    & status, ierr)    
+  if (ierr /= 0) then 
+    write(*,*) 'pt: second mpi_sendrecv_replace failed with', destid
+  !else
+  !  write(*, *) 'pt: second mpi_sendrecv_replace succeeded'
+  end if
 end subroutine
 
 !! Returns the number of accepted pt exchange moves between thisid and
