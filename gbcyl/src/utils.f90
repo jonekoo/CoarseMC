@@ -180,7 +180,7 @@ pure function crossproduct(a, b) result(c)
   c(3) = a(1) * b(2) - a(2) * b(1)
 end function
 
-!! Returns a formatting character for the default integer type. To be used when
+!> Returns a formatting character for the default integer type. To be used when
 !! consistent formatting for integer output is needed.
 !! 
 pure function fmt_char_int() result(format_char)
@@ -193,7 +193,7 @@ pure function fmt_char_int() result(format_char)
   format_char = trim(adjustl(format_char))
 end function
 
-!! Returns a formatting character for a double precision real number. To be 
+!> Returns a formatting character for a double precision real number. To be 
 !! used when consistent formatting of real numbers is needed. 
 !!
 pure function fmt_char_dp() result(format_char)
