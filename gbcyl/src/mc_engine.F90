@@ -6,7 +6,7 @@ use class_factory
 use mt_stream
 use particle, only: particledat, initParticle, particle_writeparameters
 use class_poly_box
-use openmpsweep, only: ompsweep => sweep, ompsweep_init, ompsweep_writeparameters
+!use openmpsweep, only: ompsweep => sweep, ompsweep_init, ompsweep_writeparameters
 use mc_sweep, only: mc_sweep_init => init, updatemaxvalues, sweep, &
 mc_sweep_writeparameters, resetcounters, gettemperature, settemperature 
 use pt
@@ -70,7 +70,7 @@ integer, save :: coordinateunit
 character(len = 9), save :: idchar
 !! The (MPI) id of this process formatted to a character.
 
-logical :: isopenmp = .false.
+!logical :: isopenmp = .false.
 type(mt_state), save :: mts
 type(mt_state), save :: mts_new
 
@@ -147,7 +147,7 @@ subroutine mce_init(id, ispt)
   call getparameter(parameterreader, 'move_adjusting_period', &
   moveadjustperiod)
   call getparameter(parameterreader, 'pt_adjusting_period', ptadjustperiod)
-  call getparameter(parameterreader, 'isopenmp', isopenmp)
+!  call getparameter(parameterreader, 'isopenmp', isopenmp)
   call getparameter(parameterreader, 'restartperiod', restartperiod)
 
   !! Read geometry
@@ -164,11 +164,11 @@ subroutine mce_init(id, ispt)
   close(coordinateunit)
 
   !! Initialize modules. 
-  if (isopenmp) then 
-    call ompsweep_init(parameterreader, simbox, particles)
-  else
+!  if (isopenmp) then 
+!    call ompsweep_init(parameterreader, simbox, particles)
+!  else
     call mc_sweep_init(parameterreader, simbox, particles)
-  end if
+!  end if
   call initparticle(parameterreader)
   if (ispt) call pt_init(parameterreader)
   call delete(parameterreader)
@@ -199,14 +199,14 @@ subroutine mce_writeparameters(writer)
   call writeparameter(writer, 'production_period', productionperiod)
   call writeparameter(writer, 'move_adjusting_period', moveadjustperiod)
   call writeparameter(writer, 'pt_adjusting_period', ptadjustperiod)
-  call writeparameter(writer, 'isopenmp', isopenmp)
+!  call writeparameter(writer, 'isopenmp', isopenmp)
   call writeparameter(writer, 'restartperiod', restartperiod)
   call writeparameter(writer, 'seed', seed)
-  if (isopenmp) then
-    call ompsweep_writeparameters(writer)
-  else
+!  if (isopenmp) then
+!    call ompsweep_writeparameters(writer)
+!  else
     call mc_sweep_writeparameters(writer)
-  end if
+!  end if
   call particle_writeparameters(writer)
   call pt_writeparameters(writer)
 end subroutine
@@ -232,11 +232,11 @@ end subroutine
 subroutine run
   do while (isweep < nequilibrationsweeps + nproductionsweeps)
     isweep = isweep + 1
-    if (isopenmp) then 
-      call ompsweep(simbox, particles, mts)
-    else
+!    if (isopenmp) then 
+!      call ompsweep(simbox, particles, mts)
+!    else
       call sweep(simbox, particles, mts)
-    end if
+!    end if
     if (isweep <= nequilibrationsweeps) then
       call runequilibrationtasks
     end if
