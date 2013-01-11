@@ -137,23 +137,6 @@ module mc_sweep
     call update(nbrlist, simbox, particles)
     call potentialenergy(simbox, particles, nbrlist, etotal, overlap)
     if(overlap) then 
-      do i=1, size(particles)
-        call potentialenergy(simbox, particles, nbrlist, i, etotal, overlap)
-        if (overlap) write(*, *) i, ' overlaps another particle'
-      end do
-      write(*, *) particles(1666)
-      write(*, *) particles(1607)
-      write(*, *) gb_r(orientation(particles(1666)), &
-      & orientation(particles(1607)), &
-      & minimage(simbox, position(particles(1666))-position(particles(1607))))
-      write(*,*) 'ix=',particles(1666)%x/getx(simbox)+0.5_dp
-      write(*,*) 'iy=',particles(1666)%y/gety(simbox)+0.5_dp
-      write(*,*) 'iz=',particles(1666)%z/getz(simbox)+0.5_dp
-
-      write(*,*) 'ix=',particles(1607)%x/getx(simbox)+0.5_dp
-      write(*,*) 'iy=',particles(1607)%y/gety(simbox)+0.5_dp
-      write(*,*) 'iz=',particles(1607)%z/getz(simbox)+0.5_dp
-
       stop 'Overlap when initializing mc_sweep! Stopping.'
     end if
   end subroutine 
