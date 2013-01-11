@@ -19,7 +19,9 @@ module gayberne
   public :: d_potential
   public :: gb_R
   public :: g_potential
-
+  public :: chisigma, chiepsilon
+  public :: gblj_potential
+ 
   !! Parameters of the Gay-Berne potential. Documentation:
   !! @see Luckhurst & et.al J.Chem.Phys, Vol. 110, No. 14
   !!
@@ -29,10 +31,19 @@ module gayberne
   real(dp), save :: nu            = 1._dp
   real(dp), save :: sigma0       = 1._dp
   real(dp), save :: epsilon0     = 1._dp
+
+
   !! Parameters below are derived from parameters above.
   real(dp), save :: chiepsilon
   real(dp), save :: chisigma
   real(dp), save :: chisigmasquared
+
+  !! Defines when the particles "overlap"
+  real(dp), parameter :: hardcore = 0.6_dp
+
+  !! Parameters for the GB-LJ interaction:
+  real(dp), save :: gblj_epsilon_0 = 1._dp
+  real(dp), save :: gblj_sigma_0 = 1._dp
 
   interface potential
     module procedure potentials
@@ -57,6 +68,8 @@ module gayberne
     call getparameter(reader, 'gb_nu', nu)
     call getparameter(reader, 'gb_sigma_0', sigma0)
     call getparameter(reader, 'gb_epsilon_0', epsilon0)
+    call getparameter(reader, 'gblj_epsilon_0', gblj_epsilon_0)
+    call getparameter(reader, 'gblj_sigma_0', gblj_sigma_0)
     chiepsilon = &
       (kappaepsilon**(1._dp / mu) - 1._dp) / &
       (kappaepsilon**(1._dp / mu)+ 1._dp)
@@ -112,6 +125,8 @@ module gayberne
     call writeparameter(writer, 'gb_nu', nu)
     call writeparameter(writer, 'gb_sigma_0', sigma0)
     call writeparameter(writer, 'gb_epsilon_0', epsilon0)    
+    call writeparameter(writer, 'gblj_epsilon_0', gblj_epsilon_0)
+    call writeparameter(writer, 'gblj_sigma_0', gblj_sigma_0)
   end subroutine
 
   !! Calculates the Gay-Berne potential for two particles 
@@ -127,7 +142,6 @@ module gayberne
     real(dp), intent(out) :: gbV
     logical, intent(out) :: ovrlp
     real(dp) :: rgb, gb6
-    real(dp), parameter :: hardcore = 0.6_dp
     real(dp), dimension(3) :: urij
     gbV = 0._dp
     ovrlp = .false.
@@ -403,6 +417,30 @@ end function
       d_anisotropic_ids(ui, uj, urij, chisigma)*g_ids(ui, urij, rijabs) + &
       d_anisotropic_ids(uj, ui, urij, chisigma)*g_ids(uj, urij, rijabs))
   end function
+
+
+  !! Calculates the interaction energy of a GB particle (i) and a Lennard-Jones
+  !! particle (j)
+  pure subroutine gblj_potential(ui, rij, energy, overlap)
+    real(dp), intent(in) :: ui(3), rij(3)
+    real(dp), intent(out) :: energy
+    logical, intent(out) :: overlap
+    real(dp) :: rijabs, urij(3), sigma, epsilon, R
+    rijabs = sqrt(dot_product(rij, rij))
+    urij = rij/rijabs
+    sigma = gblj_sigma_0 / sqrt(1 - chisigma * dot_product(ui, urij)**2)
+    epsilon = gblj_epsilon_0 * (1 - chiepsilon * dot_product(ui, urij)**2)
+    R = (rijabs - sigma + gblj_sigma_0) / gblj_sigma_0
+    if (hardcore > R) then 
+      overlap = .true.
+      energy = 0._dp
+    else
+      overlap = .false.
+      energy = 4 * epsilon * R**(-6) * (R**(-6) - 1)
+    end if
+  end subroutine
+
+
 
 end module
 

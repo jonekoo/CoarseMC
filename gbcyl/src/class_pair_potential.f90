@@ -1,6 +1,7 @@
 module class_pair_potential
 use nrtype
 use gayberne
+use lj, only: lj_potential, lj_init, lj_writeparameters
 use particle
 use class_poly_box
 use class_parameterizer
@@ -37,6 +38,7 @@ subroutine pp_initwith(reader)
   type(parameterizer), intent(in) :: reader
   call getparameter(reader, 'r_cutoff', rcutoff)
   call gayberne_init(reader)
+  call lj_init(reader)
 end subroutine
 
 subroutine pp_initvalue(cutoff)
@@ -54,6 +56,7 @@ subroutine pp_writeparameters(writer)
   type(parameter_writer), intent(in) :: writer
   call writeparameter(writer, 'r_cutoff', rcutoff)
   call gb_writeparameters(writer)
+  call lj_writeparameters(writer)
 end subroutine
 
 elemental function cutoff() result(r)
@@ -96,7 +99,16 @@ elemental subroutine pairv(particlei, particlej, simbox, potE, overlap)
     uj(1)=particlej%ux
     uj(2)=particlej%uy
     uj(3)=particlej%uz
-    call potential(ui, uj, rij, potE, overlap)  
+    if (particlei%rod .and. particlej%rod) then
+      call potential(ui, uj, rij, potE, overlap)
+    else if (particlei%rod) then
+      call gblj_potential(ui, rij, potE, overlap)
+    else if (particlej%rod) then
+      call gblj_potential(uj, -rij, potE, overlap)
+    else
+      potE = lj_potential(sqrt(dot_product(rij, rij)))
+      overlap = .false.
+    end if
   else
     potE = 0._dp
     overlap = .false.
