@@ -14,9 +14,8 @@ module particle
 
   public :: particledat
   public :: initparticle
-  public :: new_particle
   public :: createparticle
-  public :: binwrite
+!  public :: binwrite
   public :: write
   public :: read
   public :: position
@@ -53,7 +52,7 @@ module particle
 
   real(dp), save :: dthetamax = -1._dp
   real(dp), save :: maxdr = -1._dp
-  character(len = *), parameter :: typeid = 'gb'
+  !!character(len = *), parameter :: typeid = 'gb' 
 
   interface read
     module procedure readparticle
@@ -63,9 +62,9 @@ module particle
     module procedure writeparticle
   end interface
 
-  interface binwrite
-    module procedure binwriteparticle
-  end interface
+!  interface binwrite
+!    module procedure binwriteparticle
+!  end interface
 
   !! Generic interface for initialization of the module..
   !! 
@@ -121,17 +120,7 @@ module particle
     call writeparameter(writer, 'max_rotation', dthetamax)    
   end subroutine
 
-  function new_particle()
-    type(particledat) :: new_particle
-    new_particle%x = 0._dp
-    new_particle%y = 0._dp
-    new_particle%z = 0._dp
-    new_particle%ux = 0._dp
-    new_particle%uy = 0._dp
-    new_particle%uz = 1._dp
-    new_particle%rod = .true.
-  end function
-
+  !! Currently not in use!!!
   function createparticle(particlestring) result(pp)
     type(particledat) :: pp
     character(len = *), intent(in) :: particlestring
@@ -140,6 +129,9 @@ module particle
     if ('gb' == typeid) then
       read(particlestring, *) typeid, pp%x, pp%y, pp%z, pp%ux, pp%uy, pp%uz
       pp%rod = .true.
+    else if ('lj' == typeid) then
+      read(particlestring, *) typeid, pp%x, pp%y, pp%z
+      pp%rod = .false.
     else
       stop 'Error: Could not read particle from string. Stopping.'
     end if
@@ -148,28 +140,40 @@ module particle
   subroutine writeparticle(writeunit, aparticle)
     integer, intent(in) :: writeunit
     type(particledat), intent(in) :: aparticle
+    character(len = 2) :: typeid
+    if (aparticle%rod) then
+       typeid = 'gb'
+    else 
+       typeid = 'lj'
+    end if
     write(writeunit, '(A,1X,6(' // fmt_char_dp() // ',1X))', advance='no') &
     typeid, aparticle%x, aparticle%y, aparticle%z, aparticle%ux, &
     aparticle%uy, aparticle%uz 
   end subroutine
 
-  subroutine binwriteparticle(writeunit, aparticle)
-    integer, intent(in) :: writeunit
-    type(particledat), intent(in) :: aparticle
-    write(writeunit) &
-    typeid, aparticle%x, aparticle%y, aparticle%z, aparticle%ux, &
-    aparticle%uy, aparticle%uz 
-  end subroutine
+  !subroutine binwriteparticle(writeunit, aparticle)
+  !  integer, intent(in) :: writeunit
+  !  type(particledat), intent(in) :: aparticle
+  !  write(writeunit) &
+  !  typeid, aparticle%x, aparticle%y, aparticle%z, aparticle%ux, &
+  !  aparticle%uy, aparticle%uz 
+  !end subroutine
 
   subroutine readparticle(readunit, aparticle, ios)
     type(particledat), intent(out) :: aparticle
     integer, intent(in) :: readunit
     integer, intent(out) :: ios
-    character(len = len(typeid)) :: temp
+    character(len = 2) :: temp
     read(readunit, fmt=*, iostat=ios) &
     temp, aparticle%x, aparticle%y, aparticle%z, aparticle%ux, &
     aparticle%uy, aparticle%uz 
-    if (temp /= typeid) ios = 999
+    if (temp == 'gb') then
+      aparticle%rod = .true.
+    else if (temp == 'lj') then 
+      aparticle%rod = .false. 
+    else
+      ios = 999
+    end if
     if (ios /= 0) backspace readunit
   end subroutine
 
@@ -231,24 +235,6 @@ module particle
     zn = zo + (2._dp * rng(genstate) - 1._dp) * max1d
   end subroutine
 
-  !Palauttaa partikkelin orientaatiovektorin komponentit
-  !sylinterikoordinaatistossa. 
-  !subroutine unitvec(aparticle, uro, utheta, uz)
-  !  intrinsic atan2
-  !  type(particledat), intent(in) :: aparticle
-  !  real(dp), intent(out) :: uro,utheta,uz
-  !  real(dp) :: nx, ny, nz, uxn, uyn, uzn, theta
-  !  theta = -atan2(aparticle%y, aparticle%x)
-  !  nx = 0.0_dp
-  !  ny = 0.0_dp
-  !  nz = 1.0_dp
-  !  call xvec2(aparticle%ux, aparticle%uy, aparticle%uz, nx, ny, nz, theta, &
-  !    uxn, uyn, uzn)
-  !  uro = uxn
-  !  utheta = uyn
-  !  uz = uzn
-  !end subroutine
-    
   subroutine rotate(uxo, uyo, uzo, uxn, uyn, uzn, genstate)
     real(dp), intent(in) :: uxo,uyo,uzo
     real(dp), intent(out) :: uxn,uyn,uzn
