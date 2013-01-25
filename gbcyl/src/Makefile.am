@@ -371,7 +371,6 @@ model_src = \
   gayberne.f90 \
   ljcylinder.f90 \
   particlewall.f90 \
-  lj.f90 \
   class_pair_potential.f90 \
   verlet.f90 \
   all_pairs.f90 \
