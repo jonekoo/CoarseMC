@@ -25,9 +25,10 @@ bin_PROGRAMS = \
   virialpressure \
   doublezsize \
   onwallpressure \
-  celllist_prof \
   cyltoshells \
-  cyljackknife
+  1Ddf \
+  remove_every_2nd\
+  test_mpi_types
 
 ## Scripts to install
 dist_bin_SCRIPTS = \
@@ -56,7 +57,7 @@ dist_bin_SCRIPTS = \
 
 ## Listings of source files needed by programs
 
-ldadd_mtstream = ${top_builddir}/mt_stream_f90-1.11/libmt_stream.a
+ldadd_mtstream = ${top_builddir}/mt_stream_f90-1.11/libmt_stream.la
 
 AM_FCFLAGS = -I${top_builddir}/mt_stream_f90-1.11 -I${top_builddir}/mt_stream_f90-1.11/f_jump_ahead_coeff
 mt_stream_test_LDADD = $(ldadd_mtstream)
@@ -75,6 +76,17 @@ orientation_parameter_SOURCES = \
   jacobiwrapper.f90 \
   orientational_ordering.f90 \
   orientation_parameter.f90
+
+remove_every_2nd_SOURCES = \
+  ${nr_src} \
+  utils.f90 \
+  m_fileunit.f90 \
+  rng.inc mtfort90.f90  \
+  ${model_src} \
+  class_factory.f90 \
+  remove_every_2nd.f90
+
+remove_every_2nd_LDADD = $(ldadd_mtstream)
 
 cylindrical_orientation_SOURCES = \
   ${nr_src} \
@@ -138,6 +150,16 @@ radial_distribution_SOURCES = \
   radial_distribution.f90 \
   gr3d.f90
 
+1Ddf_SOURCES = \
+  ${nr_src} \
+  utils.f90 \
+  m_fileunit.f90 \
+  rng.inc mtfort90.f90  \
+  ${model_src} \
+  class_factory.f90 \
+  distribution.f90 \
+  1Ddf.f90
+
 weighted_rdf_SOURCES = \
   ${nr_src} \
   utils.f90 \
@@ -190,28 +212,8 @@ cylhist_SOURCES = \
   layernormal.f90 \
   class_factory.f90 \
   bin_indices.f90 \
+  distribution.f90 \
   cylhist.f90 \
-  jacobi.f90 
-                            
-cyljackknife_SOURCES = \
-  ${nr_src} \
-  utils.f90 \
-  m_fileunit.f90 \
-  rng.inc mtfort90.f90  \
-  ${model_src} \
-  state_reader.f90 \
-  histogram.f90 \
-  jacobiwrapper.f90 \
-  orientational_ordering.f90 \
-  simplemin.f90 \
-  tau1_negative.f90 \
-  tau1_module.f90 \
-  xfunc_module.f90 \
-  psi6_module.f90 \
-  layernormal.f90 \
-  class_factory.f90 \
-  bin_indices.f90 \
-  cyljackknife.f90 \
   jacobi.f90 
                             
 cyltoshells_SOURCES = \
@@ -294,12 +296,12 @@ psi6_LDADD = ${ldadd_mtstream}
 povanimator_LDADD = ${ldadd_mtstream}
 smcpsi6_LDADD = ${ldadd_mtstream}
 cylhist_LDADD = ${ldadd_mtstream}
-cyljackknife_LDADD = ${ldadd_mtstream}
 cyltoshells_LDADD = ${ldadd_mtstream}
 printgbgb_LDADD = ${ldadd_mtstream}
 printljcylinder_LDADD = ${ldadd_mtstream}
 configurationconverter_LDADD = ${ldadd_mtstream}
 cylindrical_layerorientation_LDADD = ${ldadd_mtstream}
+1Ddf_LDADD=${ldadd_mtstream}
 
 printljcylinder_SOURCES = \
   ${nr_src} \
@@ -355,7 +357,6 @@ hellompi_SOURCES = \
 
 #tracer_SOURCES = \
   ${common_src} \
-  cell_energy.f90 \
   class_geometryreader.f90 \
   class_particlesystem.f90 \
   class_nptintegral.f90 \
@@ -366,15 +367,15 @@ model_src = \
   class_parameter_writer.f90 \
   particle.f90 \
   class_poly_box.f90 \
+  lj.f90 \
   gayberne.f90 \
-  cell.f90 \
   ljcylinder.f90 \
   particlewall.f90 \
+  lj.f90 \
   class_pair_potential.f90 \
   verlet.f90 \
   all_pairs.f90 \
-  class_nbrcelliterator.f90 \
-  cell_energy.f90 \
+  cell.f90 \
   class_simplelist.f90 \
   class_poly_nbrlist.f90 \
   energy.f90 \
@@ -392,7 +393,6 @@ parallel_src = \
   mpi.f90 \
   pt.f90 \
   mc_sweep.f90 \
-  openmpsweep.f90 \
   mc_engine.f90 
 
 pressurezz_SOURCES = \
@@ -428,6 +428,17 @@ ptgbcyl_SOURCES = \
 
 ptgbcyl_LDADD = ${ldadd_mtstream}
 
+test_mpi_types_SOURCES = \
+  nrtype.f90\
+  utils.f90 \
+  m_fileunit.f90 \
+  class_parameterizer.f90 \
+  class_parameter_writer.f90 \
+  particle.f90 \
+  test_mpi_types.f90 
+
+test_mpi_types_LDADD = ${ldadd_mtstream}
+
 testrunner_SOURCES = \
   nrtype.f90 \
   m_fileunit.f90 \
@@ -447,7 +458,7 @@ testrunner_SOURCES = \
   testrunner.f90 
 
 driver_SOURCES = \
-  VectorOperations.F90 \
+  Vectoroperations.F90 \
   nrtype.f90 \
   m_fileunit.f90 \
   class_parameterizer.f90 \
@@ -458,22 +469,12 @@ driver_SOURCES = \
   gayberne_pfunit.f90 \
   particle.f90 \
   class_poly_box.f90 \
+  cell.f90\
   class_simplelist.f90 \
   class_simplelist_pfunit.f90 \
-  cell.f90 \
-  class_nbrcelliterator.f90 \
-  cell_energy.f90 \
-  cell_energy_pfunit.f90 \
   tests.F90 \
   driver.F90  
 
-celllist_prof_SOURCES =\
-  ${common_src} \
-  class_factory.f90 \
-  celllist_prof.f90 
-
-celllist_prof_LDADD = ${ldadd_mtstream}
-celllist_prof_FCFLAGS = ${FCFLAGS} -I${top_builddir}/mt_stream_f90-1.11 
 PFUNIT_DIR=/Users/jounikarjalainen/pFUnit
 
 driver_FCFLAGS = ${FCFLAGS} -I${PFUNIT_DIR}/mod  -I${top_builddir}/mt_stream_f90-1.11
@@ -509,13 +510,11 @@ check_PROGRAMS = testrunner driver #test_gayberne test_particle #TestRunner
 #  testutils.f90 \
 #  class_parameterizer_fun.f90 \
 #  verlet_fun.f90 \
-#  cell_energy_fun.f90 \
 #  class_cylformatter_fun.f90 \
 #  particle_fun.f90 \
 #  box_fun.f90 \
 #  mtmod_fun.f90 \
 #  gayberne_fun.f90 \
-#  cell_fun.f90 \
 #  cylinder_fun.f90 \
 #  pt_fun.f90 \
 #  class_nbrcelliterator_fun.f90 \
