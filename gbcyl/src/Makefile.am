@@ -24,8 +24,7 @@ bin_PROGRAMS = \
   doublezsize \
   onwallpressure \
   1Ddf \
-  remove_every_2nd\
-  test_mpi_types
+  remove_every_2nd
 
 ## Scripts to install
 dist_bin_SCRIPTS = \
@@ -58,7 +57,7 @@ ldadd_mtstream = ${top_builddir}/mt_stream_f90-1.11/libmt_stream.la
 
 AM_FCFLAGS = -I${top_builddir}/mt_stream_f90-1.11 -I${top_builddir}/mt_stream_f90-1.11/f_jump_ahead_coeff
 
-nr_src = nrtype.f90 nrutils.f90 
+nr_src = nrtype.f90 nrutil.f90 nr.f90 rf_s.f90 rd_s.f90 brent.f90 pythag.f90 tqli.f90 tred2.f90 jacobi.f90
 
 orientation_parameter_SOURCES = \
   ${nr_src} \
@@ -67,7 +66,6 @@ orientation_parameter_SOURCES = \
   m_fileunit.f90 \
   ${model_src} \
   class_factory.f90 \
-  jacobi.f90 \
   jacobiwrapper.f90 \
   orientational_ordering.f90 \
   orientation_parameter.f90
@@ -89,7 +87,6 @@ cylindrical_orientation_SOURCES = \
   m_fileunit.f90 \
   rng.inc mtfort90.f90  \
   ${model_src} \
-  jacobi.f90 \
   jacobiwrapper.f90 \
   orientational_ordering.f90 \
   cylindrical_orientation.f90 \
@@ -102,7 +99,6 @@ cylindrical_layerorientation_SOURCES = \
   m_fileunit.f90 \
   rng.inc mtfort90.f90  \
   ${model_src} \
-  jacobi.f90 \
   jacobiwrapper.f90 \
   orientational_ordering.f90 \
   layernormal.f90 \
@@ -121,7 +117,6 @@ povanimator_SOURCES = \
   povanimation.f90
 
 tau1_SOURCES = \
-  jacobi.f90 \
   ${nr_src} \
   simplemin.f90 \
   m_fileunit.f90 \
@@ -164,8 +159,7 @@ weighted_rdf_SOURCES = \
   class_factory.f90 \
   layernormal.f90 \
   gr3dweighted.f90 \
-  weighted_rdf.f90 \
-  jacobi.f90 
+  weighted_rdf.f90 
 
 density_SOURCES = \
   ${nr_src} \
@@ -186,8 +180,7 @@ psi6_SOURCES = \
   psi6_module.f90 \
   jacobiwrapper.f90 \
   orientational_ordering.f90 \
-  psi6.f90 \
-  jacobi.f90 
+  psi6.f90 
 
 cylhist_SOURCES = \
   ${nr_src} \
@@ -208,9 +201,8 @@ cylhist_SOURCES = \
   class_factory.f90 \
   bin_indices.f90 \
   distribution.f90 \
-  cylhist.f90 \
-  jacobi.f90 
-                            
+  cylhist.f90 
+
 smctau1_SOURCES = \
   ${nr_src} \
   rng.inc mtfort90.f90  \
@@ -221,15 +213,10 @@ smctau1_SOURCES = \
   tau1_negative.f90 \
   tau1_module.f90 \
   layernormal.f90 \
-  pythag.f90 \
-  jacobi.f90 \
-  tred2.f90 \
-  tqli.f90 \
   class_factory.f90 \
   smctau1.f90
 
 smcpsi6_SOURCES = \
-  jacobi.f90 \
   ${nr_src} \
   rng.inc mtfort90.f90  \
   utils.f90 \
@@ -237,9 +224,6 @@ smcpsi6_SOURCES = \
   ${model_src} \
   simplemin.f90 \
   psi6_module.f90 \
-  pythag.f90 \
-  tred2.f90 \
-  tqli.f90 \
   layernormal.f90 \
   class_factory.f90 \
   smcpsi6.f90
@@ -394,17 +378,6 @@ ptgbcyl_SOURCES = \
   gbcyl.f90 
 
 ptgbcyl_LDADD = ${ldadd_mtstream}
-
-test_mpi_types_SOURCES = \
-  nrtype.f90\
-  utils.f90 \
-  m_fileunit.f90 \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
-  particle.f90 \
-  test_mpi_types.f90 
-
-test_mpi_types_LDADD = ${ldadd_mtstream}
 
 testrunner_SOURCES = \
   nrtype.f90 \
