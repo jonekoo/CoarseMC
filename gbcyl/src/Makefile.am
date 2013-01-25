@@ -18,7 +18,6 @@ bin_PROGRAMS = \
   printgbgb \
   printljcylinder \
   configurationconverter \
-  hellompi \
   cylindrical_layerorientation \
   mt_stream_test \
   pressurezz \
