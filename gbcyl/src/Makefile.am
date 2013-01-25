@@ -351,10 +351,6 @@ doublezsize_SOURCES = \
   class_factory.f90 \
   doublezsize.f90
 
-hellompi_SOURCES = \
-  mpi.f90 \
-  hellompi.f90
-
 #tracer_SOURCES = \
   ${common_src} \
   class_geometryreader.f90 \
