@@ -58,6 +58,8 @@ ldadd_mtstream = ${top_builddir}/mt_stream_f90-1.11/libmt_stream.la
 
 AM_FCFLAGS = -I${top_builddir}/mt_stream_f90-1.11 -I${top_builddir}/mt_stream_f90-1.11/f_jump_ahead_coeff
 
+nr_src = nrtype.f90 nrutils.f90 
+
 orientation_parameter_SOURCES = \
   ${nr_src} \
   rng.inc mtfort90.f90  \
