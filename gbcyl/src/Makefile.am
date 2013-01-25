@@ -58,7 +58,6 @@ dist_bin_SCRIPTS = \
 ldadd_mtstream = ${top_builddir}/mt_stream_f90-1.11/libmt_stream.la
 
 AM_FCFLAGS = -I${top_builddir}/mt_stream_f90-1.11 -I${top_builddir}/mt_stream_f90-1.11/f_jump_ahead_coeff
-mt_stream_test_LDADD = $(ldadd_mtstream)
 
 orientation_parameter_SOURCES = \
   ${nr_src} \
