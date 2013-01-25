@@ -31,17 +31,9 @@ dist_bin_SCRIPTS = \
   rdf_average.sh \
   loop-script-over-args.sh \
   remove-non-numeric-lines.sh \
-  density_cyl.awk \
   show-non-numeric-lines.sh \
-  select.awk \
-  periodic_select.awk \
-  volume_cyl.awk \
   find_closest.awk \
-  dots2commas.sh \
-  every-xth-field.awk \
   pipe-columns.awk \
-  pt.sh \
-  createinput.sh \
   makerestart.sh \
   replaceparameter.py \
   slowcool.py
