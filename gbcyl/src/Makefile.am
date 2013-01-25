@@ -23,7 +23,6 @@ bin_PROGRAMS = \
   virialpressure \
   doublezsize \
   onwallpressure \
-  cyltoshells \
   1Ddf \
   remove_every_2nd\
   test_mpi_types
@@ -210,28 +209,6 @@ cylhist_SOURCES = \
   cylhist.f90 \
   jacobi.f90 
                             
-cyltoshells_SOURCES = \
-  ${nr_src} \
-  utils.f90 \
-  m_fileunit.f90 \
-  rng.inc mtfort90.f90  \
-  ${model_src} \
-  histogram.f90 \
-  xfunc_module.f90 \
-  class_factory.f90 \
-  bin_indices.f90 \
-  cyltoshells.f90 
-                            
-nr_src = \
-  nrtype.f90 \
-  nrutil.f90 \
-  brent.f90 \
-  rf_s.f90 \
-  rf_v.f90 \
-  rd_s.f90 \
-  rd_v.f90 \
-  nr.f90 
-
 smctau1_SOURCES = \
   ${nr_src} \
   rng.inc mtfort90.f90  \
@@ -290,7 +267,6 @@ psi6_LDADD = ${ldadd_mtstream}
 povanimator_LDADD = ${ldadd_mtstream}
 smcpsi6_LDADD = ${ldadd_mtstream}
 cylhist_LDADD = ${ldadd_mtstream}
-cyltoshells_LDADD = ${ldadd_mtstream}
 printgbgb_LDADD = ${ldadd_mtstream}
 printljcylinder_LDADD = ${ldadd_mtstream}
 configurationconverter_LDADD = ${ldadd_mtstream}
