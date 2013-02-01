@@ -25,8 +25,8 @@ program psi6
     if (io_status < 0) then
       exit
     else
-      call orientation_parameter(particles, size(particles), value, direction)
-      write(*,'(5(' // fmt_char_dp() //',1X))') psi6_bulk(simbox, particles, direction), value, direction
+      call orientation_parameter(pack(particles, particles%rod), count(particles%rod), value, direction)
+      write(*,'(5(' // fmt_char_dp() //',1X))') psi6_bulk(simbox, pack(particles, particles%rod), direction), value, direction
     end if
   end do
   if(associated(particles)) deallocate(particles)

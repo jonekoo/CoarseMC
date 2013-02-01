@@ -30,7 +30,7 @@ program analysis
     else
       !call orientation_parameter(particles, size(particles), p2, director)
       !write(*, '( 4('// fmt_char_dp() //',1X))') p2, director
-      call eigens(particles, size(particles), values, vectors)
+      call eigens(pack(particles, particles%rod), count(particles%rod), values, vectors)
       write(*, '(12('//fmt_char_dp()//',1X))') values(1:3), vectors(1:3, 1), vectors(1:3, 2), vectors(1:3, 3) 
     end if
   end do

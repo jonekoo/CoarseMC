@@ -56,8 +56,8 @@ do
   !if (.not. allocated(localnormals)) allocate(localnormals(nparticles, 3))
   !simbox = new_cylinder(rcyl, lz)
   cutoff = 2._dp * sigma0
-  call globalnormal(simbox, particles, cutoff, p2, direction)
-  call tau1_routine(particles, real(direction, sp), tau1_value, layerdistance)
+  call globalnormal(simbox, pack(particles, particles%rod), cutoff, p2, direction)
+  call tau1_routine(pack(particles, particles%rod), real(direction, sp), tau1_value, layerdistance)
   write(*, '(6('//fmt_char_dp()//',1X))') tau1_value, layerdistance, p2, direction
 end do
 

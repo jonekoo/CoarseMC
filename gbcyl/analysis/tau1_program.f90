@@ -25,8 +25,8 @@ program tau1
     if (io_status < 0) then
       exit
     else
-      call orientation_parameter(particles, size(particles), P2, direction)
-      call tau1_routine(particles, real(direction, sp), value, layer_distance)
+      call orientation_parameter(pack(particles, particles%rod), count(particles%rod), P2, direction)
+      call tau1_routine(pack(particles, particles%rod), real(direction, sp), value, layer_distance)
       write(*, '(6(' // fmt_char_dp() // ',1X))') value, layer_distance, p2, direction
     end if
   end do

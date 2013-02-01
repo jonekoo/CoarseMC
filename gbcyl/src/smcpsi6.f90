@@ -37,8 +37,8 @@ do
   !call readstate(cf, simbox, particles, io_status)
   call readstate(afactory, stdin, simbox, particles, io_status)
   if (io_status < 0) exit
-  call globalnormal(simbox, particles, cutoff, p2, direction)
-  write(*,'(5('// fmt_char_dp() // ',1X))') psi6_bulk(simbox, particles, direction), p2, direction
+  call globalnormal(simbox, pack(particles, particles%rod), cutoff, p2, direction)
+  write(*,'(5('// fmt_char_dp() // ',1X))') psi6_bulk(simbox, pack(particles, particles%rod), direction), p2, direction
 end do
 
 end program
