@@ -25,7 +25,7 @@ program analysis
     if (io_status < 0) then
       exit
     else
-      call orientation_parameter(particles, size(particles), p2, director)
+      call orientation_parameter(pack(particles, particles%rod), count(particles%rod), p2, director)
       write(*, '( 4('// fmt_char_dp() //',1X))') p2, director
     end if
   end do
