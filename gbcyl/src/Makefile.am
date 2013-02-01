@@ -3,7 +3,6 @@ bin_PROGRAMS = \
   ptgbcyl \
   printpotentials \
   createbox \
-  smctau1 \
   orientation_parameter \
   cylindrical_orientation \
   tau1 \
