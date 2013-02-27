@@ -69,7 +69,7 @@ module mc_sweep
   real(dp), save :: smallestrotation = 0.157_dp  !! 1/10 largest rotation
   real(dp), save :: ptlow
   real(dp), save :: pthigh
-  integer, save :: ptratio = -1
+  integer, save :: ptratio = 1
   integer, save :: volratio = -1
   integer, save :: radialratio = -1
   real(dp), save :: etotal = 0._dp
@@ -102,7 +102,6 @@ module mc_sweep
     type(particledat), dimension(:), intent(in) :: particles
     type(poly_nbrlist), target, intent(inout), optional :: nbrs
     logical :: overlap
-    integer :: i
     call energy_init(reader)
     call getparameter(reader, 'scaling_type', scalingtype)
     call parsescalingtype(scalingtype)
@@ -215,10 +214,11 @@ module mc_sweep
   !! coordinates.
   !! @param particles the array of particles.
   !!  
-  subroutine sweep(simbox, particles, genstate)    
+  subroutine sweep(simbox, particles, genstate, isweep)    
     type(particledat), dimension(:), intent(inout) :: particles
     type(poly_box), intent(inout) :: simbox
     type(rngstate), intent(inout) :: genstate
+    integer, intent(in) :: isweep
     integer :: i
     logical :: overlap
     integer :: irss
@@ -241,13 +241,13 @@ module mc_sweep
           call movevol(simbox, particles, scalingtypes(ivolmove), genstate)
         end do
       end if
-      if (mod(i, ptratio) == 0) then
-        call makeptmove(simbox, particles, genstate)
-      end if 
       if (mod(i, radialratio) == 0) then
         call radialscaling(simbox, particles, genstate)
       end if
     end do
+    if (mod(isweep, ptratio) == 0) then
+      call makeptmove(simbox, particles, genstate)
+    end if 
     currentvolume = volume(simbox)
   end subroutine 
 

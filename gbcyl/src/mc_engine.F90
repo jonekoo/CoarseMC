@@ -235,7 +235,7 @@ subroutine run
 !    if (isopenmp) then 
 !      call ompsweep(simbox, particles, mts)
 !    else
-      call sweep(simbox, particles, mts)
+      call sweep(simbox, particles, mts, isweep)
 !    end if
     if (isweep <= nequilibrationsweeps) then
       call runequilibrationtasks
