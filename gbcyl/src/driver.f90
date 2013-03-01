@@ -5,13 +5,6 @@ program main
    use class_simplelist_pfunit
    implicit none
 
-   external testZeroVectors
-   external testSameVector
-   external testOrthogonalVectors
-   external testFailOnPurpose
-
-  
-   type (TestSuite_type) :: suite
    type (TestSuite_type) :: gayberne_suite
    type (TestSuite_type) :: class_simplelist_suite
    type (TestResult_type) :: result
@@ -20,13 +13,9 @@ program main
    call pFUnit_init()
 
 ! Build suite from test procedures:
-   suite = TestSuite('vector tests')
    gayberne_suite = TestSuite('Gay-Berne potential tests')
    class_simplelist_suite = TestSuite('Simple cell list tests')
 
-   call add(suite, TestCase1Step('testZeroVectors', testZeroVectors))
-   call add(suite, TestCase1Step('testSameVector', testSameVector))
-   call add(suite, TestCase1Step('testOrthogonalVectors', testOrthogonalVectors))
    call add(gayberne_suite, TestCase1Step('Calculate potential at cross contact', test_zero_at_cross_contact))
    call add(gayberne_suite, TestCase1Step('Check kappa for sigma', test_kappa_sigma_defined))
    call add(gayberne_suite, TestCase1Step('Check kappa for epsilon', test_kappa_epsilon_defined))
@@ -42,12 +31,6 @@ program main
 
 ! Run the tests and accumulate the results in "result"
    result = newTestResult(mode=MODE_USE_STDOUT)
-   call Run(suite, result)
-   summary_statement=Summary(result)
-   print*,trim(summary_statement)
-
-   call clean(suite)
-
    call Run(gayberne_suite, result)
    summary_statement=Summary(result)
    print*,trim(summary_statement)

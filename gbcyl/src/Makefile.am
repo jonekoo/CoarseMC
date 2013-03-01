@@ -23,7 +23,8 @@ bin_PROGRAMS = \
   doublezsize \
   onwallpressure \
   1Ddf \
-  remove_every_2nd
+  remove_every_2nd \
+  ljgb_rdf
 
 ## Scripts to install
 dist_bin_SCRIPTS = \
@@ -130,6 +131,16 @@ radial_distribution_SOURCES = \
   class_factory.f90 \
   radial_distribution.f90 \
   gr3d.f90
+
+ljgb_rdf_SOURCES = \
+  ${nr_src} \
+  utils.f90 \
+  m_fileunit.f90 \
+  rng.inc mtfort90.f90  \
+  ${model_src} \
+  class_factory.f90 \
+  ljgb_rdf.f90 \
+  gr3d_2.f90
 
 1Ddf_SOURCES = \
   ${nr_src} \
@@ -238,6 +249,7 @@ orientation_parameter_LDADD = ${ldadd_mtstream}
 cylindrical_orientation_LDADD = ${ldadd_mtstream}
 tau1_LDADD = ${ldadd_mtstream}
 radial_distribution_LDADD = ${ldadd_mtstream}
+ljgb_rdf_LDADD = ${ldadd_mtstream}
 weighted_rdf_LDADD = ${ldadd_mtstream}
 density_LDADD = ${ldadd_mtstream}
 psi6_LDADD = ${ldadd_mtstream}
@@ -389,7 +401,6 @@ testrunner_SOURCES = \
   testrunner.f90 
 
 driver_SOURCES = \
-  Vectoroperations.F90 \
   nrtype.f90 \
   m_fileunit.f90 \
   class_parameterizer.f90 \
@@ -403,10 +414,9 @@ driver_SOURCES = \
   cell.f90\
   class_simplelist.f90 \
   class_simplelist_pfunit.f90 \
-  tests.F90 \
   driver.F90  
 
-PFUNIT_DIR=/Users/jounikarjalainen/pFUnit
+PFUNIT_DIR=${top_builddir}/pFUnit
 
 driver_FCFLAGS = ${FCFLAGS} -I${PFUNIT_DIR}/mod  -I${top_builddir}/mt_stream_f90-1.11
 driver_LDADD = ${PFUNIT_DIR}/lib/libpfunit.a ${ldadd_mtstream}
