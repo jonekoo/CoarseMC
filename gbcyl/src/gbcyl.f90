@@ -2,11 +2,10 @@
 !! Its purpose is just to call the necessary routines from the simulation 
 !! engine which should be exchangeable.
 !!
-!! lopojee cvs testi
 program gbcyl
   use mc_engine, only: init, run, finalize
   use mpi
-  use pt
+  !!use pt
   implicit none
   integer :: ierr
   integer :: id
@@ -19,10 +18,8 @@ program gbcyl
   call mpi_comm_rank(MPI_COMM_WORLD, id, ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
   do i=0, ntasks-1
-    if (i == id) call init(id, ispt = .true.)
-    !call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    if (i == id) call init(id, ntasks)
   end do
-  !call pt_test_particle_exchange
   call run 
   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
   call finalize(id)
