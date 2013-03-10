@@ -6,13 +6,13 @@ use class_factory
 use mt_stream
 use particle, only: particledat, initParticle, particle_writeparameters
 use class_poly_box
-!use openmpsweep, only: ompsweep => sweep, ompsweep_init, ompsweep_writeparameters
 use mc_sweep, only: mc_sweep_init => init, updatemaxvalues, sweep, &
 mc_sweep_writeparameters, resetcounters, gettemperature, settemperature 
 use pt
 use m_fileunit
 use class_parameterizer
 use class_parameter_writer
+!$ use omp_lib
 implicit none
 private
 
@@ -71,7 +71,7 @@ character(len = 9), save :: idchar
 !! The (MPI) id of this process formatted to a character.
 
 !logical :: isopenmp = .false.
-type(mt_state), save :: mts
+type(mt_state), allocatable, save :: mts(:)
 type(mt_state), save :: mts_new
 
 integer, save :: seed = 123456
@@ -87,9 +87,9 @@ contains
 !! @p the process id for an MPI process.
 !! @p ispt True if a parallel tempering simulation is initialized.
 !!
-subroutine mce_init(id, ispt)
-  integer, intent(in) :: id 
-  logical, intent(in) :: ispt
+subroutine mce_init(id, n_tasks)
+  integer, intent(in) :: id
+  integer, intent(in) :: n_tasks 
   logical :: isrestart 
   character(len = 50) :: statefile 
   integer :: ios
@@ -102,6 +102,8 @@ subroutine mce_init(id, ispt)
   !! restart.
 
   type(parameterizer) :: parameterreader
+  integer :: thread_id = 0, n_threads = 1
+
   write(idchar, '(I9)') id 
   idchar = trim(adjustl(idchar))
   isrestart = .false.
@@ -119,24 +121,39 @@ subroutine mce_init(id, ispt)
   !! For mt_stream use
   open(unit = rngunit, file = trim(adjustl(rngfile)), &
   action = 'READ', status = 'OLD', form = 'UNFORMATTED', iostat = ios)
+  allocate(mts(0:0))
   call set_mt19937
-  call new(mts)
+  call new(mts(thread_id))
   if(0 /= ios) then
     write(*, *) 'Warning: Could not open ' // trim(rngfile) // &
     ' for reading!'
     call getparameter(parameterreader, 'seed', seed)
     !call sgrnd(seed + id)
-    call init(mts, seed)
-    if (id > 0) then 
-      call create_stream(mts, mts_new, id)
-      mts = mts_new
-    end if
-    !write(*, *) 'first random is:', genrand_double1(mts)
+    call init(mts(thread_id), seed)
   else
     !call mtget(rngunit, 'f')
-    call read(mts, rngunit)
-    close(rngunit)
+    call read(mts(thread_id), rngunit)
+    close(rngunit)    
   end if
+
+  !$OMP PARALLEL
+  !$ n_threads = omp_get_num_threads()
+  !$ write(*, *) 'Running with ', n_threads, ' threads.'
+  !$OMP END PARALLEL
+  !$ mts_new = mts(0)
+  !$ if (allocated(mts)) deallocate(mts)
+  !$ allocate(mts(0:n_threads-1))
+  !! Give different random number streams to each OpenMP thread inside a MPI task
+
+  !$ mts(0) = mts_new
+  !! The structure below will probably make a mess of the streams read from files.
+  !$ do thread_id = 1, n_threads-1
+    if (id + n_tasks * thread_id > 0) then 
+      call create_stream(mts_new, mts(thread_id), id + n_tasks * thread_id)
+      write(*, *) 
+    end if
+  !$ end do
+
   call getparameter(parameterreader, 'n_equilibration_sweeps', &
   nequilibrationsweeps)
   call getparameter(parameterreader, 'n_production_sweeps', &
@@ -170,7 +187,6 @@ subroutine mce_init(id, ispt)
     call mc_sweep_init(parameterreader, simbox, particles)
 !  end if
   call initparticle(parameterreader)
-  if (ispt) call pt_init(parameterreader)
   call delete(parameterreader)
  
   !! Open output for geometries
@@ -208,7 +224,6 @@ subroutine mce_writeparameters(writer)
     call mc_sweep_writeparameters(writer)
 !  end if
   call particle_writeparameters(writer)
-  call pt_writeparameters(writer)
 end subroutine
 
 !> Finalizes the simulation.
@@ -299,7 +314,7 @@ subroutine makerestartpoint
     write(*, *) 'makerestartpoint: Warning: Failed opening ', rngfile
   else
     !call mtsave(rngunit, 'f')
-    call save(mts, rngunit)
+    call save(mts(0), rngunit)
     close(rngunit)
   end if
 end subroutine
