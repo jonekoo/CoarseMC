@@ -208,7 +208,7 @@ end subroutine
 !! @p reader the object which reads the parameters. 
 !! 
 subroutine pt_initwtparameterizer(reader)
-  type(parameterizer), intent(inout) :: reader
+  type(parameterizer), intent(in) :: reader
   call getparameter(reader, 'confid', confid)
   call getparameter(reader, 'idirection', idirection)
   call getparameter(reader, 'nacceptedup', nacceptedup)
@@ -303,7 +303,6 @@ subroutine pt_move(beta, energy, particles, nparticles, simbox, genstate, isacce
   call pt_exchange(destid, betan, energyn, particlesn, nparticlesn, &
     simboxn, randn, confidn)
   if (mod(id, 2) == 1) rand = randn
-  !! :TODO: Check validity of expression below
   if(exp((beta - betan) * (energy - energyn)) > rand ) then
     energy = energyn
     particles(1:nparticles) = particlesn(1:nparticles)
