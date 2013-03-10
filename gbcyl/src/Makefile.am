@@ -24,7 +24,9 @@ bin_PROGRAMS = \
   onwallpressure \
   1Ddf \
   remove_every_2nd \
+  test_simplelist_with_openmp \
   ljgb_rdf
+
 
 ## Scripts to install
 dist_bin_SCRIPTS = \
@@ -374,6 +376,10 @@ onwallpressure_SOURCES = \
 
 virialpressure_LDADD = ${ldadd_mtstream}
 
+test_simplelist_with_openmp_SOURCES = \
+  ${common_src} \
+  test_simplelist_with_openmp.f90
+
 ptgbcyl_SOURCES = \
   ${common_src} \
   class_factory.f90 \
@@ -423,6 +429,8 @@ driver_LDADD = ${PFUNIT_DIR}/lib/libpfunit.a ${ldadd_mtstream}
 
 testrunner_FCFLAGS = ${FCFLAGS} -I${top_builddir}/ftnunit -I${top_builddir}/mt_stream_f90-1.11
 testrunner_LDADD = ${top_builddir}/ftnunit/libftnunit.a ${ldadd_mtstream}
+
+test_simplelist_with_openmp_LDADD = ${ldadd_mtstream}
 
 #ftnunit_TESTS=testrunner
 #ftnunit_TESTS_ENVIRONMENT=sh ${top_srcdir}/ftnunit/runtests.sh
