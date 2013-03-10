@@ -17,6 +17,7 @@ public :: simplelist_writeparameters
 public :: update
 public :: nbrmask
 public :: simplelist
+public :: simplelist_allocate
 
 real(dp), save :: this_minlength = 7.5_dp
 logical, save :: this_iseven = .false.
