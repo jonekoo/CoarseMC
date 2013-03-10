@@ -246,7 +246,7 @@ module mc_sweep
     !  call radialscaling(simbox, particles, genstate)
     !end if
     if (mod(isweep, ptratio) == 0) then
-      call makeptmove(simbox, particles, genstates(0:))
+      call makeptmove(simbox, particles, genstates(0))
     end if 
     currentvolume = volume(simbox)
   end subroutine 
