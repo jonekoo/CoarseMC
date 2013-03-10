@@ -2,8 +2,6 @@
 !! provide neighbourlists. 
 module class_poly_nbrlist
   use verlet
-  !use cell_energy
-  !use cell
   use class_simplelist
   use particle
   use nrtype
@@ -27,9 +25,8 @@ module class_poly_nbrlist
   character(len = 80), save :: nbrlisttype = 'stublist'
 
   type poly_nbrlist
-    private
+    !private
     type(verletlist), pointer :: vl => NULL()
-    !type(list), pointer :: cl => NULL()
     type(simplelist), pointer :: sl => NULL()
   end type
 
@@ -58,8 +55,6 @@ contains
 subroutine pnl_init(parameterreader)
   type(parameterizer), intent(in) :: parameterreader
   call getparameter(parameterreader, 'nbrlisttype', nbrlisttype)
-!  if (nbrlisttype == 'celllist') then
-!    call cell_energy_init(parameterreader)
   if (nbrlisttype == 'verletlist') then
     call verlet_init(parameterreader)
   else if (nbrlisttype == 'simplelist') then
@@ -72,7 +67,6 @@ subroutine pnl_writeparameters(writer)
   type(parameter_writer), intent(in) :: writer
   call writeparameter(writer, 'nbrlisttype', nbrlisttype)
   if (nbrlisttype == 'verletlist') call verlet_writeparameters(writer)
-!  if (nbrlisttype == 'celllist') call cell_energy_writeparameters(writer)
   if (nbrlisttype == 'simplelist') call simplelist_writeparameters(writer)
   call pp_writeparameters(writer)
 end subroutine
@@ -83,8 +77,6 @@ function create_nbrlist(simbox, particles) result(polylist)
   type(poly_nbrlist) :: polylist
   if (nbrlisttype == 'verletlist') then
     polylist = new_verletlist(simbox, particles)
-!  else if (nbrlisttype == 'celllist') then
-!    polylist = new_celllist(simbox, particles)
   else if (nbrlisttype == 'simplelist') then
     polylist = new_simplelist(simbox, particles)
   else 
@@ -92,14 +84,6 @@ function create_nbrlist(simbox, particles) result(polylist)
     write(*, *) 'Calculating all pair interactions.'
   end if
 end function
-
-!subroutine assigncl(polylist, cl)
-!  type(poly_nbrlist), intent(inout) :: polylist 
-!  type(list), intent(in) :: cl
-!  call delete(polylist)
-!  allocate(polylist%cl)
-!  polylist%cl = cl
-!end subroutine
 
 subroutine assignvl(polylist, vl)
   type(poly_nbrlist), intent(inout) :: polylist 
@@ -122,8 +106,6 @@ subroutine assignpoly(polylist, another)
   type(poly_nbrlist), intent(in) :: another
   if (associated(another%vl)) then
     polylist = another%vl
-  !else if (associated(another%cl)) then
-  !  polylist = another%cl
   else if (associated(another%sl)) then
     polylist = another%sl
   end if   
@@ -147,7 +129,7 @@ subroutine pnl_totalpairinteractions(polylist, simbox, particles, energy, overla
   end do
 end subroutine
 
-pure subroutine maskedinteractions(mask, simbox, particles, i, energy, overlap)
+subroutine maskedinteractions(mask, simbox, particles, i, energy, overlap)
   logical, dimension(:), intent(in) :: mask
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
@@ -156,17 +138,49 @@ pure subroutine maskedinteractions(mask, simbox, particles, i, energy, overlap)
   logical, intent(out) :: overlap
   integer :: j
   real(dp) :: pairenergy
+  logical :: overlap_ij
+  overlap = .false.
   energy = 0._dp
-  !$OMP DO DEFAULT(shared) PRIVATE(j, pairenergy), REDUCTION(+:energy, .OR. overlap)
+  !$OMP PARALLEL
+  !$OMP DO PRIVATE(overlap_ij, pairenergy) REDUCTION(+ : energy) REDUCTION(.or. : overlap)
   do j=1, size(particles)
     if(mask(j)) then
-      call pairv(particles(i), particles(j), simbox, pairenergy, overlap)
-      if (overlap) exit
+      call pairv(particles(i), particles(j), simbox, pairenergy, overlap_ij)
+      overlap = overlap .or. overlap_ij
       energy = energy + pairenergy
     end if
   end do
-  !$OMP END DO 
+  !$OMP END DO
+  !$OMP END PARALLEL
 end subroutine
+
+!! Calculate interactions between particles and particle_i
+!! 
+!! @p particlei must not belong to particles!
+subroutine interactions(simbox, particles, particle_i, energy, overlap)
+  type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:), intent(in) :: particles
+  type(particledat), intent(in) :: particle_i
+  real(dp), intent(out) :: energy
+  logical, intent(out) :: overlap
+  integer :: j
+  real(dp) :: pairenergy
+  logical :: overlap_ij
+  overlap = .false.
+  energy = 0._dp
+  !$OMP PARALLEL
+  !$OMP DO PRIVATE(overlap_ij, pairenergy) REDUCTION(+ : energy) REDUCTION(.or. : overlap)
+  do j=1, size(particles)
+    call pairv(particle_i, particles(j), simbox, pairenergy, overlap_ij)
+    overlap = overlap .or. overlap_ij
+    energy = energy + pairenergy
+  end do
+  !$OMP END DO
+  !$OMP END PARALLEL
+end subroutine
+
+
+
 
 subroutine pnl_pairinteractions(polylist, simbox, particles, i, energy, overlap)
   type(poly_nbrlist), intent(in) :: polylist
@@ -184,8 +198,6 @@ function pnl_nbrmask(polylist, simbox, particles, i) result(mask)
   type(particledat), dimension(:), intent(in) :: particles
   integer, intent(in) :: i
   logical, dimension(size(particles)) :: mask
-!  if (associated(polylist%cl)) then
-!    mask = nbrmask(polylist%cl, simbox, particles, i)
   if(associated(polylist%vl)) then
     mask = nbrmask(polylist%vl, size(particles), i)
   else if(associated(polylist%sl)) then
@@ -200,8 +212,6 @@ subroutine pnl_update(polylist, simbox, particles)
   type(poly_nbrlist), intent(inout) :: polylist
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
-!  if (associated(polylist%cl)) then
-!    call update(polylist%cl, simbox, particles)
   if (associated(polylist%vl)) then
     call update(polylist%vl, simbox, particles)
   else if (associated(polylist%sl)) then
@@ -214,8 +224,6 @@ subroutine pnl_updatei(polylist, simbox, particles, i)
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
   integer, intent(in) :: i
-  !if (associated(polylist%cl)) then
-  !  call update(polylist%cl, simbox, particles, i)
   if (associated(polylist%vl)) then
     call update(polylist%vl, simbox, particles, i)
   else if (associated(polylist%sl)) then
@@ -226,14 +234,11 @@ end subroutine
 
 subroutine pnl_delete(polylist)
   type(poly_nbrlist), intent(inout) :: polylist
-  !if (associated(polylist%cl)) then
-  !  call delete(polylist%cl)
   if (associated(polylist%vl)) then
     call delete(polylist%vl)
   else if (associated(polylist%sl)) then
     call delete(polylist%sl)
   end if
-  !nullify(polylist%cl)
   nullify(polylist%vl)
   nullify(polylist%sl)
 end subroutine
