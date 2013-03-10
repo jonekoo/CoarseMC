@@ -11,6 +11,8 @@ module mc_sweep
   use genvoltrial
   use utils 
   use gayberne
+  !$ use omp_lib
+  !$ use class_simplelist
   include 'rng.inc'
   implicit none  
   private 
@@ -138,6 +140,7 @@ module mc_sweep
     if(overlap) then 
       stop 'Overlap when initializing mc_sweep! Stopping.'
     end if
+    if (ptratio > 0) call pt_init(reader)
   end subroutine 
 
   !> Checks and parses the scalingtype string to the scalingtypes array. 
@@ -201,6 +204,7 @@ module mc_sweep
     call writeparameter(writer, 'total_energy', etotal)
     call pnl_writeparameters(writer)
     call energy_writeparameters(writer)
+    call pt_writeparameters(writer)
 !    call genvoltrial_writeparameters(writer)
   end subroutine
 
@@ -214,10 +218,10 @@ module mc_sweep
   !! coordinates.
   !! @param particles the array of particles.
   !!  
-  subroutine sweep(simbox, particles, genstate, isweep)    
+  subroutine sweep(simbox, particles, genstates, isweep)    
     type(particledat), dimension(:), intent(inout) :: particles
     type(poly_box), intent(inout) :: simbox
-    type(rngstate), intent(inout) :: genstate
+    type(rngstate), intent(inout) :: genstates(0:)
     integer, intent(in) :: isweep
     integer :: i
     logical :: overlap
@@ -226,30 +230,75 @@ module mc_sweep
     !! If the volratio parameter is not given, make volume move once a sweep.
     if (volratio < 1) volratio = size(particles) ! == once per sweep
     if (radialratio < 1) radialratio = 2*size(particles) ! == never
-    if (ptratio < 1) ptratio = size(particles) ! == once per sweep
+    !if (ptratio < 1) ptratio = size(particles) ! == once per sweep
     !! Particle selected for Random Sequential Skipping:
-    irss = int(rng(genstate) * real(size(particles), dp)) + 1
+    irss = int(rng(genstates(0)) * real(size(particles), dp)) + 1
     call update(nbrlist, simbox, particles)
     call potentialenergy(simbox, particles, nbrlist, etotal, overlap)
     if(overlap) then 
       stop 'Overlap when entering sweep! Stopping.'
     end if
-    do i = 1, size(particles)
-      if (i /= irss) call moveparticle(simbox, particles, i, genstate)
-      if (mod(i, volratio) == 0) then
-        do ivolmove = 1, size(scalingtypes)
-          call movevol(simbox, particles, scalingtypes(ivolmove), genstate)
-        end do
-      end if
-      if (mod(i, radialratio) == 0) then
-        call radialscaling(simbox, particles, genstate)
-      end if
+    call make_particle_moves(simbox, particles, genstates)
+    do ivolmove = 1, size(scalingtypes)
+      call movevol(simbox, particles, scalingtypes(ivolmove), genstates(0))
     end do
+    !if (mod(i, radialratio) == 0) then
+    !  call radialscaling(simbox, particles, genstate)
+    !end if
     if (mod(isweep, ptratio) == 0) then
-      call makeptmove(simbox, particles, genstate)
+      call makeptmove(simbox, particles, genstates(0:))
     end if 
     currentvolume = volume(simbox)
   end subroutine 
+
+  subroutine make_particle_moves(simbox, particles, genstates)
+    type(poly_box), intent(in) :: simbox
+    type(particledat), intent(inout) :: particles(:)
+    type(rngstate), intent(inout) :: genstates(0:)
+    integer, allocatable :: indices(:, :)
+    integer :: i, thread_id = 0
+    !$ integer :: j, ix, iy, iz
+    !$ type(simplelist), pointer :: sl
+
+    !! Use domain decomposition if OpenMP parallelization is available:
+    !$ if (associated(nbrlist%sl)) then
+      !! :TODO: Find out if parallel random number generation is a problem.
+      !! :TODO: put OpenMP pragmas here to parallelize the loop below.
+      sl=>nbrlist%sl
+      !! The allocation below is needed only when the nbrlist has been updated.
+      !! Could be optimized.
+      !!$ if (allocated(indices)) deallocate(indices)
+      !$ allocate(indices(maxval(sl%counts), max(sl%nx/2, 1) * max(sl%ny/2, 1) * max(sl%nz/2, 1))) 
+
+      !! Loop over cells. This can be thought of as looping through a 2 x 2 x 2 cube
+      !! of cells.
+      !$ do ix=0, min(1, sl%nx-1)
+      !$ do iy=0, min(1, sl%ny-1)
+      !$ do iz=0, min(1, sl%nz-1)
+        !$ indices = reshape(sl%indices(:, ix:sl%nx-1:2, iy:sl%ny-1:2, iz:sl%nz-1:2), (/size(indices(:,1)), size(indices(1,:))/))
+        !$OMP PARALLEL
+        !$ thread_id = omp_get_thread_num()
+        !$ if (size(genstates) /= omp_get_num_threads()) write(*,*) size(genstates), omp_get_num_threads()
+        !$OMP DO 
+        !$ do i = 1, size(indices(1,:))
+          !!write(*, *) "thread:", thread_id, ix, iy, iz, pack(indices(:,i), indices(:,i) > 0)
+          !$ do j = 1, size(pack(indices(:,i), indices(:,i) > 0))
+            !$ call moveparticle(simbox, particles, indices(j,i), genstates(thread_id))
+          !$ end do
+        !$ end do
+        !$OMP END DO
+        !$OMP END PARALLEL
+      !$ end do 
+      !$ end do
+      !$ end do
+
+    !$ else 
+      !! Use regular looping if no OpenMP or no cell list.
+      do i = 1, size(particles)
+        call moveparticle(simbox, particles, i, genstates(thread_id))
+      end do
+    !$ end if
+  end subroutine
 
   !> Makes one parallel tempering trial move. This is a convenience routine
   !! to enhance readability of code. 
