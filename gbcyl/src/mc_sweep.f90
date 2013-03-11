@@ -258,30 +258,27 @@ module mc_sweep
     integer, allocatable :: indices(:, :)
     integer :: i, thread_id = 0
     !$ integer :: j, ix, iy, iz
-    !$ type(simplelist), pointer :: sl
-
-    !! Use domain decomposition if OpenMP parallelization is available:
+    !! Use domain decomposition if OpenMP parallelization and cell list are available:
     !$ if (associated(nbrlist%sl)) then
       !! :TODO: Find out if parallel random number generation is a problem.
       !! :TODO: put OpenMP pragmas here to parallelize the loop below.
-      sl=>nbrlist%sl
       !! The allocation below is needed only when the nbrlist has been updated.
       !! Could be optimized.
-      !!$ if (allocated(indices)) deallocate(indices)
-      !$ allocate(indices(maxval(sl%counts), max(sl%nx/2, 1) * max(sl%ny/2, 1) * max(sl%nz/2, 1))) 
+      !$ allocate(indices(maxval(nbrlist%sl%counts), max(nbrlist%sl%nx/2, 1) * max(nbrlist%sl%ny/2, 1) * max(nbrlist%sl%nz/2, 1))) 
 
       !! Loop over cells. This can be thought of as looping through a 2 x 2 x 2 cube
       !! of cells.
-      !$ do ix=0, min(1, sl%nx-1)
-      !$ do iy=0, min(1, sl%ny-1)
-      !$ do iz=0, min(1, sl%nz-1)
-        !$ indices = reshape(sl%indices(:, ix:sl%nx-1:2, iy:sl%ny-1:2, iz:sl%nz-1:2), (/size(indices(:,1)), size(indices(1,:))/))
+      !$ do ix=0, min(1, nbrlist%sl%nx-1)
+      !$ do iy=0, min(1, nbrlist%sl%ny-1)
+      !$ do iz=0, min(1, nbrlist%sl%nz-1)
+        !$ indices = reshape(nbrlist%sl%indices(:, &
+        !$   & ix:nbrlist%sl%nx-1:2, iy:nbrlist%sl%ny-1:2, iz:nbrlist%sl%nz-1:2),&
+        !$   &  (/size(indices(:,1)), size(indices(1,:))/))
         !$OMP PARALLEL
         !$ thread_id = omp_get_thread_num()
         !$ if (size(genstates) /= omp_get_num_threads()) write(*,*) size(genstates), omp_get_num_threads()
         !$OMP DO 
         !$ do i = 1, size(indices(1,:))
-          !!write(*, *) "thread:", thread_id, ix, iy, iz, pack(indices(:,i), indices(:,i) > 0)
           !$ do j = 1, size(pack(indices(:,i), indices(:,i) > 0))
             !$ call moveparticle(simbox, particles, indices(j,i), genstates(thread_id))
           !$ end do
@@ -291,8 +288,10 @@ module mc_sweep
       !$ end do 
       !$ end do
       !$ end do
+      !$ deallocate(indices)
 
     !$ else 
+      !$ write(*, *) 'Warning! Using regular looping although OpenMP is available'
       !! Use regular looping if no OpenMP or no cell list.
       do i = 1, size(particles)
         call moveparticle(simbox, particles, i, genstates(thread_id))
