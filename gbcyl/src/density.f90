@@ -10,7 +10,7 @@ program analysis
   use nrtype, only: dp
   use particle, only : particledat
   implicit none
-  type(particledat), dimension(:), pointer :: particles
+  type(particledat), allocatable :: particles(:)
   integer :: io_status
   type(poly_box) :: simbox
   integer, parameter :: stdin = 5
@@ -23,7 +23,6 @@ program analysis
       write(*,*) real(size(particles), dp)/volume(simbox)
     end if
   end do
-  if(associated(particles)) deallocate(particles)
 end program analysis
 
 

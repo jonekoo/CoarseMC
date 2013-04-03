@@ -10,7 +10,7 @@ program remove_every_2nd
   use particle, only : particledat
   use class_poly_box
   implicit none
-  type(particledat), dimension(:), pointer :: particles
+  type(particledat), allocatable :: particles(:)
   integer :: io_status
   integer, parameter :: stdin = 5
   integer, parameter :: stdout = 6
@@ -27,7 +27,6 @@ program remove_every_2nd
     end if
     i=i+1
   end do
-  if(associated(particles)) deallocate(particles)
 end program
 
 

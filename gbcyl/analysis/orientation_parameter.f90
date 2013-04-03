@@ -13,7 +13,7 @@ program analysis
   use orientational_ordering
   implicit none
   !real(dp) :: radius, height
-  type(particledat), dimension(:), pointer :: particles
+  type(particledat), allocatable :: particles(:)
   integer :: io_status
   integer, parameter :: stdin = 5
   type(factory) :: afactory
@@ -29,7 +29,6 @@ program analysis
       write(*, '( 4('// fmt_char_dp() //',1X))') p2, director
     end if
   end do
-  if(associated(particles)) deallocate(particles)
 end program analysis
 
 

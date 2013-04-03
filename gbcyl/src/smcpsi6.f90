@@ -20,7 +20,7 @@ use psi6_module
 implicit none
 
 real(dp), parameter :: sigma0 = 1._dp 
-type(particledat), dimension(:), pointer :: particles
+type(particledat), allocatable :: particles(:)
 real(dp) :: cutoff
 integer :: io_status
 !type(cylformatter) :: cf

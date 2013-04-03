@@ -11,7 +11,7 @@ program tau1
   use utils
   use class_factory
   implicit none
-  type(particledat), dimension(:), pointer :: particles
+  type(particledat), allocatable :: particles(:)
   integer :: io_status
   real(sp) :: value
   real(sp) :: layer_distance
@@ -30,5 +30,4 @@ program tau1
       write(*, '(6(' // fmt_char_dp() // ',1X))') value, layer_distance, p2, direction
     end if
   end do
-  if(associated(particles)) deallocate(particles)
 end program 

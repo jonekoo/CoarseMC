@@ -44,7 +44,7 @@ program cylhist
   use m_fileunit
   implicit none
 
-  type(particledat), dimension(:), pointer :: particles
+  type(particledat), allocatable :: particles(:)
   integer :: io_status
   integer :: n_particles
   
@@ -346,7 +346,6 @@ program cylhist
   end function 
 
   subroutine finalize
-    if(associated(particles)) deallocate(particles)
     if(associated(indices)) deallocate(indices)
     close(configuration_unit)
 

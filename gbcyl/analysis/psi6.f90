@@ -13,7 +13,7 @@ program psi6
   use utils
   use class_factory
   implicit none
-  type(particledat), dimension(:), pointer :: particles
+  type(particledat), allocatable :: particles(:)
   integer :: io_status
   real(dp), dimension(3) :: direction
   real(dp) :: value
@@ -29,7 +29,6 @@ program psi6
       write(*,'(5(' // fmt_char_dp() //',1X))') psi6_bulk(simbox, pack(particles, particles%rod), direction), value, direction
     end if
   end do
-  if(associated(particles)) deallocate(particles)
 end program
 
 

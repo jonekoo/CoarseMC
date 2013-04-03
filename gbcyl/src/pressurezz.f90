@@ -5,7 +5,8 @@ use particle
 use class_poly_box
 use class_parameterizer
 use m_fileunit
-use class_poly_nbrlist
+!use class_poly_nbrlist
+use class_simplelist, poly_nbrlist => simplelist
 use energy
 use nrtype
 use utils
@@ -14,7 +15,7 @@ type(factory) :: coordinatereader
 integer :: coordinateunit
 integer :: nparticles
 integer :: ios
-type(particledat), dimension(:), pointer :: particles
+type(particledat), allocatable :: particles(:)
 type(poly_box) :: simbox
 type(parameterizer) :: reader
 real(dp) :: oldenergy, newenergy, dUinc, dUdec
@@ -32,7 +33,7 @@ real(dp) :: temperature
 read(*, *) idchar, direction
 reader = new_parameterizer('parameters.in.' // trim(adjustl(idchar)))
 call energy_init(reader)
-call pnl_init(reader)
+call simplelist_init(reader)
 call getparameter(reader, 'temperature', temperature)
 coordinateunit = fileunit_getfreeunit()
 open(unit=coordinateunit, file='configurations.' //trim(adjustl(idchar)), action='READ', status='OLD')
@@ -43,7 +44,7 @@ do
     exit
   end if
   nparticles = size(particles)
-  nbrlist = create_nbrlist(simbox, particles)
+  nbrlist = new_simplelist(simbox, particles)
   !! Calculate initial volume and potential energy
   call potentialenergy(simbox, particles, nbrlist, oldenergy, overlap)
   oldvolume = volume(simbox)

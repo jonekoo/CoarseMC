@@ -21,7 +21,7 @@ type(poly_box) :: boxwritten2
 type(particledat), dimension(100) :: particleswritten
 type(particledat), dimension(100) :: particleswritten2
 type(poly_box) :: boxread
-type(particledat), dimension(:), pointer :: particlesread
+type(particledat), allocatable :: particlesread(:)
 real(dp), dimension(100) :: numbers
 real(dp), parameter :: diameter = 11.11_dp
 real(dp), parameter :: height = 22.22_dp

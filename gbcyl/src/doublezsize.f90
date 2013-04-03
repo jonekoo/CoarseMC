@@ -5,10 +5,10 @@ use class_factory
 implicit none
 
 type(poly_box) :: simbox
-type(particledat), dimension(:), pointer :: particles
+type(particledat), allocatable :: particles(:)
 type(factory) :: reader
 type(factory) :: writer
-type(particledat), dimension(:), allocatable :: newparticles
+type(particledat), allocatable :: newparticles(:)
 integer :: ios
 integer :: i,n
 integer, parameter :: stdin=5

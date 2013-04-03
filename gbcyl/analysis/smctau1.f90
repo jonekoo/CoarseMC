@@ -30,7 +30,7 @@ implicit none
 
 real(dp) :: sigma0 = 1._dp 
 !real(dp), dimension(:, :), allocatable :: localnormals
-type(particledat), dimension(:), pointer :: particles
+type(particledat), allocatable :: particles(:)
 !integer :: nparticles
 real(dp) :: cutoff
 !real(dp) :: rcyl, lz

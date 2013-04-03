@@ -12,7 +12,7 @@ type(factory) :: coordinatereader
 integer :: coordinateunit
 integer :: nparticles
 integer :: ios
-type(particledat), dimension(:), pointer :: particles
+type(particledat), allocatable :: particles(:)
 type(poly_box) :: simbox
 type(parameterizer) :: reader
 character(len=3) :: idchar = '0'
@@ -41,7 +41,5 @@ do
   f=0.5_dp*(f01+f12)
   write(*, *) f, -f/(getz(simbox)*4._dp*atan(1._dp)*getx(simbox))
 end do
-
-
 
 end program

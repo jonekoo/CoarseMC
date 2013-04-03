@@ -12,7 +12,7 @@ program analysis
   use m_fileunit
   use class_poly_box
   implicit none
-  type(particledat), dimension(:), pointer :: particles
+  type(particledat), allocatable :: particles(:)
   integer :: io_status
   character(len = 7) :: ichr
   integer :: i
@@ -30,7 +30,6 @@ program analysis
     end if
     i = i + 1
   end do
-  if(associated(particles)) deallocate(particles)
 end program analysis
 
 

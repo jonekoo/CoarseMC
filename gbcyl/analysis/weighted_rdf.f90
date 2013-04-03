@@ -16,7 +16,7 @@ program analysis
   use gr3dweighted
   use layernormal
   implicit none
-  type(particledat), dimension(:), pointer :: particles
+  type(particledat), allocatable :: particles(:)
   integer :: io_status
   integer, parameter :: maxbin = 100
   real(dp) :: delr = 0.1_dp
@@ -49,8 +49,6 @@ program analysis
       write(*, '(100('//fmt_char_dp()//',1X))') weightedhistogram
     end if
   end do
-  if(associated(particles)) deallocate(particles)
-  !deallocate(orientations)
 end program
 
 

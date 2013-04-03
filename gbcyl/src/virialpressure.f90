@@ -17,7 +17,7 @@ type(factory) :: coordinatereader
 integer :: coordinateunit
 integer :: nparticles
 integer :: ios
-type(particledat), dimension(:), pointer :: particles
+type(particledat), allocatable :: particles(:)
 type(poly_box) :: simbox
 type(parameterizer) :: reader
 character(len=3) :: idchar = '0'

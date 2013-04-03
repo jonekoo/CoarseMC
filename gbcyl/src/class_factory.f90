@@ -102,7 +102,7 @@ subroutine factory_readstate(afactory, inunit, boxread, particles, ios)
   type(factory), intent(in) :: afactory
   integer, intent(in) :: inunit
   type(poly_box), intent(out) :: boxread
-  type(particledat), dimension(:), pointer :: particles
+  type(particledat), dimension(:), allocatable, intent(inout) :: particles
   integer, intent(out) :: ios
   integer :: nparticles
   integer :: astat
@@ -131,13 +131,14 @@ subroutine factory_readstate(afactory, inunit, boxread, particles, ios)
   end if
 
   !! allocate space for particles.
-  if(associated(particles)) then
+  !if(associated(particles)) then
+  if (allocated(particles)) then
     if (size(particles) /= nparticles) then
       deallocate(particles)
-      particles=>NULL()
+      !particles=>NULL()
     end if
   end if
-  if( .not. associated(particles)) then
+  if( .not. allocated(particles)) then
     allocate(particles(nparticles), stat = astat)
     if (astat /= 0) then
       stop 'factory_readstate: Memory allocation for particles failed.'
