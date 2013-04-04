@@ -5,6 +5,7 @@ module mc_sweep
   use particle
   use class_poly_nbrlist
   use pt
+  use beta_exchange
   use class_parameterizer
   use class_parameter_writer
   use mpi
@@ -12,7 +13,8 @@ module mc_sweep
   use utils 
   use gayberne
   !$ use omp_lib
-  !$ use class_simplelist
+  use mpi
+  use class_simplelist
   include 'rng.inc'
   implicit none  
   private 
@@ -31,6 +33,7 @@ module mc_sweep
   public :: volratio
   public :: ptratio
   public :: getscalingtypes
+  public :: set_system, get_system
 
   integer, save :: nacceptedmoves
   !! number of accepted particle moves
@@ -80,9 +83,13 @@ module mc_sweep
   integer, save :: nscalingtrials = 0
   integer, save :: nradialtrials = 0
   integer, save :: nacceptedradial = 0
-  type(poly_nbrlist), pointer, save :: nbrlist
+  !type(poly_nbrlist), save :: nbrlist
+  type(simplelist), save :: sl
   character(len = 200), save :: scalingtype = "z"
-  character(len = 200), dimension(:), pointer, save :: scalingtypes
+  character(len = 200), dimension(:), allocatable, save :: scalingtypes
+
+  type(poly_box), save :: simbox
+  type(particledat), allocatable, save :: particles(:)
 
   interface init
     module procedure initparameterizer
@@ -98,12 +105,10 @@ module mc_sweep
   !! volume.
   !! @param particles the particles to be simulated.
   !!
-  subroutine initparameterizer(reader, simbox, particles, nbrs)
+  subroutine initparameterizer(reader, the_simbox, the_particles)
     type(parameterizer), intent(in) :: reader
-    type(poly_box), intent(in) :: simbox
-    type(particledat), dimension(:), intent(in) :: particles
-    type(poly_nbrlist), target, intent(inout), optional :: nbrs
-    logical :: overlap
+    type(poly_box), intent(in) :: the_simbox
+    type(particledat), dimension(:), intent(in) :: the_particles
     call energy_init(reader)
     call getparameter(reader, 'scaling_type', scalingtype)
     call parsescalingtype(scalingtype)
@@ -126,20 +131,18 @@ module mc_sweep
     !! in the same simulation. 
     nacceptedmoves = 0
     nacceptedscalings = 0
-    currentvolume = volume(simbox)
     if (volratio < 1) volratio = size(particles)   
-    allocate(nbrlist)
-    if (present(nbrs)) then
-      nbrlist=>nbrs
-    else
-      call pnl_init(reader)
-      nbrlist = create_nbrlist(simbox, particles)
-    end if
-    call update(nbrlist, simbox, particles)
-    call potentialenergy(simbox, particles, nbrlist, etotal, overlap)
-    if(overlap) then 
-      stop 'Overlap when initializing mc_sweep! Stopping.'
-    end if
+    
+    !call pnl_init(reader)
+    !nbrlist = create_nbrlist(the_simbox, the_particles)
+    call simplelist_init(reader)
+    sl = new_simplelist(the_simbox, the_particles)
+    !call update(nbrlist, simbox, particles)
+    !call potentialenergy(simbox, particles, nbrlist, etotal, overlap)
+    !if(overlap) then 
+    !  stop 'Overlap when initializing mc_sweep! Stopping.'
+    !end if
+    call set_system(the_simbox, the_particles)
     if (ptratio > 0) call pt_init(reader)
   end subroutine 
 
@@ -208,37 +211,52 @@ module mc_sweep
 !    call genvoltrial_writeparameters(writer)
   end subroutine
 
+  subroutine set_system(the_simbox, the_particles)
+    type(poly_box), intent(in) :: the_simbox
+    type(particledat), intent(in) :: the_particles(:)
+    logical :: overlap
+    logical :: should_allocate
+    should_allocate = .false.
+    simbox = the_simbox
+    if(allocated(particles)) deallocate(particles)
+    allocate(particles(size(the_particles)))
+    particles = the_particles
+    call update(sl, simbox, particles)
+    call potentialenergy(simbox, particles, sl, etotal, overlap)
+    if (overlap) stop 'mc_sweep:set_system: Trying to set a geometry with overlap!' 
+    currentvolume = volume(simbox)
+  end subroutine
+
+  subroutine get_system(the_simbox, the_particles)
+    type(poly_box), intent(out) :: the_simbox
+    type(particledat), allocatable, intent(out) :: the_particles(:)
+    the_simbox = simbox
+    allocate(the_particles(size(particles)))
+    the_particles = particles
+  end subroutine
 
   !> Runs one sweep of Metropolis Monte Carlo updates to the system. This
-  !! Parallel tempering NPT-ensemble sweep consists of trials of particle 
-  !! moves, scaling of the simulation box and a exchange of particle system 
-  !! coordinates with the particle system in the neighbouring temperature.
+  !! Parallel tempering NPT-ensemble sweep consists of trial moves of particles,
+  !! trial scaling of the simulation box (barostat) and a exchange of particle 
+  !! system coordinates with the particle system in the neighbouring temperature
+  !! (parallel tempering).
   !! 
-  !! @param simbox the simulation box defining the limits of particle 
-  !! coordinates.
-  !! @param particles the array of particles.
+  !! @param genstates random number generator states for all threads.
+  !! @param isweep the sweep counter.
   !!  
-  subroutine sweep(simbox, particles, genstates, isweep)    
-    type(particledat), dimension(:), intent(inout) :: particles
-    type(poly_box), intent(inout) :: simbox
+  subroutine sweep(genstates, isweep)    
     type(rngstate), intent(inout) :: genstates(0:)
     integer, intent(in) :: isweep
-    integer :: i
-    logical :: overlap
     integer :: irss
     integer :: ivolmove
+    real(dp) :: beta
     !! If the volratio parameter is not given, make volume move once a sweep.
     if (volratio < 1) volratio = size(particles) ! == once per sweep
     if (radialratio < 1) radialratio = 2*size(particles) ! == never
-    !if (ptratio < 1) ptratio = size(particles) ! == once per sweep
-    !! Particle selected for Random Sequential Skipping:
-    irss = int(rng(genstates(0)) * real(size(particles), dp)) + 1
-    call update(nbrlist, simbox, particles)
-    call potentialenergy(simbox, particles, nbrlist, etotal, overlap)
-    if(overlap) then 
-      stop 'Overlap when entering sweep! Stopping.'
-    end if
-    call make_particle_moves(simbox, particles, genstates)
+    !irss = int(rng(genstates(0)) * real(size(particles), dp)) + 1
+    call update(sl, simbox, particles)
+    call make_particle_moves(simbox, particles, genstates, sl)
+    call update(sl, simbox, particles)
     do ivolmove = 1, size(scalingtypes)
       call movevol(simbox, particles, scalingtypes(ivolmove), genstates(0))
     end do
@@ -246,64 +264,119 @@ module mc_sweep
     !  call radialscaling(simbox, particles, genstate)
     !end if
     if (mod(isweep, ptratio) == 0) then
-      call makeptmove(simbox, particles, genstates(0))
+      !call makeptmove(simbox, particles, genstates(0))
+      beta = 1._dp/temperature
+      call try_beta_exchanges(beta, etotal, 3, genstates(0)) 
+      temperature = 1._dp/beta
     end if 
-    currentvolume = volume(simbox)
   end subroutine 
 
-  subroutine make_particle_moves(simbox, particles, genstates)
+  !> Schedules parallel moves of particles using OpenMP with a domain 
+  !! decomposition algorithm. 
+  !!
+  !! @see e.g. G. Heffelfinger and M. Lewitt. J. Comp. Chem., 17(2):250–265,
+  !! 1996.
+  !! 
+  !! @p simbox is the simulation box in which the particles reside.
+  !! @p particles is the array of particles to move.
+  !! @p genstates randon number generator states. Each thread needs one.
+  !! @p sl the cell list implementation.
+  !! 
+  subroutine make_particle_moves(simbox, particles, genstates, sl)
+    implicit none
     type(poly_box), intent(in) :: simbox
     type(particledat), intent(inout) :: particles(:)
     type(rngstate), intent(inout) :: genstates(0:)
-    integer, allocatable :: indices(:, :)
-    integer :: i, thread_id = 0
-    !$ integer :: j, ix, iy, iz
-    !! Use domain decomposition if OpenMP parallelization and cell list are available:
-    !$ if (associated(nbrlist%sl)) then
-      !! :TODO: Find out if parallel random number generation is a problem.
-      !! :TODO: put OpenMP pragmas here to parallelize the loop below.
-      !! The allocation below is needed only when the nbrlist has been updated.
-      !! Could be optimized.
-      !$ allocate(indices(maxval(nbrlist%sl%counts), max(nbrlist%sl%nx/2, 1) * max(nbrlist%sl%ny/2, 1) * max(nbrlist%sl%nz/2, 1))) 
-
-      !! Loop over cells. This can be thought of as looping through a 2 x 2 x 2 cube
-      !! of cells.
-      !$ do ix=0, min(1, nbrlist%sl%nx-1)
-      !$ do iy=0, min(1, nbrlist%sl%ny-1)
-      !$ do iz=0, min(1, nbrlist%sl%nz-1)
-        !$ indices = reshape(nbrlist%sl%indices(:, &
-        !$   & ix:nbrlist%sl%nx-1:2, iy:nbrlist%sl%ny-1:2, iz:nbrlist%sl%nz-1:2),&
-        !$   &  (/size(indices(:,1)), size(indices(1,:))/))
-        !$OMP PARALLEL
-        !$ thread_id = omp_get_thread_num()
-        !$ if (size(genstates) /= omp_get_num_threads()) write(*,*) size(genstates), omp_get_num_threads()
-        !$OMP DO 
-        !$ do i = 1, size(indices(1,:))
-          !$ do j = 1, size(pack(indices(:,i), indices(:,i) > 0))
-            !$ call moveparticle(simbox, particles, indices(j,i), genstates(thread_id))
-          !$ end do
-        !$ end do
+    type(simplelist), intent(in) :: sl
+    integer :: n_threads = 1, thread_id = 0, i
+    real(dp) :: dE = 0._dp
+    logical :: isaccepted
+    !! You may be tempted to make the allocatable arrays automatic, but there's
+    !! no performance gained and depending on the system large automatic arrays
+    !! may cause a stack overflow.
+    type(particledat), allocatable :: temp_particles(:)
+    logical, allocatable :: nbr_mask(:)
+    integer :: n_cell ! particles in the cell where particles are moved.
+    integer :: n_local ! particles cell and its neighbour cells.
+    real(dp) :: dE_ij = 0._dp
+    integer :: nacc = 0, ntrials = 0
+    integer :: j, ix, iy, iz, jx, jy, jz
+    !integer :: check(size(particles))
+    !! Use domain decomposition if OpenMP parallelization and cell list are 
+    !! available:
+    !check = 0
+    if (.true.) then
+      !! Loop over cells. This can be thought of as looping through a 2 x 2 x 2
+      !! cube of cells.
+      !$OMP PARALLEL shared(particles, simbox, sl, genstates)& 
+      !$OMP& private(thread_id, n_threads, temp_particles, nbr_mask)&
+      !$OMP& reduction(+:dE, nacc, ntrials) 
+      !$ thread_id = omp_get_thread_num()
+      allocate(temp_particles(size(particles)), nbr_mask(size(particles)))
+      do iz=0, min(1, sl%nz-1)
+      do iy=0, min(1, sl%ny-1)
+      do ix=0, min(1, sl%nx-1)
+        !$OMP DO collapse(3) private(j, n_cell, n_local, dE_ij)&
+        !$OMP& schedule(dynamic)
+        do jz = iz, sl%nz-1, 2
+        do jy = iy, sl%ny-1, 2
+        do jx = ix, sl%nx-1, 2
+          nbr_mask = .false.
+          n_cell = sl%counts(jx, jy, jz)
+          call simplelist_nbrmask(sl, simbox, jx, jy, jz, nbr_mask)
+          n_local = count(nbr_mask)
+          nbr_mask(sl%indices(1:n_cell, jx, jy, jz)) = .false.
+          temp_particles(1:n_cell) = &
+            particles(sl%indices(1:n_cell, jx, jy, jz))
+          temp_particles(n_cell + 1 : n_local) = pack(particles, nbr_mask)
+          do j = 1, n_cell
+            call moveparticle_2(simbox, temp_particles(1:n_local), j, &
+            &genstates(thread_id), dE_ij, isaccepted)
+            dE = dE + dE_ij
+            if (isaccepted) nacc = nacc + 1
+            ntrials = ntrials + 1
+          end do
+          ! debug stuff:
+          !check(sl%indices(1:n_cell, jx, jy, jz)) = &
+          !  check(sl%indices(1:n_cell, jx, jy, jz)) + 1
+          ! The critical may not be necessary
+          !!$OMP CRITICAL 
+          particles(sl%indices(1:n_cell, jx, jy, jz)) = &
+            temp_particles(1:n_cell)
+          !!$OMP END CRITICAL
+        end do
+        end do
+        end do
         !$OMP END DO
-        !$OMP END PARALLEL
-      !$ end do 
-      !$ end do
-      !$ end do
-      !$ deallocate(indices)
-
-    !$ else 
-      !$ write(*, *) 'Warning! Using regular looping although OpenMP is available'
-      !! Use regular looping if no OpenMP or no cell list.
-      do i = 1, size(particles)
-        call moveparticle(simbox, particles, i, genstates(thread_id))
+      end do 
+      !!$OMP BARRIER
       end do
-    !$ end if
+      !$OMP BARRIER
+      end do
+      deallocate(temp_particles, nbr_mask)
+      !$OMP END PARALLEL
+      etotal = etotal + dE
+      nmovetrials = nmovetrials + ntrials
+      nacceptedmoves = nacceptedmoves + nacc
+      !if (any(check/=1)) write(*, *) 'particles moved unevenly:', check  
+    else 
+      do i = 1, size(particles)
+        call moveparticle(simbox, particles, i, genstates(thread_id), dE, &
+        isaccepted)
+        etotal = etotal + dE
+        nmovetrials = nmovetrials + 1
+        if (isaccepted) nacceptedmoves = nacceptedmoves + 1
+      end do
+    end if
   end subroutine
+
 
   !> Makes one parallel tempering trial move. This is a convenience routine
   !! to enhance readability of code. 
   !!
   !! @param simbox the simulation box.
   !! @param particles the array of particles.
+  !! @param genstate the random number generator state.
   !!
   subroutine makeptmove(simbox, particles, genstate)
     type(poly_box), intent(inout) :: simbox
@@ -323,7 +396,7 @@ module mc_sweep
       !! One way to get rid of explicit list update would be to use some kind 
       !! of observing system between the particlearray and the neighbour list. 
       currentvolume = volume(simbox)
-      call update(nbrlist, simbox, particles)
+      call update(sl, simbox, particles)
     end if
   end subroutine
 
@@ -334,11 +407,14 @@ module mc_sweep
   !! which contains all the particles that interact with particle i.
   !! @param i the index of particle to be moved.
   !! 
-  subroutine moveparticle(simbox, particles, i, genstate)
+  pure subroutine moveparticle(simbox, particles, i, genstate, dE, isaccepted)
     type(poly_box), intent(in) :: simbox
     type(particledat), dimension(:), intent(inout) :: particles
     integer, intent(in) :: i
     type(rngstate), intent(inout) :: genstate
+    real(dp), intent(out) :: dE
+    logical, intent(out) :: isaccepted
+
     type(particledat) :: newparticle
     type(particledat) :: oldparticle
     logical :: overlap
@@ -346,29 +422,66 @@ module mc_sweep
     real(dp) :: eold
     enew = 0._dp
     eold = 0._dp
+    dE = 0._dp
     overlap = .false.
-    !! :TODO: Change moving of particles to a separate object which 
-    !! :TODO: gets the whole particle array (and possibly the box too).
+    isaccepted = .false.
     newparticle = particles(i)
     call move(newparticle, genstate)
     call setposition(newparticle, minimage(simbox, position(newparticle)))
     oldparticle = particles(i) 
     particles(i) = newparticle
-    call potentialenergy(simbox, particles, nbrlist, i, enew, overlap)
+    call potentialenergy(simbox, particles, sl, i, enew, overlap)
     particles(i) = oldparticle
     if(.not. overlap) then 
-      call potentialenergy(simbox, particles, nbrlist, i, eold, overlap)
-      if (overlap) then
-        stop 'moveparticle: overlap with old particle'
-      end if
-      if(acceptchange(eold, enew, genstate)) then
+      call potentialenergy(simbox, particles, sl, i, eold, overlap)
+      !if (overlap) then
+      !  stop 'moveparticle: overlap with old particle'
+      !end if
+      call acceptchange(eold, enew, genstate, isaccepted)
+      if(isaccepted) then
         particles(i) = newparticle
-        etotal = etotal + (enew - eold)
-        nacceptedmoves = nacceptedmoves + 1
-        call update(nbrlist, simbox, particles, i)
+        dE = enew - eold
       end if
     end if 
-    nmovetrials = nmovetrials + 1
+  end subroutine
+
+
+  pure subroutine moveparticle_2(simbox, particles, i, genstate, dE, isaccepted)
+    type(poly_box), intent(in) :: simbox
+    type(particledat), dimension(:), intent(inout) :: particles
+    integer, intent(in) :: i
+    type(rngstate), intent(inout) :: genstate
+    real(dp), intent(out) :: dE
+    logical, intent(out) :: isaccepted
+
+    type(particledat) :: newparticle
+    type(particledat) :: oldparticle
+    logical :: overlap
+    real(dp) :: enew
+    real(dp) :: eold
+    enew = 0._dp
+    eold = 0._dp
+    dE = 0._dp
+    overlap = .false.
+    isaccepted = .false.
+    newparticle = particles(i)
+    call move(newparticle, genstate)
+    call setposition(newparticle, minimage(simbox, position(newparticle)))
+    oldparticle = particles(i) 
+    particles(i) = newparticle
+    call potentialenergy(simbox, particles, i, enew, overlap)
+    particles(i) = oldparticle
+    if(.not. overlap) then 
+      call potentialenergy(simbox, particles, i, eold, overlap)
+      !if (overlap) then
+      !  stop 'moveparticle: overlap with old particle'
+      !end if
+      call acceptchange(eold, enew, genstate, isaccepted)
+      if(isaccepted) then
+        particles(i) = newparticle
+        dE = enew - eold
+      end if
+    end if 
   end subroutine
 
   !> Returns the simulation temperature.
@@ -416,7 +529,7 @@ module mc_sweep
     scaling = genvoltrial_scale(simbox, maxscaling, genstate, trim(adjustl(scalingtype)))
     call scalepositions(oldbox, simbox, particles, nparticles) 
     Vn = volume(simbox)
-    call potentialenergy(simbox, particles, nbrlist, totenew, overlap)    
+    call potentialenergy(simbox, particles, sl, totenew, overlap)    
     call scalepositions(simbox, oldbox, particles, nparticles)
     if (overlap) then
       simbox = oldbox  
@@ -425,14 +538,14 @@ module mc_sweep
         temperature * log(Vn)  
       boltzmanno = etotal + pressure * Vo - real(nparticles, dp) * &
         temperature * log(Vo)
-      isaccepted = acceptchange(boltzmanno, boltzmannn, genstate)
+      call acceptchange(boltzmanno, boltzmannn, genstate, isaccepted)
       if (isaccepted) then
         !! Scale back to new configuration
         call scalepositions(oldbox, simbox, particles, nparticles)
         etotal = totenew
         nacceptedscalings = nacceptedscalings + 1
         currentvolume = volume(simbox)
-        call update(nbrlist, simbox, particles)
+        call update(sl, simbox, particles)
       else 
         simbox = oldbox
       end if 
@@ -462,17 +575,17 @@ module mc_sweep
     tempbox = simbox
     scaling = genvoltrial_scale(tempbox, maxscaling, genstate, 'xy')
     call scalepositions(simbox, tempbox, particles, nparticles)
-    call potentialenergy(simbox, particles, nbrlist, totenew, overlap)    
+    call potentialenergy(simbox, particles, sl, totenew, overlap)    
     !! Scale back to old coordinates
     call scalepositions(tempbox, simbox, particles, nparticles)
     if (.not. overlap) then
-      isaccepted = acceptchange(etotal, totenew, genstate)
+      call acceptchange(etotal, totenew, genstate, isaccepted)
       if (isaccepted) then
         !! Scale back to new configuration
         call scalepositions(simbox, tempbox, particles, nparticles)
         etotal = totenew
         nacceptedradial = nacceptedradial + 1
-        call update(nbrlist, simbox, particles)
+        call update(sl, simbox, particles)
       end if 
     end if
     nradialtrials = nradialtrials + 1
@@ -484,20 +597,21 @@ module mc_sweep
   !! @param oldenergy the energy of the system before the move.
   !! @param newenergy the energy of the system after the trial move.
   !!
-  function acceptchange(oldenergy, newenergy, genstate) &
-    result(isaccepted)    
-    logical :: isaccepted
+  pure subroutine acceptchange(oldenergy, newenergy, genstate, isaccepted)
     real(dp), intent(in) :: oldenergy
     real(dp), intent(in) :: newenergy
     type(rngstate), intent(inout) :: genstate
+    logical, intent(out) :: isaccepted
     real(dp) :: dE
+    real(dp) :: r
     dE = newenergy - oldenergy
     if(dE < 0._dp) then
       isaccepted = .true.
     else
-      isaccepted = (rng(genstate) < exp(-dE/temperature))
+      call rng(genstate, r)
+      isaccepted = (r < exp(-dE/temperature))
     end if  
-  end function
+  end subroutine
 
   !> Adjusts the maximum values for trial moves of particles and trial scalings
   !! of the simulation volume. Should be used only during equilibration run.
