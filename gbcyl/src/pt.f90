@@ -82,7 +82,7 @@ subroutine pt_initinternal()
   offsets(1)=offsets(1)-offsets(0)
   offsets(0)=0
   !offsets(1) = 6 * extent 
-  oldtypes(1) = MPI_LOGICAL8 
+  oldtypes(1) = MPI_LOGICAL
   blockcounts(1) = 1 
   !! Now define structured type and commit it  
   call MPI_TYPE_CREATE_STRUCT(2, blockcounts, offsets, oldtypes, particletype, ierr) 
@@ -94,113 +94,6 @@ subroutine pt_initinternal()
   !write(*,*)'Created datatype with extent and size ', extent, sizeof(aparticle)
 end subroutine
 
-subroutine setup_test(particles, id)
-  type(particledat), intent(inout) :: particles(2)
-  integer, intent(in) :: id
-  integer :: i
-  do i=1,2
-    particles(i)%rod=.true.
-  end do
-  if (mod(id,2)==0) then
-    particles(2)%rod=.false.
-  end if
-end subroutine
-
-subroutine pt_test_particle_exchange 
-  integer, parameter :: testtag=77
-  integer :: status(MPI_STATUS_SIZE)
-  integer :: ierr
-  integer :: id
-  type(particledat) :: particles(2)
-  integer, parameter :: n_lots=1000
-  type(particledat) :: lots_of_particles(n_lots)
-  type(particledat) :: particlebuffer(2)
-  integer :: id_other
-  call MPI_COMM_RANK(MPI_COMM_WORLD, id, ierr)
-  if (ierr/=0) write(*, *) 'mpi_comm_rank failed'
-  
-  if (mod(id,2)==0) then
-    id_other=id+1
-  else 
-    id_other=id-1
-  end if
-
-  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-  !! Test sending and receiving of particles
-  call setup_test(particles, id)
-
-  if (mod(id,2)==0) then
-      call MPI_SEND(particles(2), 1, particletype, id_other, testtag, MPI_COMM_WORLD, ierr)
-  else
-    call MPI_RECV(particles(2), 1, particletype, id_other, testtag, MPI_COMM_WORLD, status, ierr) 
-  end if
-  if (mod(id,2)==1 .and. particles(2)%rod) then
-    write(*,*) 'MPI_SEND(aparticle) + MPI_RECV(aparticle) failed'
-  end if
-  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-
-
-
-  !! Test sending and receiving an array of particles with the regular 
-  !! MPI_SEND and MPI_RECV
-  call setup_test(particles, id)
-
-  if (mod(id,2)==0) then
-      call MPI_SEND(particles, 2, particletype,id_other, testtag, MPI_COMM_WORLD, ierr)
-  else
-    call MPI_RECV(particles, 2, particletype, id_other, testtag, MPI_COMM_WORLD, status, ierr) 
-  end if
-  if (mod(id,2)==1 .and. particles(2)%rod) then
-    write(*,*) 'MPI_SEND(particles) + MPI_RECV(particles) failed'
-  end if
-  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-
-
-
-  !! Test sending and receiving an array of particles with MPI_SENDRECV
-  call setup_test(particles, id)
-  particlebuffer=particles
-  call MPI_SENDRECV(particlebuffer, 2, particletype,id_other, testtag,&
-    & particles, 2, particletype,id_other, testtag, MPI_COMM_WORLD, status,&
-    & ierr)
-  if (mod(id,2)==1 .and. particles(2)%rod) then
-    write(*,*) 'MPI_SENDRECV(particles) failed'
-  end if
-  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-
-
-
-  !! Test sending and receiving an array of particles with MPI_SENDRECV_REPLACE
-  call setup_test(particles, id)
-  call mpi_sendrecv_replace(particles, 2, particletype, &
-      & id_other, testtag, id_other, testtag, MPI_COMM_WORLD, status,&
-      & ierr)
-  if (ierr/=0) then
-    write(*, *) id, 'MPI_SENDRECV_REPLACE(particles) ierr=', ierr
-  end if
-
-  if (mod(id,2)==1 .and. particles(2)%rod) then
-    write(*,*) 'MPI_SENDRECV_REPLACE(particles) failed'
-  !else if(mod(id,2)==1) then
-  !  write(*, *) 'MPI_SENDRECV_REPLACE(particles) succeeded'
-  end if
-  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-
-  !! Test sending and receiving an large array of particles with 
-  !! MPI_SENDRECV_REPLACE
-  call setup_test(lots_of_particles(1:2), id)
-  write(*, *) 'sizeof(lots_of_particles)=',sizeof(lots_of_particles)
-  call mpi_sendrecv_replace(lots_of_particles, n_lots, particletype, &
-      & id_other, testtag, id_other, testtag, MPI_COMM_WORLD, status,&
-      & ierr)
-  if (ierr/=0) then
-    write(*, *) id, 'MPI_SENDRECV_REPLACE(lots_of_particles) ierr=', ierr
-  end if
-
-  if (mod(id,2)==1 .and. particles(2)%rod) then
-    write(*,*) 'MPI_SENDRECV_REPLACE(lots_of_particles) failed'
-  end if
-end subroutine
 
 !! Initializes this module using a parameterizer object to get the parameters
 !! for this module. 
@@ -236,8 +129,6 @@ subroutine pt_writeparameters(pwriter)
   call writeparameter(pwriter, 'idirection', idirection)
   call writeparameter(pwriter, 'nacceptedup', nacceptedup)
   call writeparameter(pwriter, 'ntrialsup', ntrialsup)
-  call writeparameter(pwriter, 'current_ptaccratioup', &
-  real(nacceptedup, dp)/real(ntrialsup, dp))
 end subroutine
 
 !! Tries to make a parallel tempering Hamiltonian exchange with the process 
@@ -290,7 +181,7 @@ subroutine pt_move(beta, energy, particles, nparticles, simbox, genstate, isacce
     end if
   end if 
   !! Calculate random number for accepting the move.
-  rand = rng(genstate)
+  call rng(genstate, rand)
   !! Make temporary variables. 
   betan = beta
   energyn = energy
@@ -477,4 +368,112 @@ subroutine pt_resetcounters
   ntrialsup = 0
 end subroutine
 
-end module pt
+subroutine setup_test(particles, id)
+  type(particledat), intent(inout) :: particles(2)
+  integer, intent(in) :: id
+  integer :: i
+  do i=1,2
+    particles(i)%rod=.true.
+  end do
+  if (mod(id,2)==0) then
+    particles(2)%rod=.false.
+  end if
+end subroutine
+
+subroutine pt_test_particle_exchange 
+  integer, parameter :: testtag=77
+  integer :: status(MPI_STATUS_SIZE)
+  integer :: ierr
+  integer :: id
+  type(particledat) :: particles(2)
+  integer, parameter :: n_lots=1000
+  type(particledat) :: lots_of_particles(n_lots)
+  type(particledat) :: particlebuffer(2)
+  integer :: id_other
+  call MPI_COMM_RANK(MPI_COMM_WORLD, id, ierr)
+  if (ierr/=0) write(*, *) 'mpi_comm_rank failed'
+  
+  if (mod(id,2)==0) then
+    id_other=id+1
+  else 
+    id_other=id-1
+  end if
+
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+  !! Test sending and receiving of particles
+  call setup_test(particles, id)
+
+  if (mod(id,2)==0) then
+      call MPI_SEND(particles(2), 1, particletype, id_other, testtag, MPI_COMM_WORLD, ierr)
+  else
+    call MPI_RECV(particles(2), 1, particletype, id_other, testtag, MPI_COMM_WORLD, status, ierr) 
+  end if
+  if (mod(id,2)==1 .and. particles(2)%rod) then
+    write(*,*) 'MPI_SEND(aparticle) + MPI_RECV(aparticle) failed'
+  end if
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+
+
+
+  !! Test sending and receiving an array of particles with the regular 
+  !! MPI_SEND and MPI_RECV
+  call setup_test(particles, id)
+
+  if (mod(id,2)==0) then
+      call MPI_SEND(particles, 2, particletype,id_other, testtag, MPI_COMM_WORLD, ierr)
+  else
+    call MPI_RECV(particles, 2, particletype, id_other, testtag, MPI_COMM_WORLD, status, ierr) 
+  end if
+  if (mod(id,2)==1 .and. particles(2)%rod) then
+    write(*,*) 'MPI_SEND(particles) + MPI_RECV(particles) failed'
+  end if
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+
+
+
+  !! Test sending and receiving an array of particles with MPI_SENDRECV
+  call setup_test(particles, id)
+  particlebuffer=particles
+  call MPI_SENDRECV(particlebuffer, 2, particletype,id_other, testtag,&
+    & particles, 2, particletype,id_other, testtag, MPI_COMM_WORLD, status,&
+    & ierr)
+  if (mod(id,2)==1 .and. particles(2)%rod) then
+    write(*,*) 'MPI_SENDRECV(particles) failed'
+  end if
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+
+
+
+  !! Test sending and receiving an array of particles with MPI_SENDRECV_REPLACE
+  call setup_test(particles, id)
+  call mpi_sendrecv_replace(particles, 2, particletype, &
+      & id_other, testtag, id_other, testtag, MPI_COMM_WORLD, status,&
+      & ierr)
+  if (ierr/=0) then
+    write(*, *) id, 'MPI_SENDRECV_REPLACE(particles) ierr=', ierr
+  end if
+
+  if (mod(id,2)==1 .and. particles(2)%rod) then
+    write(*,*) 'MPI_SENDRECV_REPLACE(particles) failed'
+  !else if(mod(id,2)==1) then
+  !  write(*, *) 'MPI_SENDRECV_REPLACE(particles) succeeded'
+  end if
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+
+  !! Test sending and receiving an large array of particles with 
+  !! MPI_SENDRECV_REPLACE
+  call setup_test(lots_of_particles(1:2), id)
+  !write(*, *) 'sizeof(lots_of_particles)=',c_sizeof(lots_of_particles)
+  call mpi_sendrecv_replace(lots_of_particles, n_lots, particletype, &
+      & id_other, testtag, id_other, testtag, MPI_COMM_WORLD, status,&
+      & ierr)
+  if (ierr/=0) then
+    write(*, *) id, 'MPI_SENDRECV_REPLACE(lots_of_particles) ierr=', ierr
+  end if
+
+  if (mod(id,2)==1 .and. particles(2)%rod) then
+    write(*,*) 'MPI_SENDRECV_REPLACE(lots_of_particles) failed'
+  end if
+end subroutine
+
+end module
