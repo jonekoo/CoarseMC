@@ -7,7 +7,7 @@ use mt_stream
 use particle, only: particledat, initParticle, particle_writeparameters
 use class_poly_box
 use mc_sweep, only: mc_sweep_init => init, updatemaxvalues, sweep, &
-mc_sweep_writeparameters, resetcounters, gettemperature, settemperature 
+mc_sweep_writeparameters, resetcounters, gettemperature, settemperature, get_system, set_system 
 use pt
 use m_fileunit
 use class_parameterizer
@@ -25,13 +25,6 @@ interface init
   module procedure mce_init
 end interface
   
-type(particledat), dimension(:), pointer, save :: particles
-!! is the pointer to the array where the particles are stored throughout the
-!! simulation.
-
-type(poly_box), save :: simbox
-!! stores the simulation box that is used. 
-
 integer, save :: nequilibrationsweeps = 0
 integer, save :: nproductionsweeps = 0
 !! define the number of equilibration and production MC sweeps in the 
@@ -103,6 +96,13 @@ subroutine mce_init(id, n_tasks)
 
   type(parameterizer) :: parameterreader
   integer :: thread_id = 0, n_threads = 1
+  
+  type(particledat), dimension(:), allocatable :: particles
+  !! is the pointer to the array where the particles are stored throughout the
+  !! simulation.
+
+  type(poly_box) :: simbox
+  !! stores the simulation box that is used. 
 
   write(idchar, '(I9)') id 
   idchar = trim(adjustl(idchar))
@@ -136,11 +136,9 @@ subroutine mce_init(id, n_tasks)
     close(rngunit)    
   end if
 
-  !$OMP PARALLEL
-  !$ n_threads = omp_get_num_threads()
+  !$ n_threads = omp_get_max_threads()
   !$ write(*, *) 'Running with ', n_threads, ' threads.'
-  !$OMP END PARALLEL
-  !$ mts_new = mts(0)
+  mts_new = mts(0)
   !$ if (allocated(mts)) deallocate(mts)
   !$ allocate(mts(0:n_threads-1))
   !! Give different random number streams to each OpenMP thread inside a MPI task
@@ -150,7 +148,6 @@ subroutine mce_init(id, n_tasks)
   !$ do thread_id = 1, n_threads-1
     if (id + n_tasks * thread_id > 0) then 
       call create_stream(mts_new, mts(thread_id), id + n_tasks * thread_id)
-      write(*, *) 
     end if
   !$ end do
 
@@ -235,7 +232,7 @@ subroutine finalize(id)
   integer, intent(in) :: id
   close(coordinateunit)
   call makerestartpoint
-  if (associated(particles)) deallocate(particles)
+  !if (associated(particles)) deallocate(particles)
   if (id == 0) write (*, *) 'End of program gbcyl.'
   call pt_finalize()
 end subroutine 
@@ -250,7 +247,7 @@ subroutine run
 !    if (isopenmp) then 
 !      call ompsweep(simbox, particles, mts)
 !    else
-      call sweep(simbox, particles, mts, isweep)
+      call sweep(mts, isweep)
 !    end if
     if (isweep <= nequilibrationsweeps) then
       call runequilibrationtasks
@@ -284,6 +281,9 @@ subroutine makerestartpoint
   character(len=80) :: rngfile
 
   integer :: ios
+  type(particledat), allocatable :: particles(:)
+  type(poly_box) :: simbox
+
 
   !! Write parameters to a restartfile
   parameterunit = fileunit_getfreeunit()
@@ -302,8 +302,11 @@ subroutine makerestartpoint
   action='WRITE', status='REPLACE', iostat=ios)
   if (ios/=0) write(*, *) 'makerestartpoint: Warning: Failed opening', &
   configurationfile
+
+  call get_system(simbox, particles)
   call writestate(restartwriter, configurationunit, simbox, particles)
   close(configurationunit)
+  deallocate(particles)
 
   !! Write random number generator state to a file.
   rngunit = fileunit_getfreeunit()
@@ -347,9 +350,13 @@ subroutine runproductiontasks
   character(len=80) :: parameterfile
   type(parameter_writer) :: writer
   type(factory) :: coordinatewriter
+  type(poly_box) :: simbox
+  type(particledat), allocatable :: particles(:)
   parameterfile='parameters.'//trim(adjustl(idchar))
   if (mod(isweep, productionperiod) == 0) then
-    call writestate(coordinatewriter, coordinateunit, simbox, particles) 
+    call get_system(simbox, particles)
+    call writestate(coordinatewriter, coordinateunit, simbox, particles)
+    deallocate(particles) 
     pwunit = fileunit_getfreeunit()
     open(UNIT=pwunit, FILE=parameterfile, action='WRITE', position='APPEND',&
     DELIM='QUOTE', IOSTAT=ios) 
