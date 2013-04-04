@@ -2,10 +2,12 @@ module energy
   use nrtype, only: dp
   use particle, only: particledat
   use particlewall
-  use class_poly_nbrlist
+  !use class_poly_nbrlist
+  use class_simplelist
   use class_poly_box
   use class_parameter_writer
   use class_parameterizer
+  use all_pairs 
   implicit none
   private
  
@@ -17,7 +19,7 @@ module energy
   logical, save :: iswall
 
   interface potentialenergy
-    module procedure totalenergy, singleenergy
+    module procedure totalenergy, singleenergy, simple_singleenergy
   end interface
 
   contains
@@ -26,12 +28,14 @@ module energy
     type(parameterizer), intent(in) :: reader
     call getparameter(reader, 'is_wall_on', iswall)
     if (iswall) call initptwall(reader)
+    call ap_init(reader)
   end subroutine
  
   subroutine energy_writeparameters(writer)
     type(parameter_writer), intent(in) :: writer
     call writeparameter(writer, 'is_wall_on', iswall)
     if (iswall) call particlewall_writeparameters(writer)
+    call ap_writeparameters(writer)
   end subroutine
 
   !> Calculates the total potential energy of @param particles with respect to 
@@ -48,7 +52,7 @@ module energy
   subroutine totalenergy(simbox, particles, nbrlist, Etot, overlap)
     type(poly_box), intent(in) :: simbox
     type(particledat), dimension(:), intent(in) :: particles
-    type(poly_nbrlist), intent(in) :: nbrlist
+    type(simplelist), intent(in) :: nbrlist
     real(dp), intent(out) :: Etot
     logical, intent(out) :: overlap
     real(dp) :: Vpairtot
@@ -56,7 +60,7 @@ module energy
     Etot = 0._dp
     Vwalltot = 0._dp
     overlap = .false.
-    call pairinteractions(nbrlist, simbox, particles, Vpairtot, overlap)
+    call simplelist_pairinteractions(nbrlist, simbox, particles, Vpairtot, overlap)
     if (iswall .and. (.not. overlap)) then
       call totwallprtclV(simbox, particles, Vwalltot, overlap)
     end if  
@@ -103,10 +107,10 @@ module energy
   !! @param Vitot the potential energy at return.
   !! @param overlap is .true. if an infinitely large interaction occurs. 
   !!
-  subroutine singleenergy(simbox, particles, nbrlist, i, Vitot, overlap)
+  pure subroutine singleenergy(simbox, particles, nbrlist, i, Vitot, overlap)
     type(poly_box), intent(in) :: simbox
     type(particledat), dimension(:), intent(in) :: particles
-    type(poly_nbrlist), intent(in) :: nbrlist
+    type(simplelist), intent(in) :: nbrlist
     integer, intent(in) :: i
     real(dp), intent(out) :: Vitot
     logical, intent(out) :: overlap
@@ -120,7 +124,40 @@ module energy
       call particlewall_potential(particles(i), simbox, Viwall, overlap)
     end if
     if (.not. overlap) then
-      call pairinteractions(nbrlist, simbox, particles, i, Vipair, overlap)
+      call simplelist_pairinteractions(nbrlist, simbox, particles, i, Vipair, overlap)
+    end if
+    if (.not. overlap) then 
+      Vitot = Vipair + Viwall
+    end if
+  end subroutine
+
+  !> Returns the potential energy of @param particles(@param i) in the system.
+  !! 
+  !! @param simbox the simulation box where the particles are.
+  !! @param particles the particles in the system.
+  !! @param nbrlist the neighbourlist to be used to calculate short-ranged
+  !! pair interactions.
+  !! @param i the index of the particle in @param particles.
+  !! @param Vitot the potential energy at return.
+  !! @param overlap is .true. if an infinitely large interaction occurs. 
+  !!
+  pure subroutine simple_singleenergy(simbox, particles, i, Vitot, overlap)
+    type(poly_box), intent(in) :: simbox
+    type(particledat), dimension(:), intent(in) :: particles
+    integer, intent(in) :: i
+    real(dp), intent(out) :: Vitot
+    logical, intent(out) :: overlap
+    real(dp) :: Vipair 
+    real(dp) :: Viwall 
+    Viwall = 0._dp 
+    Vipair = 0._dp
+    Vitot = 0._dp
+    overlap = .false.
+    if (iswall) then
+      call particlewall_potential(particles(i), simbox, Viwall, overlap)
+    end if
+    if (.not. overlap) then
+      call pairinteractions(simbox, particles, i, Vipair, overlap)
     end if
     if (.not. overlap) then 
       Vitot = Vipair + Viwall
