@@ -2257,13 +2257,13 @@ REAL(SP), INTENT(OUT) :: ai,bi,aip,bip
     END FUNCTION rc_v
   END INTERFACE
   INTERFACE rd
-    FUNCTION rd_s(x,y,z)
+    pure FUNCTION rd_s(x,y,z)
     USE nrtype
     REAL(SP), INTENT(IN) :: x,y,z
     REAL(SP) :: rd_s
     END FUNCTION rd_s
 !BL
-    FUNCTION rd_v(x,y,z)
+    pure FUNCTION rd_v(x,y,z)
     USE nrtype
     REAL(SP), DIMENSION(:), INTENT(IN) :: x,y,z
     REAL(SP), DIMENSION(size(x)) :: rd_v
@@ -2320,13 +2320,13 @@ REAL(SP), INTENT(OUT) :: ai,bi,aip,bip
     END FUNCTION resid
   END INTERFACE
   INTERFACE rf
-    FUNCTION rf_s(x,y,z)
+    pure FUNCTION rf_s(x,y,z)
     USE nrtype
     REAL(SP), INTENT(IN) :: x,y,z
     REAL(SP) :: rf_s
     END FUNCTION rf_s
 !BL
-    FUNCTION rf_v(x,y,z)
+    pure FUNCTION rf_v(x,y,z)
     USE nrtype
     REAL(SP), DIMENSION(:), INTENT(IN) :: x,y,z
     REAL(SP), DIMENSION(size(x)) :: rf_v
