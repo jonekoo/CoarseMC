@@ -2,9 +2,11 @@ module class_simplelist
 use cell
 use nrtype
 use particle
+use class_pair_potential
 use class_poly_box
 use class_parameter_writer
 use class_parameterizer
+use all_pairs
 implicit none
 private
 
@@ -15,9 +17,10 @@ public :: delete
 public :: simplelist_init
 public :: simplelist_writeparameters
 public :: update
-public :: nbrmask
-public :: simplelist
+public :: simplelist_nbrmask
 public :: simplelist_allocate
+public :: simplelist
+public :: simplelist_pairinteractions
 
 real(dp), save :: this_minlength = 7.5_dp
 logical, save :: this_iseven = .false.
@@ -35,16 +38,20 @@ interface update
   module procedure simplelist_update, simplelist_singleupdate !, simplelist_updatei
 end interface
 
+interface simplelist_pairinteractions
+  module procedure simplelist_pairinteractions, simplelist_totalpairinteractions
+end interface
+
 type simplelist
   integer :: nx, ny, nz
-  integer, pointer, dimension(:,:,:,:) :: indices
-  integer, pointer, dimension(:,:,:) :: counts
-  integer, pointer, dimension(:,:) :: coords
-  real(dp), pointer, dimension(:,:) :: xyzlist
+  integer, allocatable, dimension(:,:,:,:) :: indices
+  integer, allocatable, dimension(:,:,:) :: counts
+  integer, allocatable, dimension(:,:) :: coords
+  real(dp), allocatable, dimension(:,:) :: xyzlist
 end type
 
-interface nbrmask
-  module procedure simplelist_nbrmask
+interface simplelist_nbrmask
+  module procedure simplelist_nbrmask, simplelist_cell_nbrmask
 end interface
 
 interface delete
@@ -154,7 +161,7 @@ subroutine simplelist_delete(sl)
   deallocate(sl%xyzlist)
 end subroutine
 
-subroutine simplelist_populate(sl, simbox, particles)
+pure subroutine simplelist_populate(sl, simbox, particles)
   type(simplelist), intent(inout) :: sl
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
@@ -162,7 +169,6 @@ subroutine simplelist_populate(sl, simbox, particles)
   integer :: iparticle
   sl%indices=0
   sl%counts=0
-  !call delete(sl) 
   !sl=new_simplelist(simbox, particles)
   do iparticle = 1, size(particles)
     !! calculate cell index assuming centered coordinates
@@ -175,10 +181,6 @@ subroutine simplelist_populate(sl, simbox, particles)
     sl%coords(iparticle,:)=(/ix, iy, iz/)
     sl%xyzlist(iparticle,:)=position(particles(iparticle))
   end do
-
-  !! Let's check that all the particles are in the list, although it is quite 
-  !! unlikely to happen when the list is used correctly.
-  if(size(particles)/=sum(sl%counts)) stop 'Some particles are not in the cell list' 
 end subroutine
 
 subroutine simplelist_singleupdate(sl, simbox, particles, i)
@@ -187,8 +189,6 @@ subroutine simplelist_singleupdate(sl, simbox, particles, i)
   type(particledat), dimension(:), intent(in) :: particles
   integer, intent(in) :: i
   if (any(abs(minimage(simbox, position(particles(i))-sl%xyzlist(i,:))) > this_updatethreshold)) then
-    !write(*, *) 'called update from singleupdate'
-    !write(*, *) abs(minimage(simbox, position(particles(i))-sl%xyzlist(i,:))) > this_updatethreshold
     call update(sl, simbox, particles)
   end if
 end subroutine
@@ -246,19 +246,30 @@ function maskcells(nx, ny, nz, xperiodic, yperiodic, zperiodic, ix, iy, iz)
 
 end function
 
-function simplelist_nbrmask(sl, simbox, particles, i)
+pure subroutine simplelist_nbrmask(sl, simbox, particles, i, mask)
   type(simplelist), intent(in) :: sl
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
   integer, intent(in) :: i 
+  logical, intent(out) :: mask(:)
   integer :: ix,iy,iz !! cell indices of particle i
-  integer :: x,y,z    !! iteration indices through neighbouring cell
-  integer :: xl,yl,zl
-  logical, dimension(size(particles)) :: simplelist_nbrmask
-  simplelist_nbrmask=.false.
+  mask=.false.
   ix=sl%coords(i,1)
   iy=sl%coords(i,2)
   iz=sl%coords(i,3)
+  call simplelist_cell_nbrmask(sl, simbox, ix, iy, iz, mask)
+  mask(i)=.false.
+end subroutine
+
+pure subroutine simplelist_cell_nbrmask(sl, simbox, ix, iy, iz, cell_nbrmask)
+  implicit none
+  type(simplelist), intent(in) :: sl
+  type(poly_box), intent(in) :: simbox
+  integer, intent(in) :: ix,iy,iz !! cell indices
+  logical, intent(out) :: cell_nbrmask(:)
+  integer :: x, y, z    !! iteration indices through neighbouring cell
+  integer :: xl, yl, zl
+  cell_nbrmask=.false.
   do x=ix-1,ix+1
     xl=x
     if (isxperiodic(simbox)) xl=mod(sl%nx+xl,sl%nx)
@@ -271,23 +282,172 @@ function simplelist_nbrmask(sl, simbox, particles, i)
             zl=z
             if (iszperiodic(simbox)) zl=mod(sl%nz+zl,sl%nz)
             if (zl>=0 .and. zl<=sl%nz-1) then
-              simplelist_nbrmask(sl%indices(1:sl%counts(xl,yl,zl),xl,yl,zl))=.true.
+              cell_nbrmask(sl%indices(1:sl%counts(xl,yl,zl),xl,yl,zl))=.true.
             end if
           end do
         end if
       end do
     end if
   end do
-  simplelist_nbrmask(i)=.false.
-end function 
+end subroutine
 
-!pure function scaledposition(simbox, particle) result(s)
-!  type(poly_box), intent(in) :: simbox
-!  type(particledat), intent(in) :: particle
-!  real(dp), dimension(3) :: s
-!  real(dp), dimension(3) :: r
-!  r = position(particle)
-!  s = (/r(1) / getx(simbox), r(2) / gety(simbox), r(3) / getz(simbox)/)
-!end function
+subroutine simplelist_totalpairinteractions(sl, simbox, particles, energy, overlap)
+  type(simplelist), intent(in) :: sl
+  type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:), intent(in) :: particles
+  real(dp), intent(out) :: energy
+  logical, intent(out) :: overlap 
+  real(dp) :: singleenergy
+  logical, dimension(size(particles)) :: mask
+  integer :: i
+  logical :: overlap_i
+  if (.true.) then
+    call simplelist_total_by_cell(sl, simbox, particles, energy, overlap)
+  !$ else if (.true.) then !! Compiled with OpenMP
+  !$ overlap = .false.
+  !$OMP PARALLEL DO &
+  !$OMP DEFAULT(shared) & 
+  !$OMP REDUCTION(+:energy) REDUCTION(.or.:overlap) &
+  !$OMP private(mask, singleenergy, overlap_i)  
+  !$ do i=1, size(particles)
+  !$  call simplelist_nbrmask(sl, simbox, particles, i, mask)
+  !$  call maskedinteractions(mask(i:), simbox, particles(i:), 1, &
+  !$       singleenergy, overlap_i)
+  !$  overlap = overlap .or. overlap_i
+  !$  energy = energy + singleenergy
+  !$ end do
+  !$OMP END PARALLEL DO
+  else
+    do i=1, size(particles)
+      call simplelist_nbrmask(sl, simbox, particles, i, mask)
+      call maskedinteractions(mask(i:), simbox, particles(i:), 1, &
+      singleenergy, overlap)
+      if (overlap) exit
+      energy = energy + singleenergy
+    end do
+  end if
+end subroutine
+
+
+subroutine simplelist_total_by_cell(sl, simbox, particles, &
+energy, overlap)
+  type(simplelist), intent(in) :: sl
+  type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:), intent(in) :: particles
+  real(dp), intent(out) :: energy
+  logical, intent(out) :: overlap 
+  integer :: i, j, ix, iy, iz
+  logical :: mask(size(particles))
+  real(dp) :: energy_j
+  integer :: helper(size(particles))
+  integer, allocatable :: temp_helper(:)
+  integer :: n_mask
+  integer :: temp_j
+  type(particledat), allocatable :: temp_particles(:)
+  integer :: check(size(particles))
+  helper = (/(i, i=1,size(particles))/)
+  energy = 0._dp
+  overlap = .false.
+  !! Loop over cells. This can be thought of as looping through a 2 x 2 x 2 
+  !! cube
+  !! of cells.
+  !$OMP PARALLEL default(shared) reduction(+:energy) reduction(.or.:overlap)&
+  !$OMP& private(energy_j, i, j, mask, temp_particles, temp_j, temp_helper, n_mask)
+  allocate(temp_particles(size(particles)), temp_helper(size(particles))) 
+  !$OMP DO collapse(3) schedule(dynamic)
+  do ix=0, sl%nx-1
+  do iy=0, sl%ny-1
+  do iz=0, sl%nz-1
+    !!$ write(*, *) 'thread:', omp_get_thread_num(), 'calculating energy for particles in cell', ix, iy, iz
+    call simplelist_nbrmask(sl, simbox, ix, iy, iz, mask)
+    n_mask = count(mask)
+    temp_particles(1:n_mask) = pack(particles, mask)
+    temp_helper(1:n_mask) = pack(helper, mask)
+    do i=1, sl%counts(ix, iy, iz)
+      j = sl%indices(i, ix, iy, iz)
+      ! Find position of particles(j) in temp_particles:
+      do temp_j = 1, n_mask
+         if(temp_helper(temp_j) == j) exit
+      end do
+      call pairinteractions(simbox, temp_particles(temp_j:n_mask), 1, energy_j, overlap)
+      energy = energy + energy_j
+      if (overlap) exit
+    end do
+  end do
+  end do
+  end do
+  !$OMP END DO 
+  !$OMP END PARALLEL
+end subroutine
+
+!! Mask must not include i!!
+pure subroutine maskedinteractions(mask, simbox, particles, i, energy, overlap)
+  logical, dimension(:), intent(in) :: mask
+  type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:), intent(in) :: particles
+  integer, intent(in) :: i
+  real(dp), intent(out) :: energy
+  logical, intent(out) :: overlap
+  integer :: j
+  real(dp) :: pairenergy
+  logical :: overlap_ij
+  logical :: temp_mask(size(particles))
+  overlap = .false.
+  energy = 0._dp
+  !do j=1, size(particles)
+  !  if(mask(j)) then
+  !    call pairv(particles(i), particles(j), simbox, pairenergy, overlap_ij)
+  !    overlap = overlap .or. overlap_ij
+  !    energy = energy + pairenergy
+  !  end if
+  !end do
+  temp_mask = .false.
+  temp_mask(i) = .true.
+  call pairinteractions(simbox, pack(particles, mask .or. temp_mask), i, energy, overlap)
+end subroutine
+
+!! Calculate interactions between particles and particle_i
+!! 
+!! @p particlei must not belong to particles!
+subroutine interactions(simbox, particles, particle_i, energy, overlap)
+  type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:), intent(in) :: particles
+  type(particledat), intent(in) :: particle_i
+  real(dp), intent(out) :: energy
+  logical, intent(out) :: overlap
+  integer :: j
+  real(dp) :: pairenergy
+  logical :: overlap_ij
+  real(dp) :: rij(3)
+  overlap = .false.
+  energy = 0._dp
+  !$OMP PARALLEL
+  !$OMP DO PRIVATE(overlap_ij, pairenergy) REDUCTION(+ : energy) REDUCTION(.or. : overlap)
+  do j=1, size(particles)
+    rij = minimage(simbox, position(particles(j)) - position(particle_i))
+    call pairv(particle_i, particles(j), rij, simbox, pairenergy, overlap_ij)
+    overlap = overlap .or. overlap_ij
+    energy = energy + pairenergy
+  end do
+  !$OMP END DO
+  !$OMP END PARALLEL
+end subroutine
+
+
+
+
+pure subroutine simplelist_pairinteractions(sl, simbox, particles, i, energy, overlap)
+  type(simplelist), intent(in) :: sl
+  type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:), intent(in) :: particles
+  integer, intent(in) :: i
+  real(dp), intent(out) :: energy
+  logical, intent(out) :: overlap
+  logical :: mask(size(particles))
+  call simplelist_nbrmask(sl, simbox, particles, i, mask) 
+  call maskedinteractions(mask, simbox, particles, i, energy, overlap) 
+end subroutine
+
+
 
 end module
