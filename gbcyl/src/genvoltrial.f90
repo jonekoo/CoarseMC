@@ -36,8 +36,10 @@ contains
     real(dp), dimension(3) :: scaling
     real(dp) :: scaling1d
     real(dp) :: Vn, Vo, dV
+    real(dp) :: r
 
-    dV = (2._dp * real(rng(genstate), dp) - 1._dp) * maxscaling
+    call rng(genstate, r)
+    dV = (2._dp * real(r, dp) - 1._dp) * maxscaling
     Vo = volume(simbox)
     Vn = Vo + dV
     scaling1d = Vn/Vo
@@ -62,9 +64,11 @@ contains
     real(dp), dimension(3) :: scaling
     real(dp) :: scaling1d
     real(dp) :: Vn, Vo, dV
+    real(dp) :: r
 
     !! This assumes a rectangular simbox !!
-    dV = (2._dp * real(rng(genstate), dp) - 1._dp) * maxscaling
+    call rng(genstate, r)
+    dV = (2._dp * real(r, dp) - 1._dp) * maxscaling
     Vo = volume(simbox)
     Vn = Vo + dV
     scaling1d = sqrt(Vn/Vo)
@@ -91,9 +95,11 @@ contains
     real(dp), dimension(3) :: scaling
     real(dp) :: scaling1d
     real(dp) :: Vn, Vo, dV
+    real(dp) :: r
 
     !! This assumes a rectangular simbox !!
-    dV = (2._dp * real(rng(genstate), dp) - 1._dp) * maxscaling
+    call rng(genstate, r)
+    dV = (2._dp * real(r, dp) - 1._dp) * maxscaling
     Vo = volume(simbox)
     Vn = Vo + dV
     scaling1d = (Vn/Vo)**(1._dp/3._dp)
