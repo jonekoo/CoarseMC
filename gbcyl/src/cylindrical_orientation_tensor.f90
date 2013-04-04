@@ -14,7 +14,7 @@ program analysis
   use cylindrical_orientation, only: eigens
   implicit none
   !real(dp) :: radius, height
-  type(particledat), dimension(:), pointer :: particles
+  type(particledat), allocatable :: particles(:)
   integer :: io_status
   integer, parameter :: stdin = 5
   type(factory) :: afactory
@@ -34,7 +34,6 @@ program analysis
       write(*, '(12('//fmt_char_dp()//',1X))') values(1:3), vectors(1:3, 1), vectors(1:3, 2), vectors(1:3, 3) 
     end if
   end do
-  if(associated(particles)) deallocate(particles)
 end program analysis
 
 
