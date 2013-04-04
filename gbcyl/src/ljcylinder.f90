@@ -18,7 +18,7 @@ contains
 !! @p r the distance of LJ site center from the cylinder axis.
 !! @p rwall the radius of the cylinder.
 !! 
-function ljcylinderpotential(Kw, sigma, alpha, r, rwall) result(potential)
+pure function ljcylinderpotential(Kw, sigma, alpha, r, rwall) result(potential)
   real(dp), intent(in) :: Kw
   real(dp), intent(in) :: sigma
   real(dp), intent(in) :: alpha
@@ -37,7 +37,7 @@ end function
 !! the cylinder.
 !! @p rc is the radius of the cylinder in reduced LJ units.
 !!
-function repwall(xa, rc)
+pure function repwall(xa, rc)
   real(dp), intent(in) :: xa, rc !, sigwall
   real(dp) :: repwall
   real(dp), dimension(5) :: as, bs
@@ -46,7 +46,7 @@ function repwall(xa, rc)
   real(dp) :: Ek, Kk, coeff
   real(dp) :: cc, q
   interface 
-  function horner(a, n, x) 
+  pure function horner(a, n, x) 
     use nrtype
     real(dp), dimension(:), intent(in) :: a
     integer, intent(in) :: n 
@@ -85,7 +85,7 @@ end function repwall
 !! the cylinder.
 !! @p rc is the radius of the cylinder in reduced LJ units.
 !!
-function attwall(xa, rc)
+pure function attwall(xa, rc)
   real(dp), intent(in) :: xa, rc !, sigwall
   real(dp) :: attwall
   real(dp) :: coeff, z, Ek, Kk

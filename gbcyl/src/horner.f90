@@ -2,7 +2,7 @@
 !! Coefficients of the polynomial are given in table a, where 
 !! a(i) is the coefficient of the x^(n-i) term
 !! Calculation is done with the Horner method. 
-function horner(a,n,x) 
+pure function horner(a,n,x) 
   use nrtype
   implicit none
   real(dp), dimension(:),intent(in) :: a
