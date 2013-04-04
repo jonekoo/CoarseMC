@@ -7,7 +7,6 @@ program printgbgb
 !! 
 use nrtype
 use gayberne
-use ljcylinder
 use utils, only : fmt_char_dp
 use class_parameterizer
 use class_parameter_writer
