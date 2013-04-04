@@ -205,7 +205,7 @@ module particle
     aparticle%uz = vec(3)
   end subroutine
 
-  subroutine move1(aparticle, genstate)    
+  pure subroutine move1(aparticle, genstate)    
     type(particledat), intent(inout) :: aparticle
     type(rngstate), intent(inout) :: genstate
     type(particledat) :: temp
@@ -213,7 +213,7 @@ module particle
     aparticle = temp
   end subroutine
 
-  subroutine move2(oldp, newp, genstate)
+  pure subroutine move2(oldp, newp, genstate)
     type(particledat), intent(in) :: oldp
     type(particledat), intent(out) :: newp
     type(rngstate), intent(inout) :: genstate
@@ -224,24 +224,30 @@ module particle
     end if
   end subroutine
   
-  subroutine transmove(xo, yo, zo, xn, yn, zn, genstate)
+  pure subroutine transmove(xo, yo, zo, xn, yn, zn, genstate)
     real(dp), intent(in) :: xo, yo, zo
     real(dp), intent(out) :: xn, yn, zn
     type(rngstate), intent(inout) :: genstate
     real(dp) :: max1d 
+    real(dp) :: r
     max1d = maxdr/sqrt(3._dp)
-    xn = xo + (2._dp * rng(genstate) - 1._dp) * max1d
-    yn = yo + (2._dp * rng(genstate) - 1._dp) * max1d
-    zn = zo + (2._dp * rng(genstate) - 1._dp) * max1d
+    call rng(genstate, r)
+    xn = xo + (2._dp * r - 1._dp) * max1d
+    call rng(genstate, r)
+    yn = yo + (2._dp * r - 1._dp) * max1d
+    call rng(genstate, r)
+    zn = zo + (2._dp * r - 1._dp) * max1d
   end subroutine
 
-  subroutine rotate(uxo, uyo, uzo, uxn, uyn, uzn, genstate)
+  pure subroutine rotate(uxo, uyo, uzo, uxn, uyn, uzn, genstate)
     real(dp), intent(in) :: uxo,uyo,uzo
     real(dp), intent(out) :: uxn,uyn,uzn
     type(rngstate), intent(inout) :: genstate
     real(dp) :: theta, nx, ny, nz
+    real(dp) :: r
     call nvec(nx, ny, nz, genstate)
-    theta = (2._dp * rng(genstate) - 1._dp) * dthetamax
+    call rng(genstate, r)
+    theta = (2._dp * r - 1._dp) * dthetamax
     call XVEC2(uxo, uyo, uzo, nx, ny, nz, theta, uxn, uyn, uzn)
   end subroutine
 
