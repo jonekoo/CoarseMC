@@ -2,7 +2,6 @@ module energy
   use nrtype, only: dp
   use particle, only: particledat
   use particlewall
-  !use class_poly_nbrlist
   use class_simplelist
   use class_poly_box
   use class_parameter_writer
