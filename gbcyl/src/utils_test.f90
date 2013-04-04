@@ -19,7 +19,7 @@ end subroutine
 
 subroutine test_splitstr()
   character(len=*), parameter :: str ='xy,xz,y,z,x,'
-  character(len=len(str)), dimension(:), pointer :: splitted
+  character(len=len(str)), dimension(:), allocatable :: splitted
   call splitstr(str, ',', splitted)
   call assert_equal(size(splitted), 6, "Splitted string has wrong length!")
   call assert_true(splitted(1) == 'xy', "Splitted string has wrong first substring!")
