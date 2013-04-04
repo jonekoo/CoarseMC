@@ -15,7 +15,7 @@ module verlet
   public :: verletlist
   public :: update
   public :: delete
-  public :: nbrmask
+  public :: verlet_nbrmask
  
   real(dp), save :: rlist = 6.8_dp
 
@@ -45,7 +45,7 @@ module verlet
     module procedure verlet_update, verlet_updatei
   end interface
 
-  interface nbrmask
+  interface verlet_nbrmask
     module procedure verlet_nbrmask
   end interface
 
