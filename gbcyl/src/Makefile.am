@@ -51,7 +51,49 @@ ldadd_mtstream = ${top_builddir}/mt_stream_f90-1.11/libmt_stream.la
 
 AM_FCFLAGS = -I${top_builddir}/mt_stream_f90-1.11 -I${top_builddir}/mt_stream_f90-1.11/f_jump_ahead_coeff
 
-nr_src = nrtype.f90 nrutil.f90 nr.f90 rf_s.f90 rd_s.f90 brent.f90 pythag.f90 tqli.f90 tred2.f90 jacobi.f90
+nr_src = \
+  nrtype.f90 \
+  nrutil.f90 \
+  nr.f90 \
+  rf_s.f90 \
+  rd_s.f90 \
+  brent.f90 \
+  pythag.f90 \
+  tqli.f90 \
+  tred2.f90 \
+  jacobi.f90
+
+model_src = \
+  class_parameterizer.f90 \
+  class_parameter_writer.f90 \
+  particle.f90 \
+  class_poly_box.f90 \
+  lj.f90 \
+  gayberne.f90 \
+  ljcylinder.f90 \
+  particlewall.f90 \
+  class_pair_potential.f90 \
+  verlet.f90 \
+  all_pairs.f90 \
+  cell.f90 \
+  class_simplelist.f90 \
+  energy.f90 \
+  genvoltrial.f90 \
+  horner.f90 
+
+common_src = \
+  ${nr_src} \
+  rng.inc \
+  utils.f90 \
+  m_fileunit.f90 \
+  ${model_src} 
+
+parallel_src = \
+  mpi.f90 \
+  pt.f90 \
+  beta_exchange.f90 \
+  mc_sweep.f90 \
+  mc_engine.f90 
 
 orientation_parameter_SOURCES = \
   ${nr_src} \
@@ -319,38 +361,6 @@ doublezsize_SOURCES = \
   class_nptintegral.f90 \
   tracer.f90
 
-model_src = \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
-  particle.f90 \
-  class_poly_box.f90 \
-  lj.f90 \
-  gayberne.f90 \
-  ljcylinder.f90 \
-  particlewall.f90 \
-  class_pair_potential.f90 \
-  verlet.f90 \
-  all_pairs.f90 \
-  cell.f90 \
-  class_simplelist.f90 \
-  class_poly_nbrlist.f90 \
-  energy.f90 \
-  genvoltrial.f90 \
-  horner.f90 
-
-common_src = \
-  ${nr_src} \
-  rng.inc \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} 
-
-parallel_src = \
-  mpi.f90 \
-  pt.f90 \
-  mc_sweep.f90 \
-  mc_engine.f90 
-
 pressurezz_SOURCES = \
   ${common_src} \
   class_factory.f90 \
@@ -418,6 +428,9 @@ driver_SOURCES = \
   particle.f90 \
   class_poly_box.f90 \
   cell.f90\
+  lj.f90 \
+  class_pair_potential.f90 \
+  all_pairs.f90 \
   class_simplelist.f90 \
   class_simplelist_pfunit.f90 \
   driver.F90  
