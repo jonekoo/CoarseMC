@@ -16,7 +16,7 @@ program distribution_1D
   use utils
   implicit none
   external g3rd
-  type(particledat), dimension(:), pointer :: particles
+  type(particledat), allocatable :: particles(:)
   integer :: io_status
   integer, parameter :: maxbin = 100
   real(dp) :: delr = 0.1_dp
@@ -36,7 +36,6 @@ program distribution_1D
       write(*, '(100(G16.10,1X))') histogram
     end if
   end do
-  if(associated(particles)) deallocate(particles)
 end program 
 
 
