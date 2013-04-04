@@ -1,4 +1,4 @@
-FUNCTION rd_s(x,y,z) 
+pure FUNCTION rd_s(x,y,z) 
 USE nrtype; USE nrutil, ONLY : assert
 IMPLICIT NONE
 REAL(SP), INTENT(IN) :: x,y,z
@@ -13,8 +13,8 @@ C4=3.0_sp/26.0_sp,C5=0.25_sp*C3,C6=1.5_sp*C4
   !! times the negative 2/3 power of the machine underflow limit. 
 REAL(SP) ::alamb,ave,delx,dely,delz,ea,eb,ec,ed,& 
   ee,fac,sqrtx,sqrty,sqrtz,sum,xt,yt,zt 
-call assert(min(x,y) >= 0.0, min(x+y,z) >= TINY, max(x,y,z) <= BIG, & 
-  'rd_s args') 
+!call assert(min(x,y) >= 0.0, min(x+y,z) >= TINY, max(x,y,z) <= BIG, & 
+!  'rd_s args') 
 xt=x
 yt=y
 zt=z

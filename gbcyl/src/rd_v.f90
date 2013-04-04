@@ -1,4 +1,4 @@
-FUNCTION rd_v(x,y,z) 
+pure FUNCTION rd_v(x,y,z) 
 USE nrtype; USE nrutil, ONLY : assert,assert_eq 
 IMPLICIT NONE 
 REAL(SP), DIMENSION(:), INTENT(IN) :: x,y,z 

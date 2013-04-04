@@ -1,4 +1,4 @@
-FUNCTION rf_s(x,y,z) 
+pure FUNCTION rf_s(x,y,z) 
 USE nrtype; USE nrutil, ONLY : assert 
 IMPLICIT NONE 
 REAL(SP), INTENT(IN) :: x,y,z 
@@ -12,8 +12,9 @@ REAL(SP), PARAMETER :: BIG=3.0e37_sp,&
   !! at least 5 times the machine underflow limit, BIG at most one-fifth the
   !! machine overflow limit. 
 REAL(SP) ::alamb,ave,delx,dely,delz,e2,e3,sqrtx,sqrty,sqrtz,xt,yt,zt 
-call assert(min(x,y,z) >=0.0, min(x+y,x+z,y+z) >= 5._sp*TINY(1._sp), & 
-max(x,y,z) <= BIG, 'rf_s args') 
+!! Assertion removed so that function can be defined pure!
+!call assert(min(x,y,z) >=0.0, min(x+y,x+z,y+z) >= 5._sp*TINY(1._sp), & 
+!max(x,y,z) <= BIG, 'rf_s args') 
 xt=x
 yt=y
 zt=z
