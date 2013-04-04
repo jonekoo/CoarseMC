@@ -3,7 +3,6 @@ module mc_sweep
   use energy
   use class_poly_box
   use particle
-  use class_poly_nbrlist
   use pt
   use beta_exchange
   use class_parameterizer
@@ -83,7 +82,6 @@ module mc_sweep
   integer, save :: nscalingtrials = 0
   integer, save :: nradialtrials = 0
   integer, save :: nacceptedradial = 0
-  !type(poly_nbrlist), save :: nbrlist
   type(simplelist), save :: sl
   character(len = 200), save :: scalingtype = "z"
   character(len = 200), dimension(:), allocatable, save :: scalingtypes
@@ -133,15 +131,8 @@ module mc_sweep
     nacceptedscalings = 0
     if (volratio < 1) volratio = size(particles)   
     
-    !call pnl_init(reader)
-    !nbrlist = create_nbrlist(the_simbox, the_particles)
     call simplelist_init(reader)
     sl = new_simplelist(the_simbox, the_particles)
-    !call update(nbrlist, simbox, particles)
-    !call potentialenergy(simbox, particles, nbrlist, etotal, overlap)
-    !if(overlap) then 
-    !  stop 'Overlap when initializing mc_sweep! Stopping.'
-    !end if
     call set_system(the_simbox, the_particles)
     if (ptratio > 0) call pt_init(reader)
   end subroutine 
@@ -205,7 +196,7 @@ module mc_sweep
     call writeparameter(writer, 'volume', currentvolume)
     call writeparameter(writer, 'enthalpy', etotal + currentvolume * pressure)
     call writeparameter(writer, 'total_energy', etotal)
-    call pnl_writeparameters(writer)
+    call simplelist_writeparameters(writer)
     call energy_writeparameters(writer)
     call pt_writeparameters(writer)
 !    call genvoltrial_writeparameters(writer)
