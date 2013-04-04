@@ -153,7 +153,7 @@ end subroutine
   !! @p Eptwall the interaction energy of the wall and the particle.
   !! @p ovrlp tells if the @p gbparticle has penetrated the wall too much.
   !! 
-  subroutine gbwall(gbparticle, simbox, Eptwall,ovrlp)
+  pure subroutine gbwall(gbparticle, simbox, Eptwall,ovrlp)
     implicit none
     type(particledat), intent(in) :: gbparticle
     type(poly_box), intent(in) :: simbox
@@ -204,7 +204,7 @@ end subroutine
   !! @p ra the distance of site A from the cylinder center
   !! @p rb the distance of site B from the cylinder center
   !!
-  subroutine rarb(particle, ra, rb)
+  pure subroutine rarb(particle, ra, rb)
     implicit none
     intrinsic sqrt
     type(particledat), intent(in) :: particle
@@ -224,7 +224,7 @@ end subroutine
   !!
   !! @p particle the particle to which the potential is calculated. 
   !! 
-  real(dp) function angular(particle)
+  pure real(dp) function angular(particle)
     implicit none
     type(particledat), intent(in) :: particle
     angular=(particle%uz)**2
