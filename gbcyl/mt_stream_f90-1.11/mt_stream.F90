@@ -91,6 +91,10 @@ module mt_stream
   public :: genrand_double3
   public :: genrand_double4
 
+  !! Two additions by Jouni Karjalainen:
+  public :: genrand_double1_s
+  public :: genrand_int32_s
+
   integer(INT32), parameter :: MTS_SUCCESS = 0
   integer(INT32), parameter :: MTS_FAIL    = -1
 #ifdef _DEBUG_
@@ -203,6 +207,15 @@ module mt_stream
   interface genrand_double4
    ! in (0,1]  (53-bit resolution)
     module procedure mt_genrand_double4
+  end interface
+
+  !! Additions by Jouni Karjalainen:
+  interface genrand_double1_s
+    module procedure mt_genrand_double1_s
+  end interface
+
+  interface genrand_int32_s
+    module procedure mt_genrand_int32_s
   end interface
 
 contains
@@ -548,6 +561,54 @@ function mt_genrand_int32(this) result(ir)
   return
 end function
 
+
+pure subroutine mt_genrand_int32_s(this, ir)
+!
+!= return a value in [0,0xFFFFFFFF]
+!
+! Modified by Jouni Karjalainen from the function mt_genrand_int32 just to fulfill 
+! the pure attribute requirements.
+!
+  implicit none
+  type(mt_state), intent(inout) :: this
+  integer(INT32), intent(out) :: ir
+  integer(INT32) :: umask,lmask,n,m,is
+  integer(INT32) :: k,nm,n1
+  if (this%i >= this%nn) then
+    n = this%nn
+    m = this%mm
+    lmask = this%lmask
+    umask = this%umask
+    nm = n - m
+    n1 = n - 1
+    do k=0,nm-1
+      is = IOR(IAND(this%state(k),umask),IAND(this%state(k+1),lmask))
+      this%state(k) = IEOR(IEOR(this%state(k+m),ISHFT(is,-1)),this%mag(IAND(is,1)))
+    enddo
+    do k=nm,n1-1
+      is = IOR(IAND(this%state(k),umask),IAND(this%state(k+1),lmask))
+      this%state(k) = IEOR(IEOR(this%state(k+m-n),ISHFT(is,-1)),this%mag(IAND(is,1)))
+    enddo
+    is = IOR(IAND(this%state(n-1),umask),IAND(this%state(0),lmask))
+    this%state(n-1) = IEOR(IEOR(this%state(m-1),ISHFT(is,-1)),this%mag(IAND(is,1)))
+    this%i = 0
+  endif
+
+  is = this%state(this%i)
+  this%i = this%i + 1
+#ifdef _TEMPERING_
+  is = IEOR(is,ISHFT(is,-this%shift0))
+  is = IEOR(is,IAND(ISHFT(is, this%shiftB),this%maskB))
+  is = IEOR(is,IAND(ISHFT(is, this%shiftC),this%maskC))
+  is = IEOR(is,ISHFT(is,-this%shift1))
+#endif
+  ir = is
+  return
+end subroutine
+
+
+
+
 subroutine mt_matvec(this,v,w)
 !
 != Multiply transition matrix on a state vector v
@@ -727,6 +788,33 @@ function mt_genrand_double1(this) result(r)
   r = (a*67108864.0_REAL64 + b)*(1.0_REAL64/9007199254740991.0_REAL64)
   return
 end function
+
+pure subroutine mt_genrand_double1_s(this, r)
+  !
+  !  r in [0,1]  (53-bit resolution)
+  !
+  ! Modified by Jouni Karjalainen from the function mt_genrand_int32 just to fulfill 
+  ! the pure attribute requirements.
+  !
+  implicit none
+  type(mt_state), intent(inout) :: this
+  real(REAL64), intent(out)   :: r
+  real(REAL64)   :: a,b
+  integer(INT32) :: ia,ib
+  !ia = mt_genrand_int32(this)   ! ia in [0,0xFFFFFFFF]
+  call mt_genrand_int32_s(this, ia)
+  !ib = mt_genrand_int32(this)   ! ib in [0,0xFFFFFFFF]
+  call mt_genrand_int32_s(this, ib)
+  ia = ISHFT(ia,-5)             ! ia in [0,2^27-1]
+  ib = ISHFT(ib,-6)             ! ib in [0,2^26-1]
+  a = REAL(ia,kind=KIND(r))
+  b = REAL(ib,kind=KIND(r))
+  !===============================
+  ! ( a*2^26 + b ) in [0,2^53-1]
+  ! r = ( a*2^26 + b )/(2^53-1)
+  !===============================
+  r = (a*67108864.0_REAL64 + b)*(1.0_REAL64/9007199254740991.0_REAL64)
+end subroutine
 
 function mt_genrand_double2(this) result(r)
   !
