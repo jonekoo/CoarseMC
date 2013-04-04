@@ -41,7 +41,7 @@ end function
 subroutine splitstr(str, delimiterstr, strarr)
   character(len=*), intent(in) :: str
   character(len=*), intent(in) :: delimiterstr
-  character(len=len(str)), dimension(:), pointer :: strarr
+  character(len=len(str)), dimension(:), allocatable, intent(out) :: strarr
   integer :: dim, i 
   integer :: lastpos
   integer :: step
@@ -113,7 +113,7 @@ pure subroutine rotate_vector(x, y, z, nx, ny, nz, angle, xp, yp, zp)
   zp = z * cp + nz * dotpr * (1._dp - cp) + zp * sp
 end subroutine rotate_vector
 
-subroutine nvec(nx, ny, nz, genstate)
+pure subroutine nvec(nx, ny, nz, genstate)
   !!
   !! Generates a random unit vector (nx, ny, nz). 
   !!
@@ -124,10 +124,13 @@ subroutine nvec(nx, ny, nz, genstate)
   double precision, intent(out) :: nx, ny, nz
   type(rngstate), intent(inout) :: genstate
   double precision :: l, u1, u2, s
+  double precision :: r
   l = 0.0_dp
   do
-     u1 = 1._dp - 2._dp * rng(genstate)
-     u2 = 1._dp - 2._dp * rng(genstate)
+     call rng(genstate, r)
+     u1 = 1._dp - 2._dp * r
+     call rng(genstate, r)
+     u2 = 1._dp - 2._dp * r
      l = u1 * u1 + u2 * u2
      if(l <= 1._dp) exit
   end do
