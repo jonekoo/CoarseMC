@@ -26,7 +26,6 @@ module particlewall
   public :: repwall
   public :: attwall
   public :: particlewall_writeparameters
-!  public :: energy
   public :: sitewallpotential
   public :: gbwallpotential
     
@@ -65,7 +64,7 @@ type gbwallpotential
   type(sitewallpotential) :: sitea
   type(sitewallpotential) :: siteb
   real(dp) :: separation = 1.7_dp
-  logical :: isuniformalignment = .true.
+  logical :: isuniformalignment = .false.
 end type
 
 interface initptwall
@@ -75,10 +74,6 @@ end interface
 interface particlewall_potential
   module procedure gbwall
 end interface
-
-!interface energy
-!  module procedure sitewallpotential_energy
-!end interface
 
 contains 
 
@@ -129,7 +124,6 @@ end subroutine
     call getparameter(reader, 'LJ_dist', LJdist) 
     call getparameter(reader, 'is_uniform_alignment', isuniformalignment)
     call getparameter(reader, 'sigwall', sig)
-    !call getparameter(reader, 'radius', radius)
   end subroutine
 
   subroutine particlewall_writeparameters(writer)
@@ -141,10 +135,9 @@ end subroutine
     call writeparameter(writer, 'LJ_dist', LJdist) 
     call writeparameter(writer, 'is_uniform_alignment', isuniformalignment)
     call writeparameter(writer, 'sigwall', sig)
-    !call writeparameter(writer, 'radius', radius)
   end subroutine
 
-  !! Calculates the potential energy of a rodlike particle with two embedded 
+  !> Calculates the potential energy of a rodlike particle with two embedded 
   !! Lennard-Jones interaction sites with respect to a wall of a cylindrical 
   !! cavity.
   !! 
@@ -153,6 +146,8 @@ end subroutine
   !! @p Eptwall the interaction energy of the wall and the particle.
   !! @p ovrlp tells if the @p gbparticle has penetrated the wall too much.
   !! 
+  !! @see D. Micheletti et al. J. Chem. Phys. 123, 224705, 2005.
+  !!
   pure subroutine gbwall(gbparticle, simbox, Eptwall,ovrlp)
     implicit none
     type(particledat), intent(in) :: gbparticle
@@ -163,9 +158,7 @@ end subroutine
     real(dp) :: fu, Rc
     ovrlp = .false.
     Eptwall = 0._dp
-    !! :TODO: Remove this dependency by making a cylinder wall object.
     Rc = getx(simbox)/2._dp 
-    !Rc = radius
     call rArB(gbparticle, rsiteA, rsiteB)
     if(rsiteA >= Rc .or. rsiteB >= Rc) then
       ovrlp = .true.
@@ -176,8 +169,8 @@ end subroutine
     else 
       fu = 1._dp
     end if
-    Eptwall = fu * ljcylinderpotential(Kw, sig, alphaA, rsiteA, Rc) + &
-    ljcylinderpotential(Kw, sig, alphaB, rsiteB, Rc)
+    Eptwall = fu * (ljcylinderpotential(Kw, sig, alphaA, rsiteA, Rc) + &
+    ljcylinderpotential(Kw, sig, alphaB, rsiteB, Rc))
   end subroutine gbwall
 
 subroutine sitewallpotential_energy(sitepotential, r, rwall, energy, overlap)
