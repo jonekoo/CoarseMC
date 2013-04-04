@@ -43,6 +43,11 @@ module particlewall
   real(dp), save :: LJdist = 1.7_dp 
   logical, save :: isuniformalignment = .false.
 
+  real(dp), save :: Kw_lj = 10.72_dp
+  real(dp), save :: alpha_lj = 1._dp
+  real(dp), save :: sigwall_lj = 0.8_dp
+
+
 !! LJ-GB interaction consists of interactions of the two sites. Basically
 !! that could be in a different module which then would use this module. 
 !! Keep in mind that the Xe-wall interaction may be of the same form as 
@@ -69,10 +74,6 @@ end type
 
 interface initptwall
   module procedure initptwallparameterizer, initptwallregular
-end interface
-
-interface particlewall_potential
-  module procedure gbwall
 end interface
 
 contains 
@@ -118,23 +119,77 @@ end subroutine
 
   subroutine initptwallparameterizer(reader)
     type(parameterizer), intent(in) :: reader
+    !! GB-wall parameters
     call getparameter(reader, 'Kw', Kw)
     call getparameter(reader, 'alpha_A', alphaA) 
     call getparameter(reader, 'alpha_B', alphaB) 
     call getparameter(reader, 'LJ_dist', LJdist) 
     call getparameter(reader, 'is_uniform_alignment', isuniformalignment)
     call getparameter(reader, 'sigwall', sig)
+    !! LJ-wall parameters
+    call getparameter(reader, 'Kw_LJ', Kw_lj)
+    call getparameter(reader, 'alpha_LJ', alpha_lj)
+    call getparameter(reader, 'sigwall_LJ', sigwall_lj)
   end subroutine
 
   subroutine particlewall_writeparameters(writer)
     type(parameter_writer), intent(in) :: writer
-    call writecomment(writer, 'Particle-wall interaction parameters')
+    !! GB-wall parameters
+    call writecomment(writer, 'GB-wall interaction parameters')
     call writeparameter(writer, 'alpha_A', alphaA) 
     call writeparameter(writer, 'alpha_B', alphaB) 
     call writeparameter(writer, 'Kw', Kw)
     call writeparameter(writer, 'LJ_dist', LJdist) 
     call writeparameter(writer, 'is_uniform_alignment', isuniformalignment)
     call writeparameter(writer, 'sigwall', sig)
+    !! LJ-wall parameters
+    call writecomment(writer, 'LJ-wall interaction parameters')
+    call writeparameter(writer, 'Kw_LJ', Kw_lj)
+    call writeparameter(writer, 'alpha_LJ', alpha_lj)
+    call writeparameter(writer, 'sigwall_LJ', sigwall_lj)
+  end subroutine
+
+
+  pure subroutine particlewall_potential(particle, simbox, energy, overlap)
+    type(particledat), intent(in) :: particle
+    type(poly_box), intent(in) :: simbox
+    real(dp), intent(out) :: energy
+    logical, intent(out) :: overlap
+    if (particle%rod) then
+      call gbwall(particle, simbox, energy, overlap)
+    else
+      call ljwall(particle, simbox, energy, overlap)
+    end if
+  end subroutine
+
+
+  !> Calculates the potential energy of a Lennard-Jones (LJ) particle with 
+  !! respect to a wall of a cylindrical cavity.
+  !! 
+  !! @p ljparticle the LJ particle.
+  !! @p simbox the simulation box defining the dimensions of the cavity.
+  !! @p energy the interaction energy of the wall and the particle.
+  !! @p ovrlp tells if the @p ljparticle has penetrated the wall too much.
+  !! 
+  !! @see D. Micheletti et al. J. Chem. Phys. 123, 224705, 2005.
+  !!
+  pure subroutine ljwall(ljparticle, simbox, energy, ovrlp)
+    implicit none
+    type(particledat), intent(in) :: ljparticle
+    type(poly_box), intent(in) :: simbox
+    real(dp), intent(out) :: energy
+    logical, intent(out) :: ovrlp
+    real(dp) :: r
+    real(dp) :: fu, Rc
+    ovrlp = .false.
+    energy = 0._dp
+    Rc = getx(simbox)/2._dp 
+    r = sqrt(ljparticle%x**2 + ljparticle%y**2)
+    if(r >= Rc) then
+      ovrlp = .true.
+      return
+    end if
+    energy = ljcylinderpotential(Kw_lj, sigwall_lj, alpha_lj, r, Rc)
   end subroutine
 
   !> Calculates the potential energy of a rodlike particle with two embedded 
@@ -143,21 +198,21 @@ end subroutine
   !! 
   !! @p gbparticle the rodlike particle.
   !! @p simbox the simulation box defining the dimensions of the cavity.
-  !! @p Eptwall the interaction energy of the wall and the particle.
+  !! @p energy the interaction energy of the wall and the particle.
   !! @p ovrlp tells if the @p gbparticle has penetrated the wall too much.
   !! 
   !! @see D. Micheletti et al. J. Chem. Phys. 123, 224705, 2005.
   !!
-  pure subroutine gbwall(gbparticle, simbox, Eptwall,ovrlp)
+  pure subroutine gbwall(gbparticle, simbox, energy,ovrlp)
     implicit none
     type(particledat), intent(in) :: gbparticle
     type(poly_box), intent(in) :: simbox
-    real(dp), intent(out) :: Eptwall
+    real(dp), intent(out) :: energy
     logical, intent(out) :: ovrlp
     real(dp) :: rsiteA, rsiteB
     real(dp) :: fu, Rc
     ovrlp = .false.
-    Eptwall = 0._dp
+    energy = 0._dp
     Rc = getx(simbox)/2._dp 
     call rArB(gbparticle, rsiteA, rsiteB)
     if(rsiteA >= Rc .or. rsiteB >= Rc) then
@@ -169,7 +224,7 @@ end subroutine
     else 
       fu = 1._dp
     end if
-    Eptwall = fu * (ljcylinderpotential(Kw, sig, alphaA, rsiteA, Rc) + &
+    energy = fu * (ljcylinderpotential(Kw, sig, alphaA, rsiteA, Rc) + &
     ljcylinderpotential(Kw, sig, alphaB, rsiteB, Rc))
   end subroutine gbwall
 
