@@ -132,7 +132,12 @@ module mc_sweep
     if (volratio < 1) volratio = size(particles)   
     
     call simplelist_init(reader)
-    sl = new_simplelist(the_simbox, the_particles)
+    !$ if (.true.) then
+      !$ sl = new_simplelist(the_simbox, the_particles, &
+      !$& is_x_even = isxperiodic(simbox), is_y_even = isyperiodic(simbox), is_z_even = iszperiodic(simbox))
+    !$ else 
+      sl = new_simplelist(the_simbox, the_particles)
+    !$ end if
     call set_system(the_simbox, the_particles)
     if (ptratio > 0) call pt_init(reader)
   end subroutine 

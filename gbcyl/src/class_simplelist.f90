@@ -1,5 +1,4 @@
 module class_simplelist
-use cell
 use nrtype
 use particle
 use class_pair_potential
@@ -13,7 +12,6 @@ private
 public :: new_simplelist
 public :: simplelist_delete
 public :: delete
-!public :: scaledposition
 public :: simplelist_init
 public :: simplelist_writeparameters
 public :: update
@@ -23,7 +21,6 @@ public :: simplelist
 public :: simplelist_pairinteractions
 
 real(dp), save :: this_minlength = 7.5_dp
-logical, save :: this_iseven = .false.
 real(dp), save :: this_updatethreshold = 0.5_dp
 
 interface simplelist_init
@@ -44,6 +41,7 @@ end interface
 
 type simplelist
   integer :: nx, ny, nz
+  logical :: is_x_even = .false., is_y_even = .false., is_z_even = .false.
   integer, allocatable, dimension(:,:,:,:) :: indices
   integer, allocatable, dimension(:,:,:) :: counts
   integer, allocatable, dimension(:,:) :: coords
@@ -63,16 +61,13 @@ contains
 subroutine initwtreader(parameterreader)
   type(parameterizer), intent(in) :: parameterreader
   call getparameter(parameterreader, 'cellminlength', this_minlength)
-  call getparameter(parameterreader, 'isdivisioneven', this_iseven)
   call getparameter(parameterreader, 'updatethreshold', this_updatethreshold)
 end subroutine
 
-subroutine initwtparameters(minlength, iseven, updatethreshold)
+subroutine initwtparameters(minlength, updatethreshold)
   real(dp), intent(in) :: minlength
-  logical, intent(in) :: iseven
   real(dp), intent(in) :: updatethreshold
   this_minlength = minlength
-  this_iseven = iseven
   this_updatethreshold = updatethreshold
 end subroutine
 
@@ -80,7 +75,6 @@ subroutine simplelist_writeparameters(writer)
   type(parameter_writer), intent(in) :: writer
   call writecomment(writer, 'simplelist parameters')
   call writeparameter(writer, 'cellminlength', this_minlength)
-  call writeparameter(writer, 'isdivisioneven', this_iseven) 
   call writeparameter(writer, 'updatethreshold', this_updatethreshold)
 end subroutine
 
@@ -95,13 +89,17 @@ end subroutine
 !! @p nparticles is the number of particles.
 !! @p minlength is the minimum length of a cell side. 
 !!
-function new_simplelist(simbox, particles) result(sl)
+function new_simplelist(simbox, particles, is_x_even, is_y_even, is_z_even) result(sl)
   type(poly_box), intent(in) :: simbox
-  type(particledat), dimension(:), intent(in) :: particles
+  type(particledat), intent(in) :: particles(:)
+  logical, intent(in), optional :: is_x_even, is_y_even, is_z_even
   type(simplelist) :: sl
-  call calculate_dimensions(simbox, sl%nx, sl%ny, sl%nz)
+  if(present(is_x_even)) sl%is_x_even = is_x_even
+  if(present(is_y_even)) sl%is_y_even = is_y_even
+  if(present(is_z_even)) sl%is_z_even = is_z_even
+  call calculate_dimensions(sl, simbox)
   call simplelist_allocate(sl, size(particles))
-  !! :TODO: Make the indices list size parameterizable or optimizable
+  !! :TODO: Could make the indices list size parameterizable or optimizable
   call simplelist_populate(sl, simbox, particles)
 end function
 
@@ -114,42 +112,34 @@ subroutine simplelist_allocate(sl, n)
   allocate(sl%xyzlist(n,3))
 end subroutine
 
-subroutine calculate_dimensions(simbox, nx, ny, nz)
+subroutine calculate_dimensions(sl, simbox)
+  type(simplelist), intent(inout) :: sl
   type(poly_box), intent(in) :: simbox
-  integer, intent(out) :: nx, ny, nz
-  nx = max(ncells(getx(simbox), this_minlength), 1)
-  ny = max(ncells(gety(simbox), this_minlength), 1)
-  nz = max(ncells(getz(simbox), this_minlength), 1)
-  if (this_iseven) then
-    if (nx < 2 .or. ny < 2 .or. nz < 2) then
-      stop 'Could not create a cell list with even number of cells in'//& 
-      &' all directions'
-    end if
-    nx = (nx / 2) * 2
-    ny = (ny / 2) * 2
-    nz = (nz / 2) * 2
-  end if 
-  if (nx < 3) nx=1
-  if (ny < 3) ny=1
-  if (nz < 3) nz=1
-  if (nx < 4 .and. isxperiodic(simbox)) nx=1
-  if (ny < 4 .and. isyperiodic(simbox)) ny=1
-  if (nz < 4 .and. iszperiodic(simbox)) nz=1
+
+  sl%nx = max(int(getx(simbox)/this_minlength), 1)
+  sl%ny = max(int(gety(simbox)/this_minlength), 1)
+  sl%nz = max(int(getz(simbox)/this_minlength), 1)
+
+  if (sl%is_x_even) sl%nx = (sl%nx / 2) * 2
+  if (sl%is_y_even) sl%ny = (sl%ny / 2) * 2
+  if (sl%is_z_even) sl%nz = (sl%nz / 2) * 2
+
+  if (sl%nx < 3) sl%nx = 1
+  if (sl%ny < 3) sl%ny = 1
+  if (sl%nz < 3) sl%nz = 1
+
+  if (sl%nx < 4 .and. isxperiodic(simbox)) sl%nx = 1
+  if (sl%ny < 4 .and. isyperiodic(simbox)) sl%ny = 1
+  if (sl%nz < 4 .and. iszperiodic(simbox)) sl%nz = 1
 end subroutine
 
 subroutine simplelist_update(sl, simbox, particles)
   type(simplelist), intent(inout) :: sl
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
-  integer :: nx, ny, nz
-  call calculate_dimensions(simbox, nx, ny, nz)
-  if (nx/=sl%nx .or. ny/=sl%ny .or. nz/=sl%nz) then
-    call delete(sl)
-    sl%nx=nx
-    sl%ny=ny
-    sl%nz=nz
-    call simplelist_allocate(sl, size(particles))
-  end if
+  call calculate_dimensions(sl, simbox)
+  call simplelist_delete(sl)
+  call simplelist_allocate(sl, size(particles))
   call simplelist_populate(sl, simbox, particles)
 end subroutine
 
@@ -344,7 +334,7 @@ energy, overlap)
   integer :: n_mask
   integer :: temp_j
   type(particledat), allocatable :: temp_particles(:)
-  integer :: check(size(particles))
+  !integer :: check(size(particles))
   helper = (/(i, i=1,size(particles))/)
   energy = 0._dp
   overlap = .false.
@@ -388,19 +378,9 @@ pure subroutine maskedinteractions(mask, simbox, particles, i, energy, overlap)
   integer, intent(in) :: i
   real(dp), intent(out) :: energy
   logical, intent(out) :: overlap
-  integer :: j
-  real(dp) :: pairenergy
-  logical :: overlap_ij
   logical :: temp_mask(size(particles))
   overlap = .false.
   energy = 0._dp
-  !do j=1, size(particles)
-  !  if(mask(j)) then
-  !    call pairv(particles(i), particles(j), simbox, pairenergy, overlap_ij)
-  !    overlap = overlap .or. overlap_ij
-  !    energy = energy + pairenergy
-  !  end if
-  !end do
   temp_mask = .false.
   temp_mask(i) = .true.
   call pairinteractions(simbox, pack(particles, mask .or. temp_mask), i, energy, overlap)
