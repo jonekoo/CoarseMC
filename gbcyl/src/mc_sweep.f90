@@ -285,7 +285,7 @@ module mc_sweep
     type(rngstate), intent(inout) :: genstates(0:)
     type(simplelist), intent(in) :: sl
     integer :: n_threads = 1, thread_id = 0, i
-    real(dp) :: dE = 0._dp
+    real(dp) :: dE 
     logical :: isaccepted
     !! You may be tempted to make the allocatable arrays automatic, but there's
     !! no performance gained and depending on the system large automatic arrays
@@ -294,13 +294,17 @@ module mc_sweep
     logical, allocatable :: nbr_mask(:)
     integer :: n_cell ! particles in the cell where particles are moved.
     integer :: n_local ! particles cell and its neighbour cells.
-    real(dp) :: dE_ij = 0._dp
-    integer :: nacc = 0, ntrials = 0
+    real(dp) :: dE_ij
+    integer :: nacc, ntrials
     integer :: j, ix, iy, iz, jx, jy, jz
     !integer :: check(size(particles))
     !! Use domain decomposition if OpenMP parallelization and cell list are 
     !! available:
     !check = 0
+    dE = 0._dp
+    dE_ij = 0._dp
+    nacc = 0
+    ntrials = 0
     if (.true.) then
       !! Loop over cells. This can be thought of as looping through a 2 x 2 x 2
       !! cube of cells.
@@ -455,6 +459,7 @@ module mc_sweep
     logical :: overlap
     real(dp) :: enew
     real(dp) :: eold
+
     enew = 0._dp
     eold = 0._dp
     dE = 0._dp
