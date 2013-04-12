@@ -60,11 +60,10 @@ end subroutine
 !! A poly_particle class could be used. This class could be quered for
 !! the true type of the particles since it knows it anyway.
 !! 
-pure subroutine pairv(particlei, particlej, rij, simbox, potE, overlap)
+pure subroutine pairv(particlei, particlej, rij, potE, overlap)
   type(particledat), intent(in) :: particlei 
   type(particledat), intent(in) :: particlej
   real(dp), intent(in) :: rij(3)
-  type(poly_box), intent(in) :: simbox
   real(dp), intent(out) :: potE
   logical, intent(out) :: overlap
   real(dp), dimension(3) :: ui, uj
