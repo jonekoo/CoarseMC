@@ -178,12 +178,12 @@ subroutine mce_init(id, n_tasks)
   close(coordinateunit)
 
   !! Initialize modules. 
+  call initparticle(parameterreader)
 !  if (isopenmp) then 
 !    call ompsweep_init(parameterreader, simbox, particles)
 !  else
     call mc_sweep_init(parameterreader, simbox, particles)
 !  end if
-  call initparticle(parameterreader)
   call delete(parameterreader)
  
   !! Open output for geometries
