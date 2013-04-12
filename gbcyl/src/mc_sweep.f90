@@ -7,12 +7,9 @@ module mc_sweep
   use beta_exchange
   use class_parameterizer
   use class_parameter_writer
-  use mpi
   use genvoltrial
   use utils 
-  use gayberne
   !$ use omp_lib
-  use mpi
   use class_simplelist
   include 'rng.inc'
   implicit none  
@@ -33,6 +30,7 @@ module mc_sweep
   public :: ptratio
   public :: getscalingtypes
   public :: set_system, get_system
+  public :: get_total_energy
 
   integer, save :: nacceptedmoves
   !! number of accepted particle moves
@@ -85,6 +83,7 @@ module mc_sweep
   type(simplelist), save :: sl
   character(len = 200), save :: scalingtype = "z"
   character(len = 200), dimension(:), allocatable, save :: scalingtypes
+  logical :: is_initialized = .false.
 
   type(poly_box), save :: simbox
   type(particledat), allocatable, save :: particles(:)
@@ -107,6 +106,7 @@ module mc_sweep
     type(parameterizer), intent(in) :: reader
     type(poly_box), intent(in) :: the_simbox
     type(particledat), dimension(:), intent(in) :: the_particles
+    real(dp) :: min_cell_length
     call energy_init(reader)
     call getparameter(reader, 'scaling_type', scalingtype)
     call parsescalingtype(scalingtype)
@@ -130,17 +130,25 @@ module mc_sweep
     nacceptedmoves = 0
     nacceptedscalings = 0
     if (volratio < 1) volratio = size(particles)   
-    
-    call simplelist_init(reader)
+    min_cell_length = get_cutoff() + 2._dp * get_max_translation()
+    !call simplelist_init(reader)
     !$ if (.true.) then
-      !$ sl = new_simplelist(the_simbox, the_particles, &
+      !$ sl = new_simplelist(the_simbox, the_particles, min_cell_length, &
       !$& is_x_even = isxperiodic(simbox), is_y_even = isyperiodic(simbox), is_z_even = iszperiodic(simbox))
     !$ else 
-      sl = new_simplelist(the_simbox, the_particles)
+      sl = new_simplelist(the_simbox, the_particles, min_cell_length)
     !$ end if
     call set_system(the_simbox, the_particles)
     if (ptratio > 0) call pt_init(reader)
+    is_initialized = .true.
   end subroutine 
+
+  real(dp) function get_total_energy()
+    if (.not. is_initialized) then
+      stop 'mc_sweep:get_total_energy: Error: module not initialized!'
+    end if
+    get_total_energy = etotal
+  end function
 
   !> Checks and parses the scalingtype string to the scalingtypes array. 
   !!
@@ -201,7 +209,6 @@ module mc_sweep
     call writeparameter(writer, 'volume', currentvolume)
     call writeparameter(writer, 'enthalpy', etotal + currentvolume * pressure)
     call writeparameter(writer, 'total_energy', etotal)
-    call simplelist_writeparameters(writer)
     call energy_writeparameters(writer)
     call pt_writeparameters(writer)
 !    call genvoltrial_writeparameters(writer)
@@ -218,7 +225,7 @@ module mc_sweep
     allocate(particles(size(the_particles)))
     particles = the_particles
     call update(sl, simbox, particles)
-    call potentialenergy(simbox, particles, sl, etotal, overlap)
+    call total_by_cell(sl, simbox, particles, etotal, overlap)
     if (overlap) stop 'mc_sweep:set_system: Trying to set a geometry with overlap!' 
     currentvolume = volume(simbox)
   end subroutine
@@ -243,7 +250,6 @@ module mc_sweep
   subroutine sweep(genstates, isweep)    
     type(rngstate), intent(inout) :: genstates(0:)
     integer, intent(in) :: isweep
-    integer :: irss
     integer :: ivolmove
     real(dp) :: beta
     !! If the volratio parameter is not given, make volume move once a sweep.
@@ -332,8 +338,11 @@ module mc_sweep
           do j = 1, n_cell
             call moveparticle_2(simbox, temp_particles(1:n_local), j, &
             &genstates(thread_id), dE_ij, isaccepted)
-            dE = dE + dE_ij
-            if (isaccepted) nacc = nacc + 1
+            !dE = dE + dE_ij
+            if (isaccepted) then 
+              nacc = nacc + 1
+              dE = dE + dE_ij
+            end if
             ntrials = ntrials + 1
           end do
           ! debug stuff:
@@ -471,9 +480,11 @@ module mc_sweep
     oldparticle = particles(i) 
     particles(i) = newparticle
     call potentialenergy(simbox, particles, i, enew, overlap)
+
     particles(i) = oldparticle
     if(.not. overlap) then 
       call potentialenergy(simbox, particles, i, eold, overlap)
+      !! DEBUG:
       !if (overlap) then
       !  stop 'moveparticle: overlap with old particle'
       !end if
@@ -483,6 +494,7 @@ module mc_sweep
         dE = enew - eold
       end if
     end if 
+  
   end subroutine
 
   !> Returns the simulation temperature.
@@ -523,17 +535,34 @@ module mc_sweep
     real(dp) :: boltzmanno
     type(poly_box) :: oldbox
     real(dp), dimension(3) :: scaling
+    logical :: is_update_needed
     nparticles = size(particles)
     overlap = .false.
+    is_update_needed = .false.
+
+    !! Store old volume and simulation box
     Vo = volume(simbox)
     oldbox = simbox
+
+    !! Scale coordinates and the simulations box
     scaling = genvoltrial_scale(simbox, maxscaling, genstate, trim(adjustl(scalingtype)))
     call scalepositions(oldbox, simbox, particles, nparticles) 
     Vn = volume(simbox)
-    call potentialenergy(simbox, particles, sl, totenew, overlap)    
-    call scalepositions(simbox, oldbox, particles, nparticles)
+
+    if (Vn/Vo < 1._dp/(1._dp + 2._dp * get_max_translation()/get_cutoff())) then
+      !! Volume shrank so quickly that the neighbourlist needs updating.
+      call update(sl, simbox, particles)
+      is_update_needed = .true.
+    end if 
+
+    !! Calculate potential energy in the scaled system.
+    call total_by_cell(sl, simbox, particles, totenew, overlap)
+
     if (overlap) then
-      simbox = oldbox  
+      !! Scale particles back to old coordinates.
+      call scalepositions(simbox, oldbox, particles, nparticles)
+      simbox = oldbox
+      if (is_update_needed) call update(sl, simbox, particles)
     else
       boltzmannn = totenew + pressure * Vn - real(nparticles, dp) * &
         temperature * log(Vn)  
@@ -541,18 +570,72 @@ module mc_sweep
         temperature * log(Vo)
       call acceptchange(boltzmanno, boltzmannn, genstate, isaccepted)
       if (isaccepted) then
-        !! Scale back to new configuration
-        call scalepositions(oldbox, simbox, particles, nparticles)
         etotal = totenew
         nacceptedscalings = nacceptedscalings + 1
         currentvolume = volume(simbox)
         call update(sl, simbox, particles)
       else 
+        !! Scale particles back to old coordinates
+        call scalepositions(simbox, oldbox, particles, nparticles)
         simbox = oldbox
+        if (is_update_needed) call update(sl, simbox, particles)
       end if 
     end if
     nscalingtrials = nscalingtrials + 1
   end subroutine
+
+subroutine total_by_cell(sl, simbox, particles, &
+energy, overlap)
+  type(simplelist), intent(in) :: sl
+  type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:), intent(in) :: particles
+  real(dp), intent(out) :: energy
+  logical, intent(out) :: overlap 
+  integer :: i, j, ix, iy, iz
+  logical :: mask(size(particles))
+  real(dp) :: energy_j
+  logical :: overlap_j
+  integer :: helper(size(particles))
+  integer, allocatable :: temp_helper(:)
+  integer :: n_mask
+  integer :: temp_j
+  type(particledat), allocatable :: temp_particles(:)
+
+  helper = (/(i, i=1,size(particles))/)
+  energy = 0._dp
+  overlap = .false.
+  
+  !! Loop over cells. This can be thought of as looping through a 2 x 2 x 2 
+  !! cube
+  !! of cells.
+  !$OMP PARALLEL default(shared) reduction(+:energy) reduction(.or.:overlap)& 
+  !$OMP& private(energy_j, i, j, mask, temp_particles, temp_j, temp_helper, n_mask)
+  allocate(temp_particles(size(particles)), temp_helper(size(particles))) 
+  !$OMP DO collapse(3) schedule(dynamic)
+  do ix=0, sl%nx-1
+  do iy=0, sl%ny-1
+  do iz=0, sl%nz-1
+    call simplelist_nbrmask(sl, simbox, ix, iy, iz, mask)
+    n_mask = count(mask)
+    temp_particles(1:n_mask) = pack(particles, mask)
+    temp_helper(1:n_mask) = pack(helper, mask)
+    do i=1, sl%counts(ix, iy, iz)
+      j = sl%indices(i, ix, iy, iz)
+      ! Find position of particles(j) in temp_particles:
+      do temp_j = 1, n_mask
+         if(temp_helper(temp_j) == j) exit
+      end do
+      call potentialenergy(simbox, temp_particles(temp_j:n_mask), 1, energy_j, overlap_j)
+      overlap = overlap .or. overlap_j !if(overlap) exit !write(*, *) 'Overlap in simplelist_total_by_cell'
+      energy = energy + energy_j
+    end do
+  end do
+  end do
+  end do
+  !$OMP END DO 
+  !$OMP END PARALLEL
+  
+end subroutine
 
   !! Makes a trial scaling of @p particles' radial coordinates. Does not scale
   !! @p simbox dimensions. 
@@ -576,7 +659,7 @@ module mc_sweep
     tempbox = simbox
     scaling = genvoltrial_scale(tempbox, maxscaling, genstate, 'xy')
     call scalepositions(simbox, tempbox, particles, nparticles)
-    call potentialenergy(simbox, particles, sl, totenew, overlap)    
+    call total_by_cell(sl, simbox, particles, totenew, overlap)    
     !! Scale back to old coordinates
     call scalepositions(tempbox, simbox, particles, nparticles)
     if (.not. overlap) then
@@ -623,6 +706,7 @@ module mc_sweep
     !! Adjust scaling
     maxscaling = newmaxvalue(nscalingtrials, nacceptedscalings, scalingratio,&
     maxscaling)
+
     call getmaxmoves(newdximax, newdthetamax)
     !! Adjust translation
     newdximax = newmaxvalue(nmovetrials, nacceptedmoves, moveratio, newdximax)
