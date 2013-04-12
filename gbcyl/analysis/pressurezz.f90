@@ -1,11 +1,10 @@
 program pressurezz
-use mc_engine
+use mc_sweep, mc_sweep_init => init
 use class_factory
 use particle
 use class_poly_box
 use class_parameterizer
 use m_fileunit
-!use class_poly_nbrlist
 use class_simplelist, poly_nbrlist => simplelist
 use energy
 use nrtype
@@ -20,7 +19,6 @@ type(poly_box) :: simbox
 type(parameterizer) :: reader
 real(dp) :: oldenergy, newenergy, dUinc, dUdec
 real(dp) :: pzzinc, pzzdec, pzz
-logical :: overlap
 integer, parameter :: ndlz = 3
 real(dp), dimension(ndlz) :: dLzs = (/0.001_dp, 0.003_dp, 0.01_dp/)
 real(dp) :: dlz
@@ -32,9 +30,10 @@ real(dp) :: newvolume, oldvolume, dVdec, dVinc
 real(dp) :: temperature
 read(*, *) idchar, direction
 reader = new_parameterizer('parameters.in.' // trim(adjustl(idchar)))
-call energy_init(reader)
-call simplelist_init(reader)
-call getparameter(reader, 'temperature', temperature)
+call initparticle(reader) !! This reads in the maximum translation of a particle
+                          !! the potential cutoff. Yes, a little messy.
+call mc_sweep_init(reader, simbox, particles) !! Potentially dangerous.
+temperature = gettemperature()
 coordinateunit = fileunit_getfreeunit()
 open(unit=coordinateunit, file='configurations.' //trim(adjustl(idchar)), action='READ', status='OLD')
 write(*, '(6(A6,18X))') '#dV   ', 'P ', 'dV ', 'P', 'dV ', 'P '
@@ -44,9 +43,9 @@ do
     exit
   end if
   nparticles = size(particles)
-  nbrlist = new_simplelist(simbox, particles)
+  call set_system(simbox, particles)
   !! Calculate initial volume and potential energy
-  call potentialenergy(simbox, particles, nbrlist, oldenergy, overlap)
+  oldenergy = get_total_energy()
   oldvolume = volume(simbox)
 
   !! Start repeat for different dLz
@@ -64,11 +63,8 @@ do
       call setx(simbox, getx(simbox) + dLz)
     end if
     !! Record new potential energy and volume
-    call update(nbrlist, simbox, particles)
-    call potentialenergy(simbox, particles, nbrlist, newenergy, overlap)
-    if (overlap) then
-      stop 'Overlap in trial volume change'
-    end if
+    call set_system(simbox, particles)
+    newenergy = get_total_energy()
     newvolume = volume(simbox)
     !! record dV/V and change in energy dU
     dUinc = newenergy - oldenergy
@@ -101,11 +97,8 @@ do
     end if
 
     !! Record new potential energy and volume
-    call update(nbrlist, simbox, particles)
-    call potentialenergy(simbox, particles, nbrlist, newenergy, overlap)
-    if (overlap) then
-      stop 'Overlap in trial volume change'
-    end if
+    call set_system(simbox, particles)
+    newenergy = get_total_energy()
     newvolume = volume(simbox)
     !! record dV/V and change in energy dU
     dUdec = newenergy - oldenergy
@@ -118,7 +111,6 @@ do
 
     !! Write results to standard output
     write(*, '(2('// fmt_char_dp() //',1X))', ADVANCE='NO') dVinc, pzz
-
 
     !! Return old volume
     if(direction == 'z') then
@@ -135,7 +127,7 @@ do
   end do !! End repeat for different dLz
   write(*, *) ''
 
-  call delete(nbrlist)
 end do
+call delete(nbrlist)
 
 end program
