@@ -26,9 +26,7 @@ program main
    call add(gayberne_suite, TestCase1Step('Test force vs finite difference', test_forcevsfinitedifference))
    call add(class_simplelist_suite, TestCase1Step('Test creation of list',test_new_simplelist))
    call add(class_simplelist_suite, TestCase1Step('Test updating of list',test_updateall))
-   call add(class_simplelist_suite, TestCase1Step('Test updating of list one particle at a time', test_updatesingle))
    call add(class_simplelist_suite, TestCase1Step('Test neighbour mask',test_nbrmask))
-
 ! Run the tests and accumulate the results in "result"
    result = newTestResult(mode=MODE_USE_STDOUT)
    call Run(gayberne_suite, result)
