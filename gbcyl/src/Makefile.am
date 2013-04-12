@@ -74,7 +74,6 @@ model_src = \
   particlewall.f90 \
   class_pair_potential.f90 \
   verlet.f90 \
-  all_pairs.f90 \
   cell.f90 \
   class_simplelist.f90 \
   energy.f90 \
