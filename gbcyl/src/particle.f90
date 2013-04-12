@@ -26,7 +26,7 @@ module particle
   public :: setmaxmoves
   public :: setposition
   public :: setorientation
-  public :: maxtrans
+  public :: get_max_translation
   
   !> Holds data of a cylindrically symmetric particle, e.g. Gay-Berne 
   !! particle. Using the rod variable one can use the same datatype to describe
@@ -51,7 +51,8 @@ module particle
   end type
 
   real(dp), save :: dthetamax = -1._dp
-  real(dp), save :: maxdr = -1._dp
+  real(dp), save :: max_translation = -1._dp
+  logical, save :: is_initialized = .false.
   !!character(len = *), parameter :: typeid = 'gb' 
 
   interface read
@@ -72,12 +73,6 @@ module particle
     module procedure init_particleold, init_particleparameterizer
   end interface
 
-  !! This interface is unnecessary. Could be removed.
-  !! 
-  interface maxtrans
-    module procedure maxtransf
-  end interface
-
   !! Interface for creating trial moves for the particle.. 
   !!
   interface move
@@ -93,20 +88,22 @@ module particle
   !! 
   subroutine init_particleparameterizer(reader)
     type(parameterizer), intent(in) :: reader
-    call getparameter(reader, 'max_translation', maxdr)
+    call getparameter(reader, 'max_translation', max_translation)
     call getparameter(reader, 'max_rotation', dthetamax)
-    if(maxdr < 0._dp) stop 'No max_translation given. Stopping.'
+    if(max_translation < 0._dp) stop 'No max_translation given. Stopping.'
     if(dthetamax < 0._dp) stop 'No max_rotation given. Stopping.'
+    is_initialized = .true.
   end subroutine
 
-  !! Initializes the module parameters maxdr and dthetamax.
+  !! Initializes the module parameters max_translation and dthetamax.
   !!
   subroutine init_particleold(maxTranslation, maxRotation)
     implicit none
     real(dp), intent(in) :: maxTranslation 
     real(dp), intent(in) :: maxRotation
     dthetamax = maxRotation
-    maxdr = maxTranslation
+    max_translation = maxTranslation
+    is_initialized = .true.
   end subroutine
 
   !! Saves the module parameters. The method for saving is defined by @p writer.
@@ -116,7 +113,7 @@ module particle
   subroutine particle_writeparameters(writer)
     type(parameter_writer), intent(in) :: writer
     call writecomment(writer, 'Particle parameters')
-    call writeparameter(writer, 'max_translation', maxdr)
+    call writeparameter(writer, 'max_translation', max_translation)
     call writeparameter(writer, 'max_rotation', dthetamax)    
   end subroutine
 
@@ -230,7 +227,7 @@ module particle
     type(rngstate), intent(inout) :: genstate
     real(dp) :: max1d 
     real(dp) :: r
-    max1d = maxdr/sqrt(3._dp)
+    max1d = max_translation/sqrt(3._dp)
     call rng(genstate, r)
     xn = xo + (2._dp * r - 1._dp) * max1d
     call rng(genstate, r)
@@ -254,21 +251,23 @@ module particle
   subroutine setmaxmoves(distance, angle)
     implicit none
     real(dp), intent(in) :: distance, angle
-    maxdr = distance
+    max_translation = distance
     dthetamax = angle
   end subroutine
 
   subroutine getmaxmoves(distance, angle)
     implicit none
     real(dp), intent(out) :: distance, angle
-    distance = maxdr
+    distance = max_translation
     angle = dthetamax
   end subroutine 
 
-  pure function maxtransf(aparticle) result(mtr)
-    type(particledat), intent(in) :: aparticle
-    real(dp) :: mtr
-    mtr = maxdr
+  !> Returns the maximum translation of a particle. Can be used by other modules
+  !! to get the private max_translation value.
+  !!
+  real(dp) function get_max_translation()
+    if (.not. is_initialized) stop 'Trying to access max_translation before module particle is initialized.'
+    get_max_translation = max_translation
   end function
   
 end module
