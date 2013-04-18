@@ -38,7 +38,8 @@ dist_bin_SCRIPTS = \
   pipe-columns.awk \
   makerestart.sh \
   replaceparameter.py \
-  slowcool.py
+  slowcool.py \
+  gbs2ljs.py
 
 ##ftnunit : 
 ##	$(MAKE) -C ftnunit
@@ -429,7 +430,6 @@ driver_SOURCES = \
   cell.f90\
   lj.f90 \
   class_pair_potential.f90 \
-  all_pairs.f90 \
   class_simplelist.f90 \
   class_simplelist_pfunit.f90 \
   driver.F90  
