@@ -15,7 +15,6 @@ module particle
   public :: particledat
   public :: initparticle
   public :: createparticle
-!  public :: binwrite
   public :: write
   public :: read
   public :: position
@@ -28,7 +27,7 @@ module particle
   public :: setorientation
   public :: get_max_translation
   
-  !> Holds data of a cylindrically symmetric particle, e.g. Gay-Berne 
+  !> Holds data of a uniaxial particle, e.g. Gay-Berne 
   !! particle. Using the rod variable one can use the same datatype to describe
   !! two diffrent particles.
   !! 
@@ -91,7 +90,11 @@ module particle
     call getparameter(reader, 'max_translation', max_translation)
     call getparameter(reader, 'max_rotation', dthetamax)
     if(max_translation < 0._dp) stop 'No max_translation given. Stopping.'
-    if(dthetamax < 0._dp) stop 'No max_rotation given. Stopping.'
+    if(dthetamax < 0._dp) then
+      !! Set rotation to move end of molecule about as much as translation.
+      dthetamax = 2._dp * asin(max_translation / 4.4_dp)
+      write(*, *) 'init_particle: Assuming molecule length is 4.4.'
+    end if
     is_initialized = .true.
   end subroutine
 

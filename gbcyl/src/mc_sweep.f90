@@ -67,8 +67,6 @@ module mc_sweep
   !! The maxtranslation won't be adjusted below this. Default is 1/10 molecule
   !! diameter.
 
-  real(dp), save :: largestrotation = 1.57_dp     !! ~ pi/4
-  real(dp), save :: smallestrotation = 0.157_dp  !! 1/10 largest rotation
   real(dp), save :: ptlow
   real(dp), save :: pthigh
   integer, save :: ptratio = 1
@@ -116,8 +114,6 @@ module mc_sweep
     call getparameter(reader, 'scaling_ratio', scalingratio)
     call getparameter(reader, 'largest_translation', largesttranslation)
     call getparameter(reader, 'smallest_translation', smallesttranslation)
-    call getparameter(reader, 'largest_rotation', largestrotation)
-    call getparameter(reader, 'smallest_rotation', smallestrotation)
     call getparameter(reader, 'max_scaling', maxscaling)
     call getparameter(reader, 'pt_ratio', ptratio)
     call getparameter(reader, 'vol_ratio', volratio)
@@ -186,8 +182,6 @@ module mc_sweep
     call writeparameter(writer, 'scaling_ratio', scalingratio)
     call writeparameter(writer, 'largest_translation', largesttranslation)
     call writeparameter(writer, 'smallest_translation', smallesttranslation)
-    call writeparameter(writer, 'largest_rotation', largestrotation)
-    call writeparameter(writer, 'smallest_rotation', smallestrotation)
     call writeparameter(writer, 'max_scaling', maxscaling)
     call writeparameter(writer, 'pt_ratio', ptratio)
     call writeparameter(writer, 'vol_ratio', volratio)
@@ -717,14 +711,11 @@ end subroutine
       !write(*, *) 'Tried to decrease maxtrans below smallesttranslation.'
       newdximax = smallesttranslation
     end if
-    !! Adjust rotation
-    newdthetamax = newmaxvalue(nmovetrials, nacceptedmoves, moveratio, &
-    newdthetamax)
-    if (newdthetamax > largestrotation) then 
-      newdthetamax = largestrotation
-    else if (newdthetamax < smallestrotation) then
-      newdthetamax = smallestrotation
-    end if
+
+    !! This should adjust rotations < pi/2 to move the particle end as much as
+    !! a random translation. 4.4 is the assumed molecule length-to-breadth 
+    !! ratio.
+    newdthetamax = 2._dp * asin(newdximax/4.4_dp) 
     call setmaxmoves(newdximax, newdthetamax)
   end subroutine
   
