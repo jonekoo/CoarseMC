@@ -31,6 +31,7 @@ module mc_sweep
   public :: getscalingtypes
   public :: set_system, get_system
   public :: get_total_energy
+  public :: test_configuration
 
   integer, save :: nacceptedmoves
   !! number of accepted particle moves
@@ -213,6 +214,8 @@ module mc_sweep
     type(particledat), intent(in) :: the_particles(:)
     logical :: overlap
     logical :: should_allocate
+    !real(dp) :: debug_etotal
+    !logical :: debug_overlap 
     should_allocate = .false.
     simbox = the_simbox
     if(allocated(particles)) deallocate(particles)
@@ -480,7 +483,7 @@ module mc_sweep
       call potentialenergy(simbox, particles, i, eold, overlap)
       !! DEBUG:
       !if (overlap) then
-      !  stop 'moveparticle: overlap with old particle'
+      !  stop 'mc_sweep: moveparticle_2: overlap with old particle! Should never happen!'
       !end if
       call acceptchange(eold, enew, genstate, isaccepted)
       if(isaccepted) then
@@ -537,6 +540,10 @@ module mc_sweep
     !! Store old volume and simulation box
     Vo = volume(simbox)
     oldbox = simbox
+
+    !! It seems that total energy may drift if it is not updated here:
+    call total_by_cell(sl, simbox, particles, etotal, overlap)
+    if (overlap) stop 'movevol: overlap in old configuration! Should never happen!'
 
     !! Scale coordinates and the simulations box
     scaling = genvoltrial_scale(simbox, maxscaling, genstate, trim(adjustl(scalingtype)))
@@ -682,10 +689,9 @@ end subroutine
     logical, intent(out) :: isaccepted
     real(dp) :: dE
     real(dp) :: r
+    isaccepted = .true.
     dE = newenergy - oldenergy
-    if(dE < 0._dp) then
-      isaccepted = .true.
-    else
+    if (dE > 0._dp) then
       call rng(genstate, r)
       isaccepted = (r < exp(-dE/temperature))
     end if  
@@ -784,5 +790,19 @@ end subroutine
       particles(i)%z = particles(i)%z * getz(newbox) / getz(oldbox)
     end do    
   end subroutine
+
+
+  subroutine test_configuration()
+    real(dp) :: total_e
+    logical :: overlap
+    if (.not. is_initialized) then
+      stop 'mc_sweep:test_configuration: Error: module not initialized!'
+    end if
+    !! This is pretty heavy since goes through all particles:
+    call potentialenergy(simbox, particles, total_e, overlap)
+    if (overlap) then
+      stop 'mc_sweep:test_configuration: Overlap!'
+    end if
+   end subroutine
 
 end module
