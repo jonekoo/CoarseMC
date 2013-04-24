@@ -5,11 +5,9 @@
 program gbcyl
   use mc_engine, only: init, run, finalize
   use mpi
-  use pt
   implicit none
   integer :: ierr
   integer :: id
-  integer :: i
   integer :: ntasks
   call mpi_init(ierr)
   if (ierr /= 0) then
@@ -21,7 +19,7 @@ program gbcyl
   !do i=0, ntasks-1
   call init(id, ntasks)
   !end do
-  call pt_test_particle_exchange
+  !call pt_test_particle_exchange
   ! call sample(n_equilibration, output_configuration_writer, output_parameters_writer, restart_configuration_writer, restart_parameters_writer, adjust=.true.)
   ! call sample(n_production, output_configuration_writer, output_parameters_writer, restart_configuration_writer, restart_parameters_writer)
   call run 
