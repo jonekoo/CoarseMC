@@ -212,14 +212,9 @@ subroutine mce_writeparameters(writer)
   call writeparameter(writer, 'production_period', productionperiod)
   call writeparameter(writer, 'move_adjusting_period', moveadjustperiod)
   call writeparameter(writer, 'pt_adjusting_period', ptadjustperiod)
-!  call writeparameter(writer, 'isopenmp', isopenmp)
   call writeparameter(writer, 'restartperiod', restartperiod)
   call writeparameter(writer, 'seed', seed)
-!  if (isopenmp) then
-!    call ompsweep_writeparameters(writer)
-!  else
-    call mc_sweep_writeparameters(writer)
-!  end if
+  call mc_sweep_writeparameters(writer)
   call particle_writeparameters(writer)
 end subroutine
 
@@ -232,8 +227,7 @@ subroutine finalize(id)
   integer, intent(in) :: id
   close(coordinateunit)
   call makerestartpoint
-  !if (associated(particles)) deallocate(particles)
-  if (id == 0) write (*, *) 'End of program gbcyl.'
+  if (id == 0) write (*, *) 'Program ptgbcyl was finalized succesfully.'
   call pt_finalize()
 end subroutine 
   
@@ -244,18 +238,14 @@ end subroutine
 subroutine run
   do while (isweep < nequilibrationsweeps + nproductionsweeps)
     isweep = isweep + 1
-!    if (isopenmp) then 
-!      call ompsweep(simbox, particles, mts)
-!    else
-      call sweep(mts, isweep)
-!    end if
+    call sweep(mts, isweep)
     if (isweep <= nequilibrationsweeps) then
       call runequilibrationtasks
     end if
-    call runproductiontasks
     if (mod(isweep, restartperiod)==0) then
       call makerestartpoint()
     end if
+    call runproductiontasks
   end do
 end subroutine 
 
