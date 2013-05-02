@@ -610,7 +610,7 @@ energy, overlap)
   !! cube
   !! of cells.
   !$OMP PARALLEL default(shared) reduction(+:energy) reduction(.or.:overlap)& 
-  !$OMP& private(energy_j, i, j, mask, temp_particles, temp_j, temp_helper, n_mask)
+  !$OMP& private(energy_j, overlap_j, i, j, mask, temp_particles, temp_j, temp_helper, n_mask)
   allocate(temp_particles(size(particles)), temp_helper(size(particles))) 
   !$OMP DO collapse(3) schedule(dynamic)
   do ix=0, sl%nx-1
@@ -627,7 +627,7 @@ energy, overlap)
          if(temp_helper(temp_j) == j) exit
       end do
       call potentialenergy(simbox, temp_particles(temp_j:n_mask), 1, energy_j, overlap_j)
-      overlap = overlap .or. overlap_j !if(overlap) exit !write(*, *) 'Overlap in simplelist_total_by_cell'
+      overlap = overlap .or. overlap_j 
       energy = energy + energy_j
     end do
   end do
