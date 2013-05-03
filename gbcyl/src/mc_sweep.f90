@@ -28,7 +28,6 @@ module mc_sweep
   public :: moveparticle
   public :: volratio
   public :: ptratio
-  public :: getscalingtypes
   public :: set_system, get_system
   public :: get_total_energy
   public :: test_configuration
@@ -162,13 +161,6 @@ module mc_sweep
     end if
     call splitstr(scalingtype, ',', scalingtypes)
   end subroutine
-
-  !> Returns the scalingtypes array.
-  !! 
-  function getscalingtypes()
-    character(len=200), dimension(:), pointer :: getscalingtypes
-    getscalingtypes = scalingtypes
-  end function
 
   !> Writes the module parameters and observables to a output file using the 
   !! writer object.
@@ -346,16 +338,16 @@ module mc_sweep
           !check(sl%indices(1:n_cell, jx, jy, jz)) = &
           !  check(sl%indices(1:n_cell, jx, jy, jz)) + 1
           ! The critical may not be necessary
-          !!$OMP CRITICAL 
           particles(sl%indices(1:n_cell, jx, jy, jz)) = &
             temp_particles(1:n_cell)
-          !!$OMP END CRITICAL
         end do
         end do
         end do
-        !$OMP END DO
+        !$OMP END DO 
+        !! The end of parallelized loop forces an implicit barrier. Memory view
+        !! of the threads is also synchronized here.
       end do 
-      !!$OMP BARRIER
+      !$OMP BARRIER
       end do
       !$OMP BARRIER
       end do
@@ -717,6 +709,10 @@ end subroutine
       !write(*, *) 'Tried to decrease maxtrans below smallesttranslation.'
       newdximax = smallesttranslation
     end if
+
+    !! Update the minimum cell side length of the cell list because the maximum
+    !! translation has changed: 
+    sl%min_length = get_cutoff() + 2._dp * get_max_translation()
 
     !! This should adjust rotations < pi/2 to move the particle end as much as
     !! a random translation. 4.4 is the assumed molecule length-to-breadth 
