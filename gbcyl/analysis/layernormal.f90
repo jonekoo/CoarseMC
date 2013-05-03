@@ -46,6 +46,7 @@ pure function globaltensor(localnormals)
   real(dp), dimension(3, 3) :: globaltensor
   integer :: i
   integer :: a, b
+  globaltensor = 0._dp 
   do i = 1, size(localnormals)/3
     forall(a = 1:3, b = 1:3) 
       globaltensor(a, b) = globaltensor(a, b) + 3._dp * localnormals(i, a) * &
