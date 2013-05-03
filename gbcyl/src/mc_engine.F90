@@ -29,7 +29,8 @@ integer, save :: nequilibrationsweeps = 0
 integer, save :: nproductionsweeps = 0
 !! define the number of equilibration and production MC sweeps in the 
 !! simulation. total no. sweeps is nequilibrationsweeps + nproductionsweeps.
-!! Equilibration sweeps may not obey detailed balance. 
+!! Equilibration sweeps are used to do all kinds of adjusting and should be 
+!! discarded from the analysis of results. 
 
 integer, save :: productionperiod = 1
 !! defines the period of writing the configuration of molecules and simulation
@@ -277,7 +278,8 @@ subroutine makerestartpoint
 
   !! Write parameters to a restartfile
   parameterunit = fileunit_getfreeunit()
-  open(UNIT=parameterunit,FILE='restartparameters.'//idchar,action='WRITE',&
+  parameterfile = 'restartparameters.'//idchar
+  open(UNIT=parameterunit,FILE=parameterfile,action='WRITE',&
   status='REPLACE', DELIM='QUOTE', iostat=ios)
   if (ios/=0) write(*, *) 'makerestartpoint: Warning: Failed opening', &
   parameterfile
