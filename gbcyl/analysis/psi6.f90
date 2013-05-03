@@ -8,7 +8,7 @@ program psi6
   use nrtype, only: dp
   use particle, only : particledat
   use orientational_ordering
-  use psi6_module
+  use psi6_module, only : psi6_bulk
   use class_poly_box
   use utils
   use class_factory
