@@ -4,8 +4,11 @@ use particle
 use nrtype
 implicit none
 
-contains
 
+real(dp), save :: slice_area
+real(dp), save :: direction(3) !! also slice normal
+
+contains
 
 !! Calculates the radial distribution function for particles of the same kind.
 !! To calculate between particles of different kind, use another routine. 
@@ -16,75 +19,124 @@ contains
 !! Based on code presented in the book Computer Simulations of Liquids by M.P.
 !! Allen and D.J. Tildesley
 !!
-!! @p simbox the simulation box where the particles are-
+!! @p N number of particles
 !! @p particles array of particles
+!! @p Lx size of simulation cell in x-direction
+!! @p Ly size of simulation cell in y-direction
+!! @p Lz size of simulation cell in z-direction
 !! @p maxbin maximum number of abscissae in the pair correlation function
 !! @p delr the distance between abscissae/bins
 !! @p histogram presenting the pair correlation function
 !!
+!! Particles i are considered as the reference particles for which the rdf is 
+!! calculated. Particles j are the other particles. 
 !!
-subroutine gr1d(simbox, particles, direction, maxbin, bin_area, bin_height, histogram)
+subroutine distribution_func(simbox, particles, mask_i, mask_j, maxbin, delr,&
+  histogram, distance_func, bin_volume_func)
   type(poly_box), intent(in) :: simbox
   type(particledat), intent(in) :: particles(:)
-  real(dp), intent(in) :: direction(3)
+  logical, intent(in) :: mask_i(size(particles)), mask_j(size(particles))
   integer, intent(in) :: maxbin
-  real(dp), intent(in) :: bin_area
-  real(dp), intent(in) :: bin_height
-  real(dp), intent(out) :: histogram(maxbin)
+  real(dp), intent(in) :: delr
+  real(dp), dimension(maxbin), intent(out) :: histogram
+  interface
+    function distance_func(rij)
+      use nrtype
+      real(dp) :: distance_func
+      real(dp), intent(in) :: rij(3)
+    end function
+  end interface
+  interface 
+    function bin_volume_func(r, dr)
+      use nrtype
+      real(dp) :: bin_volume_func
+      real(dp), intent(in) :: r
+      real(dp), intent(in) :: dr
+    end function
+  end interface
 
   integer :: i, j, bin
-  real(dp) ::  r
-  real(dp) :: n_ideal_gas, density, pi
+  real(dp) :: r, rij(3)
+  real(dp) :: n_ideal_gas
   real(dp) :: rlow
-  integer :: N
+  real(dp) :: density_j
 
-  pi = 4._dp*atan(1._dp);
   histogram(1:maxbin) = 0._dp
-  N=size(particles)
-  do i = 1, N-1
-     do j = i+1, N
-       r=distance_1d(simbox, position(particles(i)), position(particles(j)), direction)
-       bin = int(r/bin_height) + 1
-       if(bin <= maxbin) histogram(bin) = histogram(bin) + 2._dp
+  
+  do i=1, size(particles)
+     if (.not. mask_i(i)) cycle
+     do j=1, size(particles)
+           if (.not. mask_j(j) .or. j==i) cycle
+           rij = minimage(simbox, position(particles(j)) - position(particles(i)))
+           r = distance_func(rij)
+           bin = int(r/delr) + 1
+           !! :NOTE: this last line must be serial, or "locking" 
+           if(bin <= maxbin) histogram(bin) = histogram(bin) + 1._dp
      end do
   end do
-
-  density = real(N,dp)/volume(simbox)
-  !! Normalize by average density
+  
+  !! Ideal gas density for particles j
+  density_j = real(count(mask_j), dp) / volume(simbox)
+  !! Normalize by n_ideal_gas = bin_volume*ideal_gas_density and N
   do bin = 1, maxbin
-     rlow = real(bin-1,dp)*bin_height
-     n_ideal_gas = density * bin_area * bin_height
-     histogram(bin) = histogram(bin)/real(N,dp)/n_ideal_gas
+     rlow = real(bin - 1,dp) * delr
+     n_ideal_gas = bin_volume_func(rlow, delr) * density_j
+     histogram(bin) = histogram(bin) / (real(count(mask_i), dp) * n_ideal_gas)
   end do
      
 end subroutine
 
-!! Returns the minimum image distance between positions @p ri and @p rj 
-!! projected to the unit vector @p direction.
+!> Calculates the projection of rij in some direction, which has to be set
+!! beforehand (module variable direction). To be used with distribution_func.
 !!
-!! @p simbox the simulation box in which the distances are measured
-!! @p ri position vector 
-!! @p rj position vector
-!! @p direction the unit vector along which the distance is measured.
+!! @p rij a vector in cartesian coordinates.
 !!
-function distance_1d(simbox, ri, rj, direction)
-  type(poly_box), intent(in) :: simbox
-  real(dp), intent(in) :: ri(3), rj(3), direction(3)
+!! @p return distance. 
+!! 
+function distance_1d(rij)
+  real(dp), intent(in) :: rij(3)
   real(dp) :: distance_1d
-  real(dp) :: rij(3)
-  rij=minimage(simbox, rj-ri)
   distance_1d=abs(dot_product(direction, rij))
 end function
 
-!! Returns the volume of a spherical shell.
+!> Calculates the distance of two points in space. To be used with 
+!! distribution_func.
+!! 
+!! @p rij a vector in cartesian coordinates.
+!! 
+!! @return distance.
+!!
+function distance_3d(rij)
+  real(dp), intent(in) :: rij(3)
+  real(dp) :: distance_3d
+  distance_3d = sqrt(dot_product(rij, rij))
+end function
+
+!> Returns the volume of a spherical shell.
 !!
 !! @p r_inner inner radius of the shell.
-!! @p r_outer outer radius of the shell.
+!! @p thickness of the shell.
 !!
-function spherical_shell_volume(r_inner, r_outer) result(volume)
-  real(dp), intent(in) :: r_inner, r_outer
+function spherical_shell_volume(r_inner, thickness) result(volume)
+  real(dp), intent(in) :: r_inner, thickness
   real(dp) :: volume
-  volume=4._dp*pi/3._dp*(r_outer**3-r_inner**3)
+  volume=4._dp*pi/3._dp*((thickness + r_inner)**3-r_inner**3)
+end function
+
+!> Returns the volume of a slice with @p thickness the slice_area needs to be 
+!! set beforehand. The position of the slice is ignored. 
+!! 
+!! @p r_inner (ignored, set to anything).
+!! @p thickness the thickness of the slice.
+!! 
+!! @return volume of the slice
+!!
+function slice_volume(r_inner, thickness) result(volume)
+  real(dp), intent(in) :: r_inner, thickness
+  real(dp) :: volume
+  volume = 2._dp * slice_area * thickness
+  !! The factor 2 above comes from the fact that actually two slices, one at z
+  !! and the other at -z are considered. 
 end function
 
 !! Returns the volume of a cylindrical shell. 
@@ -93,11 +145,11 @@ end function
 !! @p r_outer outer radius of the shell.
 !! @p height height of the shell.
 !!
-function cylinder_shell_volume(r_inner, r_outer, height) result(volume)
-  real(dp), intent(in) :: r_inner, r_outer
+function cylinder_shell_volume(r_inner, thickness, height) result(volume)
+  real(dp), intent(in) :: r_inner, thickness
   real(dp), intent(in) :: height
   real(dp) :: volume
-  volume=pi*(r_outer**2-r_inner**2)*height
+  volume=pi*((thickness + r_inner)**2-r_inner**2)*height
 end function
 
 end module

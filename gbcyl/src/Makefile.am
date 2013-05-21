@@ -6,7 +6,6 @@ bin_PROGRAMS = \
   orientation_parameter \
   cylindrical_orientation \
   tau1 \
-  radial_distribution \
   weighted_rdf \
   density \
   psi6 \
@@ -22,10 +21,9 @@ bin_PROGRAMS = \
   virialpressure \
   doublezsize \
   onwallpressure \
-  1Ddf \
   remove_every_2nd \
   test_simplelist_with_openmp \
-  ljgb_rdf
+  pair_distribution
 
 
 ## Scripts to install
@@ -166,35 +164,17 @@ tau1_SOURCES = \
   class_factory.f90 \
   tau1_program.f90 
 
-radial_distribution_SOURCES = \
+pair_distribution_SOURCES = \
+  rng.inc mtfort90.f90  \
   ${nr_src} \
   utils.f90 \
   m_fileunit.f90 \
-  rng.inc mtfort90.f90  \
-  ${model_src} \
-  class_factory.f90 \
-  radial_distribution.f90 \
-  gr3d.f90
-
-ljgb_rdf_SOURCES = \
-  ${nr_src} \
-  utils.f90 \
-  m_fileunit.f90 \
-  rng.inc mtfort90.f90  \
-  ${model_src} \
-  class_factory.f90 \
-  ljgb_rdf.f90 \
-  gr3d_2.f90
-
-1Ddf_SOURCES = \
-  ${nr_src} \
-  utils.f90 \
-  m_fileunit.f90 \
-  rng.inc mtfort90.f90  \
   ${model_src} \
   class_factory.f90 \
   distribution.f90 \
-  1Ddf.f90
+  jacobiwrapper.f90 \
+  orientational_ordering.f90 \
+  pair_distribution.f90 
 
 weighted_rdf_SOURCES = \
   ${nr_src} \
@@ -292,8 +272,7 @@ smctau1_LDADD = ${ldadd_mtstream}
 orientation_parameter_LDADD = ${ldadd_mtstream}
 cylindrical_orientation_LDADD = ${ldadd_mtstream}
 tau1_LDADD = ${ldadd_mtstream}
-radial_distribution_LDADD = ${ldadd_mtstream}
-ljgb_rdf_LDADD = ${ldadd_mtstream}
+pair_distribution_LDADD = ${ldadd_mtstream}
 weighted_rdf_LDADD = ${ldadd_mtstream}
 density_LDADD = ${ldadd_mtstream}
 psi6_LDADD = ${ldadd_mtstream}
@@ -304,7 +283,6 @@ printgbgb_LDADD = ${ldadd_mtstream}
 printljcylinder_LDADD = ${ldadd_mtstream}
 configurationconverter_LDADD = ${ldadd_mtstream}
 cylindrical_layerorientation_LDADD = ${ldadd_mtstream}
-1Ddf_LDADD=${ldadd_mtstream}
 
 printljcylinder_SOURCES = \
   ${nr_src} \
