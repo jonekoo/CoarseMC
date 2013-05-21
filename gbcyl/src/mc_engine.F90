@@ -91,7 +91,7 @@ subroutine mce_init(id, n_tasks)
   character(len=80) :: parameterinputfile
 
   integer, save :: rngunit
-  character(len = 80), save :: rngfile = 'mtstate.'
+  character(len = 80), save :: rngfile = 'inputmtstate.'
   !! output unit and file for saving the random number generator state for a 
   !! restart.
 
