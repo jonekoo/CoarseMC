@@ -16,8 +16,8 @@ contains
     real(dp) :: x, y, z, ux, uy, uz, camdist, litedist  
 
     !camdist = maxval((/getx(simbox), gety(simbox), getz(simbox)/))
-    litedist = 4*getx(simbox)
-    camdist = 3*getx(simbox)
+    litedist = 4._dp * getx(simbox)
+    camdist = 3._dp * getx(simbox)
     open(povunit, FILE = povfile, status = 'replace', position = 'append', iostat = opened)
     if(opened /= 0) then
       write(*, *) 'pov:povout:Failed to open ', povfile
@@ -46,14 +46,14 @@ contains
         uz = particlearray(i)%uz
         write(povunit, *) 'sphere {'
         write(povunit, *) '<0,0,0>,0.5'
-        !if(particlearray(i)%rod) then
+        if(particlearray(i)%rod) then
           write(povunit, *) 'texture {pigment{color Grey}}'
           write(povunit, *) 'scale <4.4,1,1>'
           write(povunit, *) 'Reorient_Trans(<1,0,0>,<',ux,',',uy,',',-uz,'>)'
-        !else
-        !  write(povunit, *) 'scale 0.96'
-        !  write(povunit, *) 'texture {pigment{color Red}}'
-        !end if
+        else
+          write(povunit, *) 'scale 0.869'
+          write(povunit, *) 'texture {pigment{color Red}}'
+        end if
         write(povunit, *) 'translate <',x,',',y,',',-z,'>}'
       end do  
       close(povunit)
