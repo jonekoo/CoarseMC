@@ -344,11 +344,15 @@ subroutine runproductiontasks
   type(factory) :: coordinatewriter
   type(poly_box) :: simbox
   type(particledat), allocatable :: particles(:)
-  parameterfile='parameters.'//trim(adjustl(idchar))
+
   if (mod(isweep, productionperiod) == 0) then
+    !! Record snapshot of molecules and geometry.
     call get_system(simbox, particles)
     call writestate(coordinatewriter, coordinateunit, simbox, particles)
     deallocate(particles) 
+
+    !! Record simulation parameters.
+    parameterfile='parameters.'//trim(adjustl(idchar))
     pwunit = fileunit_getfreeunit()
     open(UNIT=pwunit, FILE=parameterfile, action='WRITE', position='APPEND',&
     DELIM='QUOTE', IOSTAT=ios) 
@@ -358,8 +362,8 @@ subroutine runproductiontasks
     end if
     writer = new_parameter_writer(pwunit)
     call mce_writeparameters(writer)
-    call delete(writer)
     close(pwunit)
+
     call resetcounters
   end if
 end subroutine
