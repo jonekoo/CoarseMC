@@ -14,15 +14,15 @@ contains
     type(rngstate), intent(inout) :: genstate
     character(len=*), intent(in) :: scalingtype
     real(dp), dimension(3) :: scaling
-    
-    if (len(scalingtype) == 1) then
-      scaling = genvoltrial_scale1d(simbox, maxscaling, genstate, scalingtype)
-    else if (len(scalingtype) == 2) then
-      scaling = genvoltrial_scale2d(simbox, maxscaling, genstate, scalingtype) 
-    else if (len(scalingtype) == 3) then
+
+    if (len_trim(adjustl(scalingtype)) == 1) then
+      scaling = genvoltrial_scale1d(simbox, maxscaling, genstate, trim(adjustl(scalingtype)))
+    else if (len_trim(adjustl(scalingtype)) == 2) then
+      scaling = genvoltrial_scale2d(simbox, maxscaling, genstate, trim(adjustl(scalingtype))) 
+    else if (len_trim(adjustl(scalingtype)) == 3) then
       scaling = genvoltrial_scale3d(simbox, maxscaling, genstate)
     else 
-      write(*, *) scalingtype
+      write(*, *) trim(adjustl(scalingtype))
       stop 'genvoltrial_scale: scalingtype not recognized, stopping!'
     end if
   end function
