@@ -30,6 +30,33 @@ function substrcount(str, substr)
   end if
 end function
 
+
+!> Returns a string that has been created by joining the strings in str_array.
+!! Whitespace is trimmed away from elements of str_array but not from separator.
+!!
+!! @param str_array the array to be joined.
+!! @param separator the separator used to join the strings.
+!! @param joined the elements of @p str_array joined with @p separator.
+!! 
+subroutine join(str_array, separator, joined)
+  character(len=*), intent(in) :: str_array(:)
+  character(len=*), intent(in) :: separator
+  character(len=*), intent(inout) :: joined
+  integer :: i, joined_len
+  joined_len = 0
+  !! Calculate the length of the joined string
+  do i = 1, size(str_array)
+    joined_len = joined_len + len_trim(str_array(i))
+  end do
+  joined_len = joined_len + (size(str_array) - 1) * len(separator)
+  if (len(joined) < joined_len) stop 'utils: join: Error given string joined is too short.' 
+  joined = trim(adjustl(str_array(1))) 
+  do i = 2, size(str_array)
+    joined = trim(adjustl(joined)) // separator // trim(adjustl(str_array(i)))
+  end do  
+end subroutine
+
+
 !> Splits a given string @param str to the array @param strarr using @param 
 !! delimiterstr as the delimiter. Delimiters are not included in the results.
 !! Result may contain empty strings. 
@@ -41,7 +68,7 @@ end function
 subroutine splitstr(str, delimiterstr, strarr)
   character(len=*), intent(in) :: str
   character(len=*), intent(in) :: delimiterstr
-  character(len=len(str)), dimension(:), allocatable, intent(out) :: strarr
+  character(len=len(str)), dimension(:), allocatable, intent(inout) :: strarr
   integer :: dim, i 
   integer :: lastpos
   integer :: step
