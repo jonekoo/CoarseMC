@@ -26,7 +26,6 @@ module mc_sweep
   public :: movevol
   public :: makeptmove
   public :: moveparticle
-  public :: volratio
   public :: ptratio
   public :: set_system, get_system
   public :: get_total_energy
@@ -70,7 +69,6 @@ module mc_sweep
   real(dp), save :: ptlow
   real(dp), save :: pthigh
   integer, save :: ptratio = 1
-  integer, save :: volratio = -1
   integer, save :: radialratio = -1
   real(dp), save :: etotal = 0._dp
   real(dp), save :: currentvolume = 0._dp
@@ -79,7 +77,6 @@ module mc_sweep
   integer, save :: nradialtrials = 0
   integer, save :: nacceptedradial = 0
   type(simplelist), save :: sl
-  character(len = 200), save :: scalingtype = "z"
   character(len = 200), dimension(:), allocatable, save :: scalingtypes
   logical :: is_initialized = .false.
 
@@ -105,6 +102,7 @@ module mc_sweep
     type(poly_box), intent(in) :: the_simbox
     type(particledat), dimension(:), intent(in) :: the_particles
     real(dp) :: min_cell_length
+    character(len = 200), save :: scalingtype = "z"
     call energy_init(reader)
     call getparameter(reader, 'scaling_type', scalingtype)
     call parsescalingtype(scalingtype)
@@ -116,8 +114,6 @@ module mc_sweep
     call getparameter(reader, 'smallest_translation', smallesttranslation)
     call getparameter(reader, 'max_scaling', maxscaling)
     call getparameter(reader, 'pt_ratio', ptratio)
-    call getparameter(reader, 'vol_ratio', volratio)
-    call getparameter(reader, 'radial_ratio', radialratio)
     call getparameter(reader, 'nmovetrials', nmovetrials)
     call getparameter(reader, 'nscalingtrials', nscalingtrials)
     call getparameter(reader, 'nacceptedscalings', nacceptedscalings)
@@ -125,7 +121,6 @@ module mc_sweep
     !! in the same simulation. 
     nacceptedmoves = 0
     nacceptedscalings = 0
-    if (volratio < 1) volratio = size(particles)   
     min_cell_length = get_cutoff() + 2._dp * get_max_translation()
     !call simplelist_init(reader)
     !$ if (.true.) then
@@ -135,7 +130,6 @@ module mc_sweep
       sl = new_simplelist(the_simbox, the_particles, min_cell_length)
     !$ end if
     call set_system(the_simbox, the_particles)
-    if (ptratio > 0) call pt_init(reader)
     is_initialized = .true.
   end subroutine 
 
@@ -170,6 +164,7 @@ module mc_sweep
   !! 
   subroutine mc_sweep_writeparameters(writer)
     type(parameter_writer), intent(in) :: writer
+    character(len=200) :: joined
     call writecomment(writer, 'MC sweep parameters')
     call writeparameter(writer, 'move_ratio', moveratio)
     call writeparameter(writer, 'scaling_ratio', scalingratio)
@@ -177,11 +172,8 @@ module mc_sweep
     call writeparameter(writer, 'smallest_translation', smallesttranslation)
     call writeparameter(writer, 'max_scaling', maxscaling)
     call writeparameter(writer, 'pt_ratio', ptratio)
-    call writeparameter(writer, 'vol_ratio', volratio)
-    call writeparameter(writer, 'radial_ratio', radialratio)
-    call writeparameter(writer, 'nacceptedradial', nacceptedradial)
-    call writeparameter(writer, 'nradialtrials', nradialtrials)
-    call writeparameter(writer, 'scaling_type', scalingtype)
+    call join(scalingtypes, ',', joined)
+    call writeparameter(writer, 'scaling_type', trim(joined))
     call writeparameter(writer, 'nmovetrials', nmovetrials)
     call writeparameter(writer, 'nacceptedmoves', nacceptedmoves)
     call writeparameter(writer, 'current_move_ratio', &
@@ -197,8 +189,6 @@ module mc_sweep
     call writeparameter(writer, 'enthalpy', etotal + currentvolume * pressure)
     call writeparameter(writer, 'total_energy', etotal)
     call energy_writeparameters(writer)
-    call pt_writeparameters(writer)
-!    call genvoltrial_writeparameters(writer)
   end subroutine
 
   subroutine set_system(the_simbox, the_particles)
@@ -241,21 +231,13 @@ module mc_sweep
     integer, intent(in) :: isweep
     integer :: ivolmove
     real(dp) :: beta
-    !! If the volratio parameter is not given, make volume move once a sweep.
-    if (volratio < 1) volratio = size(particles) ! == once per sweep
-    if (radialratio < 1) radialratio = 2*size(particles) ! == never
-    !irss = int(rng(genstates(0)) * real(size(particles), dp)) + 1
     call update(sl, simbox, particles)
     call make_particle_moves(simbox, particles, genstates, sl)
     call update(sl, simbox, particles)
     do ivolmove = 1, size(scalingtypes)
       call movevol(simbox, particles, scalingtypes(ivolmove), genstates(0))
     end do
-    !if (mod(i, radialratio) == 0) then
-    !  call radialscaling(simbox, particles, genstate)
-    !end if
     if (mod(isweep, ptratio) == 0) then
-      !call makeptmove(simbox, particles, genstates(0))
       beta = 1._dp/temperature
       call try_beta_exchanges(beta, etotal, 3, genstates(0)) 
       temperature = 1._dp/beta
