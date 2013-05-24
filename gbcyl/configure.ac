@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(gbcyl, 6.7.0, jouni.karjalainen@oulu.fi)
+AC_INIT(gbcyl, 6.7.2, jouni.karjalainen@oulu.fi)
 AM_INIT_AUTOMAKE([-Wall -Werror foreign tar-pax])
 AC_PROG_FC
 AC_PROG_CC
