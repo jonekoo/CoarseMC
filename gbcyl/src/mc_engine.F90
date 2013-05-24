@@ -8,7 +8,6 @@ use particle, only: particledat, initParticle, particle_writeparameters
 use class_poly_box
 use mc_sweep, only: mc_sweep_init => init, updatemaxvalues, sweep, &
 mc_sweep_writeparameters, resetcounters, gettemperature, settemperature, get_system, set_system 
-use pt
 use m_fileunit
 use class_parameterizer
 use class_parameter_writer
@@ -229,7 +228,6 @@ subroutine finalize(id)
   close(coordinateunit)
   call makerestartpoint
   if (id == 0) write (*, *) 'Program ptgbcyl was finalized succesfully.'
-  call pt_finalize()
 end subroutine 
   
 !> Runs the simulation. 
@@ -319,17 +317,9 @@ end subroutine
 !! production sweeps should be gathered inside this routine.
 !!  
 subroutine runequilibrationtasks
-  real(dp) :: temperature
   if (moveadjustperiod /= 0) then
     if (mod(isweep, moveadjustperiod) == 0) then
       call updatemaxvalues
-    end if
-  end if
-  if (ptadjustperiod /= 0) then
-    if (mod(isweep, ptadjustperiod) == 0) then
-      temperature = gettemperature()
-      call pt_adjusttemperature(temperature)
-      call settemperature(temperature)
     end if
   end if
 end subroutine 
@@ -350,7 +340,7 @@ subroutine runproductiontasks
     call get_system(simbox, particles)
     call writestate(coordinatewriter, coordinateunit, simbox, particles)
     deallocate(particles) 
-
+    
     !! Record simulation parameters.
     parameterfile='parameters.'//trim(adjustl(idchar))
     pwunit = fileunit_getfreeunit()
