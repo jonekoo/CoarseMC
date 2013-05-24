@@ -88,7 +88,6 @@ common_src = \
 
 parallel_src = \
   mpi.f90 \
-  pt.f90 \
   beta_exchange.f90 \
   mc_sweep.f90 \
   mc_engine.f90 
