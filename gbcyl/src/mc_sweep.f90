@@ -3,7 +3,6 @@ module mc_sweep
   use energy
   use class_poly_box
   use particle
-  use pt
   use beta_exchange
   use class_parameterizer
   use class_parameter_writer
@@ -24,7 +23,6 @@ module mc_sweep
   public :: settemperature
   public :: resetcounters
   public :: movevol
-  public :: makeptmove
   public :: moveparticle
   public :: ptratio
   public :: set_system, get_system
@@ -37,34 +35,22 @@ module mc_sweep
   integer, save :: nacceptedscalings
   !! number of accepted volume moves
 
-  real(dp), save :: maxscaling
-  !! the maximum absolute scaling that can happen in a volume move
-  !! currently redundant parameter for selecting the type of volume scaling
+  real(dp), save :: maxscaling = 100._dp
+  !! the maximum absolute change of volume that can happen in a volume move
 
-  real(dp), save :: temperature
+  real(dp), save :: temperature = -1._dp
   !! the simulation temperature that is used in the Metropolis acceptance
   !! criterion
 
-  real(dp), save :: pressure
+  real(dp), save :: pressure = -1._dp
   !! the simulation pressure that is used in the Metropolis acceptance
   !! criterion for trial volume scalings.
-
-  integer, save :: adjusttype
-  !! currently redundant parameter for selecting the way of adjusting the 
-  !! maximum translation and maximum rotation parameters
 
   real(dp), save :: moveratio
   !! the desired acceptance ratio for trial particle moves
 
   real(dp), save :: scalingratio
   !! the desired acceptance ratio for trial volume scalings
-
-  real(dp), save :: largesttranslation = 1._dp    
-  !! largest translation that can happen. Default is 1 x molecule diameter 
-
-  real(dp), save :: smallesttranslation = 0.1_dp 
-  !! The maxtranslation won't be adjusted below this. Default is 1/10 molecule
-  !! diameter.
 
   real(dp), save :: ptlow
   real(dp), save :: pthigh
@@ -107,11 +93,17 @@ module mc_sweep
     call getparameter(reader, 'scaling_type', scalingtype)
     call parsescalingtype(scalingtype)
     call getparameter(reader, 'temperature', temperature)
+    if (temperature < 0._dp) then
+      write(*, *) 'mc_sweep: initparameterizer: trying to set a negative temperature, stopping.'
+      stop  
+    end if
     call getparameter(reader, 'pressure', pressure)
+    if (pressure < 0._dp) then
+      write(*, *) 'mc_sweep: initparameterizer: trying to set a negative pressure, stopping.'
+      stop  
+    end if
     call getparameter(reader, 'move_ratio', moveratio)
     call getparameter(reader, 'scaling_ratio', scalingratio)
-    call getparameter(reader, 'largest_translation', largesttranslation)
-    call getparameter(reader, 'smallest_translation', smallesttranslation)
     call getparameter(reader, 'max_scaling', maxscaling)
     call getparameter(reader, 'pt_ratio', ptratio)
     call getparameter(reader, 'nmovetrials', nmovetrials)
@@ -168,8 +160,6 @@ module mc_sweep
     call writecomment(writer, 'MC sweep parameters')
     call writeparameter(writer, 'move_ratio', moveratio)
     call writeparameter(writer, 'scaling_ratio', scalingratio)
-    call writeparameter(writer, 'largest_translation', largesttranslation)
-    call writeparameter(writer, 'smallest_translation', smallesttranslation)
     call writeparameter(writer, 'max_scaling', maxscaling)
     call writeparameter(writer, 'pt_ratio', ptratio)
     call join(scalingtypes, ',', joined)
@@ -182,7 +172,6 @@ module mc_sweep
     call writeparameter(writer, 'nacceptedscalings', nacceptedscalings)
     call writeparameter(writer, 'current_scaling_ratio', &
     real(nacceptedscalings, dp)/real(nscalingtrials, dp))
-    call writeparameter(writer, 'adjusttype', adjusttype)
     call writeparameter(writer, 'pressure', pressure)
     call writeparameter(writer, 'temperature', temperature)
     call writeparameter(writer, 'volume', currentvolume)
@@ -347,36 +336,6 @@ module mc_sweep
         nmovetrials = nmovetrials + 1
         if (isaccepted) nacceptedmoves = nacceptedmoves + 1
       end do
-    end if
-  end subroutine
-
-
-  !> Makes one parallel tempering trial move. This is a convenience routine
-  !! to enhance readability of code. 
-  !!
-  !! @param simbox the simulation box.
-  !! @param particles the array of particles.
-  !! @param genstate the random number generator state.
-  !!
-  subroutine makeptmove(simbox, particles, genstate)
-    type(poly_box), intent(inout) :: simbox
-    type(particledat), dimension(:), intent(inout) :: particles
-    type(rngstate), intent(inout) :: genstate
-    real(dp) :: beta
-    real(dp) :: enthalpy
-    integer :: nparticles
-    logical :: isaccepted
-    isaccepted=.false.
-    beta = 1._dp/temperature
-    enthalpy = etotal + pressure * volume(simbox)
-    nparticles = size(particles)
-    call pt_move(beta, enthalpy, particles, nparticles, simbox, genstate, isaccepted)
-    if (isaccepted) then
-      etotal = enthalpy - pressure * volume(simbox)
-      !! One way to get rid of explicit list update would be to use some kind 
-      !! of observing system between the particlearray and the neighbour list. 
-      currentvolume = volume(simbox)
-      call update(sl, simbox, particles)
     end if
   end subroutine
 
@@ -684,13 +643,6 @@ end subroutine
     call getmaxmoves(newdximax, newdthetamax)
     !! Adjust translation
     newdximax = newmaxvalue(nmovetrials, nacceptedmoves, moveratio, newdximax)
-    if (newdximax > largesttranslation) then
-      !write(*, *) 'Tried to increase maxtrans above largesttranslation.'
-      newdximax = largesttranslation
-    else if(newdximax < smallesttranslation) then
-      !write(*, *) 'Tried to decrease maxtrans below smallesttranslation.'
-      newdximax = smallesttranslation
-    end if
 
     !! Update the minimum cell side length of the cell list because the maximum
     !! translation has changed: 
@@ -743,7 +695,6 @@ end subroutine
     nmovetrials = 0
     nscalingtrials = 0 
     nacceptedscalings = 0
-    call pt_resetcounters
   end subroutine
 
   !> Scales the positions of @param particles with the same factors that are 
