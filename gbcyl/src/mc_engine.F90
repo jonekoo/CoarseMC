@@ -63,11 +63,10 @@ integer, save :: coordinateunit
 character(len = 9), save :: idchar
 !! The (MPI) id of this process formatted to a character.
 
-!logical :: isopenmp = .false.
 type(mt_state), allocatable, save :: mts(:)
 type(mt_state), save :: mts_new
 
-integer, save :: seed = 123456
+integer, save :: seed = -1
 
 contains
   
@@ -89,11 +88,6 @@ subroutine mce_init(id, n_tasks)
   type(factory) :: coordinatereader
   character(len=80) :: parameterinputfile
 
-  integer, save :: rngunit
-  character(len = 80), save :: rngfile = 'inputmtstate.'
-  !! output unit and file for saving the random number generator state for a 
-  !! restart.
-
   type(parameterizer) :: parameterreader
   integer :: thread_id = 0, n_threads = 1
   
@@ -113,28 +107,20 @@ subroutine mce_init(id, n_tasks)
     write(*,*) 'Could not open ', parameterinputfile, '. Stopping.'
     stop
   end if
-  rngfile = trim(adjustl(rngfile)) // trim(adjustl(idchar))
-  rngunit = fileunit_getfreeunit()
-  !! For mtmod use
-  !!open(unit = rngunit, file = trim(adjustl(rngfile)), &
-  !!action = 'READ', status = 'OLD', form = 'FORMATTED', iostat = ios)
-  !! For mt_stream use
-  open(unit = rngunit, file = trim(adjustl(rngfile)), &
-  action = 'READ', status = 'OLD', form = 'UNFORMATTED', iostat = ios)
   allocate(mts(0:0))
   call set_mt19937
   call new(mts(thread_id))
-  if(0 /= ios) then
-    write(*, *) 'Warning: Could not open ' // trim(rngfile) // &
-    ' for reading!'
-    call getparameter(parameterreader, 'seed', seed)
-    !call sgrnd(seed + id)
-    call init(mts(thread_id), seed)
-  else
-    !call mtget(rngunit, 'f')
-    call read(mts(thread_id), rngunit)
-    close(rngunit)    
+  call getparameter(parameterreader, 'seed', seed)
+  if (seed < 0) then 
+    call system_clock(seed)
+    write(*, *) "Seeding RNG with system clock."
   end if
+  if (seed < 0) then
+    write(*, *) "system_clock query failed, using default seed 1234567."
+    seed = 1234567 
+  end if
+  !call sgrnd(seed + id)
+  call init(mts(thread_id), seed)
 
   !$ n_threads = omp_get_max_threads()
   !$ write(*, *) 'Running with ', n_threads, ' threads.'
@@ -161,7 +147,6 @@ subroutine mce_init(id, n_tasks)
   call getparameter(parameterreader, 'move_adjusting_period', &
   moveadjustperiod)
   call getparameter(parameterreader, 'pt_adjusting_period', ptadjustperiod)
-!  call getparameter(parameterreader, 'isopenmp', isopenmp)
   call getparameter(parameterreader, 'restartperiod', restartperiod)
 
   !! Read geometry
@@ -179,11 +164,7 @@ subroutine mce_init(id, n_tasks)
 
   !! Initialize modules. 
   call initparticle(parameterreader)
-!  if (isopenmp) then 
-!    call ompsweep_init(parameterreader, simbox, particles)
-!  else
-    call mc_sweep_init(parameterreader, simbox, particles)
-!  end if
+  call mc_sweep_init(parameterreader, simbox, particles)
   call delete(parameterreader)
  
   !! Open output for geometries
@@ -266,9 +247,6 @@ subroutine makerestartpoint
   character(len=80) :: parameterfile
   character(len=80) :: configurationfile
 
-  integer :: rngunit
-  character(len=80) :: rngfile
-
   integer :: ios
   type(particledat), allocatable :: particles(:)
   type(poly_box) :: simbox
@@ -298,18 +276,6 @@ subroutine makerestartpoint
   close(configurationunit)
   deallocate(particles)
 
-  !! Write random number generator state to a file.
-  rngunit = fileunit_getfreeunit()
-  rngfile='restartmtstate.'//trim(adjustl(idchar))
-  open(unit=rngunit, file=rngfile, action='WRITE', status='REPLACE',&
-  form='UNFORMATTED', iostat=ios)
-  if(0 /= ios) then
-    write(*, *) 'makerestartpoint: Warning: Failed opening ', rngfile
-  else
-    !call mtsave(rngunit, 'f')
-    call save(mts(0), rngunit)
-    close(rngunit)
-  end if
 end subroutine
 
 
