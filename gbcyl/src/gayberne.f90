@@ -21,6 +21,8 @@ module gayberne
   public :: g_potential
   public :: chisigma, chiepsilon
   public :: gblj_potential
+  public :: gb_force
+  public :: gblj_force
  
   !! Parameters of the Gay-Berne potential. Documentation:
   !! @see Luckhurst & et.al J.Chem.Phys, Vol. 110, No. 14
@@ -175,27 +177,27 @@ module gayberne
     gbV = 4._dp * gb_epsilon(ui, uj, urij) * gbV
   end function
 
-  !! Calculates the derivative of the potential with respect to the @p alpha 
-  !! coordinate of the vector @p rij.
-  real(dp) pure function d_potential(ui, uj, rij, alpha)
-    real(dp), dimension(3), intent(in) :: rij, ui, uj
-    integer, intent(in) :: alpha
-    real(dp) :: rijabs
-    real(dp), dimension(3) :: urij
-    real(dp) :: energy
-    logical :: overlap
-    rijabs = sqrt(dot_product(rij, rij))
-    urij = rij/rijabs
-    call potential(ui, uj, rij, energy, overlap)
-    d_potential = energy/gb_epsilon(ui, uj, urij)*mu* & !d_anisotropic(ui, uj, urij, rijabs, chiepsilon, alpha)+&
-      rd_anisotropic2(ui, uj, urij, chiepsilon, alpha)/rijabs+ &
-      4._dp*gb_epsilon(ui, uj, urij)*(6._dp*gb_R(ui, uj, rij)**(-7) - &
-      12._dp*gb_R(ui, uj, rij)**(-13))/&
-      sigma0*(rij(alpha)/rijabs+sigma0/2._dp/&
-      sqrt(anisotropic(ui, uj, urij, chisigma))**3*&
-      rd_anisotropic2(ui, uj, urij, chisigma, alpha)/rijabs)
-      !d_anisotropic(ui, uj, urij, rijabs, chisigma, alpha))
-  end function
+!! Calculates the derivative of the potential with respect to the @p alpha 
+!! coordinate of the vector @p rij.
+real(dp) pure function d_potential(ui, uj, rij, alpha)
+  real(dp), dimension(3), intent(in) :: rij, ui, uj
+  integer, intent(in) :: alpha
+  real(dp) :: rijabs
+  real(dp), dimension(3) :: urij
+  real(dp) :: energy
+  logical :: overlap
+  rijabs = sqrt(dot_product(rij, rij))
+  urij = rij/rijabs
+  call potential(ui, uj, rij, energy, overlap)
+  d_potential = energy/gb_epsilon(ui, uj, urij)*mu* & !d_anisotropic(ui, uj, urij, rijabs, chiepsilon, alpha)+&
+    rd_anisotropic2(ui, uj, urij, chiepsilon, alpha)/rijabs+ &
+    4._dp*gb_epsilon(ui, uj, urij)*(6._dp*gb_R(ui, uj, rij)**(-7) - &
+    12._dp*gb_R(ui, uj, rij)**(-13))/&
+    sigma0*(rij(alpha)/rijabs+sigma0/2._dp/&
+    sqrt(anisotropic(ui, uj, urij, chisigma))**3*&
+    rd_anisotropic2(ui, uj, urij, chisigma, alpha)/rijabs)
+    !d_anisotropic(ui, uj, urij, rijabs, chisigma, alpha))
+end function
 
 real(dp) pure function rd_anisotropic2(ui, uj, urij, chi, alpha)
   real(dp), dimension(3), intent(in) :: ui, uj, urij
@@ -428,8 +430,8 @@ end function
     real(dp) :: rijabs, urij(3), sigma, epsilon, R
     rijabs = sqrt(dot_product(rij, rij))
     urij = rij/rijabs
-    sigma = gblj_sigma_0 / sqrt(1 - chisigma * dot_product(ui, urij)**2)
-    epsilon = gblj_epsilon_0 * (1 - chiepsilon * dot_product(ui, urij)**2)
+    sigma = gblj_sigma_0 / sqrt(1._dp - chisigma * dot_product(ui, urij)**2)
+    epsilon = gblj_epsilon_0 * (1._dp - chiepsilon * dot_product(ui, urij)**2)
     R = (rijabs - sigma + gblj_sigma_0) / gblj_sigma_0
     if (hardcore > R) then 
       overlap = .true.
@@ -441,6 +443,93 @@ end function
   end subroutine
 
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+pure function grad_anisotropic(ui, uj, rij, chi)
+  real(dp) :: grad_anisotropic(3)
+  real(dp), intent(in) :: ui(3), uj(3), rij(3), chi
+  real(dp) :: mat_u(3, 3)
+  integer :: k, l
+  forall(k=1:3, l=1:3) mat_u(k, l) = ui(k) * ui(l) + uj(k) * uj(l) - &
+    2._dp * chi * dot_product(ui, uj) * ui(k) * uj(l)
+  grad_anisotropic = matmul((mat_u + transpose(mat_u)), rij) / &
+    dot_product(rij, rij) + dot_product(matmul(rij, mat_u), rij) * (-2._dp) /&
+    dot_product(rij, rij)**2 * rij
+  grad_anisotropic = grad_anisotropic * (-chi) / &
+    (1._dp - chi**2 * dot_product(ui, uj)**2)
+end function
+
+
+
+pure function gb_force(ui, uj, rij)
+  real(dp), intent(in) :: ui(3), uj(3), rij(3)
+  real(dp) :: gb_force(3)
+  real(dp) :: urij(3)
+  real(dp) :: e
+  real(dp) :: grad_e(3)
+  real(dp) :: grad_gb_sigma(3)
+  real(dp) :: grad_gb_R(3)
+  real(dp) :: r
+
+  urij = rij/sqrt(dot_product(rij, rij))
+
+  !! Potential well depth and its gradient:
+  e = gb_epsilon(ui, uj, urij)
+    grad_e = epsilon0 * ep(dot_product(ui, uj)) * &
+    grad_anisotropic(ui, uj, rij, chiepsilon)
+
+  !! The gradients of the Gay-Berne contact distance and distance
+  grad_gb_sigma = -0.5_dp * sigma0 * &
+    sqrt(anisotropic(ui, uj, urij, chisigma))**(-3) * &
+    grad_anisotropic(ui, uj, rij, chisigma)
+  grad_gb_R = (urij - grad_gb_sigma) / sigma0
+  r = gb_R(ui, uj, rij)
+
+  gb_force = -4._dp * (grad_e * (r**(-12) - r**(-6)) + &
+    e * (6._dp * r**(-7) - 12._dp * r**(-13)) * grad_gb_R)
+
+end function
+
+!! Helper function for gblj_sigma and gblj_epsilon.
+pure function gblj_a(ui, urij, chi)
+  real(dp), intent(in) :: ui(3), urij(3), chi
+  real(dp) :: gblj_a
+  gblj_a = 1._dp - chi * dot_product(ui, urij)**2
+end function
+
+pure function gblj_grad_a(ui, rij, chi)
+  real(dp), intent(in) :: ui(3), rij(3), chi
+  real(dp) :: gblj_grad_a(3)
+  gblj_grad_a = 2._dp * chi/dot_product(rij, rij) * (rij/dot_product(rij, rij)&
+   * dot_product(ui, rij)**2 - ui * dot_product(ui, rij))
+end function
+
+pure function gblj_force(ui, rij)
+  real(dp), intent(in) :: ui(3), rij(3)
+  real(dp) :: gblj_force(3)
+  real(dp) :: urij(3)
+  real(dp) :: e
+  real(dp) :: grad_e(3)
+  real(dp) :: grad_gblj_r(3)
+  real(dp) :: gblj_r
+
+  urij = rij/sqrt(dot_product(rij, rij))
+
+  !! Potential well depth and its gradient:
+
+  e = gblj_epsilon_0 * gblj_a(ui, urij, chiepsilon)**mu
+  grad_e = gblj_epsilon_0 * mu * gblj_a(ui, urij, chiepsilon)**(mu-1) * &
+    gblj_grad_a(ui, rij, chiepsilon)
+
+  grad_gblj_r = urij/gblj_sigma_0 + 0.5_dp * &
+    gblj_a(ui, urij, chisigma)**(-3/2) * gblj_grad_a(ui, rij, chisigma)
+
+  gblj_r = sqrt(dot_product(rij, rij))/gblj_sigma_0 - &
+    1._dp/sqrt(gblj_a(ui, urij, chisigma)) + 1
+
+  gblj_force = -4._dp * (grad_e * (gblj_r**(-12) - gblj_r**(-6)) + &
+    e * (6._dp * gblj_r**(-7) - 12._dp * gblj_r**(-13)) * grad_gblj_r)
+
+end function
 
 end module
 

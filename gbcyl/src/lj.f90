@@ -51,4 +51,15 @@ contains
     lj3 = 4._dp * epsilon * lj3
   end function
 
+pure function lj_force(rij)
+  real(dp), intent(in) :: rij(3)
+  real(dp) :: lj_force(3)
+  real(dp) :: urij(3)
+  real(dp) :: rijabs
+  rijabs = sqrt(dot_product(rij, rij))
+  urij = rij/rijabs
+  lj_force = 24._dp * epsilon_0_ * sigma_0_**6/rijabs**7 * &
+    (2._dp * sigma_0_**6/rijabs**6 - 1._dp) * urij
+end function
+
 end module
