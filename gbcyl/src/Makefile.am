@@ -18,7 +18,7 @@ bin_PROGRAMS = \
   configurationconverter \
   cylindrical_layerorientation \
   pressurezz \
-  virialpressure \
+  virial_tensor \
   doublezsize \
   onwallpressure \
   remove_every_2nd \
@@ -350,18 +350,18 @@ doublezsize_LDADD = ${ldadd_mtstream}
 
 onwallpressure_LDADD=${ldadd_mtstream}
 
-virialpressure_SOURCES = \
+virial_tensor_SOURCES = \
   ${common_src} \
   class_factory.f90 \
   ${parallel_src} \
-  virialpressure.f90
+  virial_tensor.f90
 
 onwallpressure_SOURCES = \
   ${common_src} \
   class_factory.f90 \
   onwallpressure.f90
 
-virialpressure_LDADD = ${ldadd_mtstream}
+virial_tensor_LDADD = ${ldadd_mtstream}
 
 test_simplelist_with_openmp_SOURCES = \
   ${common_src} \
