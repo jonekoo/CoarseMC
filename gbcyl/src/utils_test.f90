@@ -32,6 +32,13 @@ subroutine test_splitstr()
   call assert_true(splitted(3) == str(11:12), "Splitted string has wrong third substring!")
 end subroutine
  
+subroutine test_joinstr()
+  character(len=*), parameter :: str_array(5) =(/"xy","xz","y ","z ","x "/)
+  character(len=200) :: joined
+  call join(str_array, ',', joined)
+  call assert_true(trim(adjustl(joined)) == 'xy,xz,y,z,x', "Joined string does not match.")
+end subroutine
+ 
 end module
 
 
