@@ -1,7 +1,7 @@
 module class_pair_potential
 use nrtype
 use gayberne
-use lj, only: lj_potential, lj_init, lj_writeparameters
+use lj, only: lj_potential, lj_init, lj_writeparameters, lj_force
 use particle
 use class_poly_box
 use class_parameterizer
@@ -12,6 +12,7 @@ private
 public :: pairv
 public :: pp_init
 public :: pp_writeparameters
+public :: pair_force
 
 real(dp), save :: rcutoff = 5.5_dp
 
@@ -84,5 +85,29 @@ pure subroutine pairv(particlei, particlej, rij, potE, overlap)
     overlap = .false.
   end if
 end subroutine
+
+
+pure function pair_force(particlei, particlej, rij)
+  type(particledat), intent(in) :: particlei, particlej
+  real(dp), intent(in) :: rij(3)
+  real(dp) :: pair_force(3)
+  real(dp), dimension(3) :: ui, uj
+  ui(1)=particlei%ux
+  ui(2)=particlei%uy
+  ui(3)=particlei%uz
+  uj(1)=particlej%ux
+  uj(2)=particlej%uy
+  uj(3)=particlej%uz
+  if (particlei%rod .and. particlej%rod) then
+    pair_force = gb_force(ui, uj, rij)
+  else if (particlei%rod) then
+    pair_force = gblj_force(ui, rij)
+  else if (particlej%rod) then
+    pair_force = gblj_force(uj, -rij)
+  else
+    pair_force = lj_force(rij)
+  end if
+  
+end function 
 
 end module
