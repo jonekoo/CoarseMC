@@ -3,7 +3,7 @@ module mc_sweep
   use energy
   use class_poly_box
   use particle
-  use beta_exchange
+  use beta_exchange, beta_exchange_init => init
   use class_parameterizer
   use class_parameter_writer
   use genvoltrial
@@ -97,6 +97,7 @@ module mc_sweep
       write(*, *) 'mc_sweep: initparameterizer: trying to set a negative temperature, stopping.'
       stop  
     end if
+    call beta_exchange_init(1._dp / temperature)
     call getparameter(reader, 'pressure', pressure)
     if (pressure < 0._dp) then
       write(*, *) 'mc_sweep: initparameterizer: trying to set a negative pressure, stopping.'
