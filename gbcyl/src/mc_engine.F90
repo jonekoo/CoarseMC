@@ -11,6 +11,7 @@ mc_sweep_writeparameters, resetcounters, gettemperature, settemperature, get_sys
 use m_fileunit
 use class_parameterizer
 use class_parameter_writer
+use beta_exchange, only: write_stats, reset_counters
 !$ use omp_lib
 implicit none
 private
@@ -300,7 +301,7 @@ subroutine runproductiontasks
   type(factory) :: coordinatewriter
   type(poly_box) :: simbox
   type(particledat), allocatable :: particles(:)
-
+  integer :: be_unit
   if (mod(isweep, productionperiod) == 0) then
     !! Record snapshot of molecules and geometry.
     call get_system(simbox, particles)
@@ -318,6 +319,16 @@ subroutine runproductiontasks
     end if
     writer = new_parameter_writer(pwunit)
     call mce_writeparameters(writer)
+
+    !! Write beta_exchange statistics:
+    if (trim(adjustl(idchar)) == "0") then
+      be_unit = fileunit_getfreeunit()
+      open(unit=be_unit, file="beta_exchange.stats", action="WRITE", &
+        position="APPEND")
+      call write_stats(be_unit)
+      close(be_unit)
+      call reset_counters
+    end if
     close(pwunit)
 
     call resetcounters
