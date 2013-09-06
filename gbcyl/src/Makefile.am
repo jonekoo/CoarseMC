@@ -23,7 +23,8 @@ bin_PROGRAMS = \
   onwallpressure \
   remove_every_2nd \
   test_simplelist_with_openmp \
-  pair_distribution
+  pair_distribution \
+  xe_shielding
 
 
 ## Scripts to install
@@ -73,7 +74,6 @@ model_src = \
   particlewall.f90 \
   class_pair_potential.f90 \
   verlet.f90 \
-  cell.f90 \
   class_simplelist.f90 \
   energy.f90 \
   genvoltrial.f90 \
@@ -102,6 +102,20 @@ orientation_parameter_SOURCES = \
   jacobiwrapper.f90 \
   orientational_ordering.f90 \
   orientation_parameter.f90
+
+xe_shielding_SOURCES = \
+  ${nr_src} \
+  rng.inc mtfort90.f90  \
+  utils.f90 \
+  m_fileunit.f90 \
+  ${model_src} \
+  class_factory.f90 \
+  jacobiwrapper.f90 \
+  orientational_ordering.f90 \
+  m_shielding.f90 \
+  shielding.f90 
+
+xe_shielding_LDADD = $(ldadd_mtstream)
 
 remove_every_2nd_SOURCES = \
   ${nr_src} \
@@ -404,7 +418,6 @@ driver_SOURCES = \
   gayberne_pfunit.f90 \
   particle.f90 \
   class_poly_box.f90 \
-  cell.f90\
   lj.f90 \
   class_pair_potential.f90 \
   class_simplelist.f90 \
