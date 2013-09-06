@@ -140,6 +140,42 @@ pure subroutine rotate_vector(x, y, z, nx, ny, nz, angle, xp, yp, zp)
   zp = z * cp + nz * dotpr * (1._dp - cp) + zp * sp
 end subroutine rotate_vector
 
+
+
+!> Rotates a rank 2 tensor defined in @p old_axes to @p new_axes. 
+!!
+!! @p original the tensor to be rotated.
+!! @p old_axes the axes in which the original tensor is defined. 
+!! @p new_axes the axes in which we want to represent the tensor.
+!! @p rotated the @p original tensor rotated from @p old_axes to @p new_axes.
+!!
+subroutine rotate_tensor(original, old_axes, new_axes, rotated)
+  real(dp), intent(in) :: original(3, 3), old_axes(3, 3), new_axes(3, 3)
+  real(dp), intent(out) :: rotated(3, 3)
+
+  real(dp) :: cosines(3, 3)
+  integer :: a, b, i, j
+
+  do a = 1, 3
+    do i = 1, 3
+      cosines(a, i) = dot_product(new_axes(1:3, a), old_axes(1:3, i)) 
+    end do
+  end do
+
+  rotated = 0._dp
+  do a = 1, 3
+  do b = 1, 3
+    do i = 1, 3
+      do j = 1, 3
+        rotated(a, b) = rotated(a, b) + cosines(a, i) * cosines(b, j) * original(i, j)
+      end do
+    end do
+  end do
+  end do
+end subroutine  
+
+
+
 pure subroutine nvec(nx, ny, nz, genstate)
   !!
   !! Generates a random unit vector (nx, ny, nz). 
@@ -187,6 +223,15 @@ pure SUBROUTINE XVEC2(X, Y, Z, NX, NY, NZ, PHI, XP, YP, ZP)
   YP = Y * COS(PHI) + NY * DOTP * (1._dp - COS(PHI)) + YP * SIN(PHI)
   ZP = Z * COS(PHI) + NZ * DOTP * (1._dp - COS(PHI)) + ZP * SIN(PHI)
 END SUBROUTINE
+
+pure function cross_product(a, b) result(c)
+  real(dp), intent(in) :: a(3), b(3)
+  real(dp) :: c(3)
+  c = 0._dp
+  c(1) = a(2) * b(3) - a(3) * b(2)
+  c(2) = -a(1) * b(3) + a(3) * b(1)
+  c(3) = a(1) * b(2) - a(2) * b(1)
+end function
 
 pure SUBROUTINE CROSSP(AX,AY,AZ,BX,BY,BZ,CX,CY,CZ)
   !!
