@@ -23,6 +23,8 @@ module gayberne
   public :: gblj_potential
   public :: gb_force
   public :: gblj_force
+  public :: gblj_r
+  public :: get_gblj_sigma_0
  
   !! Parameters of the Gay-Berne potential. Documentation:
   !! @see Luckhurst & et.al J.Chem.Phys, Vol. 110, No. 14
@@ -529,6 +531,22 @@ pure function gblj_force(ui, rij)
   gblj_force = -4._dp * (grad_e * (gblj_r**(-12) - gblj_r**(-6)) + &
     e * (6._dp * gblj_r**(-7) - 12._dp * gblj_r**(-13)) * grad_gblj_r)
 
+end function
+
+function gblj_r(ui, rij)
+  real(dp), intent(in) :: ui(3)
+  real(dp), intent(in) :: rij(3)
+  real(dp) :: gblj_r
+
+  real(dp) :: urij(3)
+  urij = rij / sqrt(dot_product(rij, rij))
+  gblj_r = sqrt(dot_product(rij, rij))/gblj_sigma_0 - &
+    1._dp/sqrt(gblj_a(ui, urij, chisigma)) + 1
+end function
+
+function get_gblj_sigma_0()
+  real(dp) :: get_gblj_sigma_0
+  get_gblj_sigma_0 = gblj_sigma_0
 end function
 
 end module
