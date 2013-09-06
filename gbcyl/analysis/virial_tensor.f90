@@ -29,7 +29,7 @@ real(dp), dimension(3, 3) :: w
 real(dp), dimension(3) :: rij, deriv
 real(dp) :: cutoff
 read(*, *) idchar
-reader = new_parameterizer('inputparameters.'//trim(adjustl(idchar)))
+reader = new_parameterizer('inputparameters.'//trim(adjustl(idchar)), logfile = "virial_tensor_log."//trim(adjustl(idchar)))
 !! Initialize the modules needed
 call pp_init(reader)
 call getparameter(reader, 'temperature', temperature)
