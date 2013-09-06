@@ -7,6 +7,7 @@ module orientational_ordering
   public :: eigens
   public :: orientation_parameter
   public :: orientation_tensor
+  public :: cycle_largest_to_3rd
 
   PRIVATE
 
@@ -65,6 +66,57 @@ module orientational_ordering
     call jacobi(tensor, values, vectors, nrot)    
   end subroutine eigens_dv
 
+  
+  !! Makes a cyclic permutation to values and vectors so that the largest of
+  !! values is values(3) and the corresponding vector is vectors(:, 3)
+  !! 
+  subroutine cycle_largest_to_3rd(values, vectors)
+    real(dp), intent(inout) :: values(3)
+    real(dp), intent(inout) :: vectors(3, 3)
+    real(dp) :: temp
+    real(dp) :: temp_vector(3)
+    integer :: j, i, offset, max_value_position(1)
+    max_value_position = maxloc(values)
+    offset = 3 - max_value_position(1)
+    if (offset /= 0) then
+      do i = 1, offset
+        !! One cyclic permutation:
+        temp = values(3)
+        temp_vector = vectors(:, 3)
+        do j = 2, 1, -1
+          values(j + 1) = values(j)
+          vectors(:, j + 1) = vectors(:, j)
+        end do
+        values(1) = temp
+        vectors(:, 1) = temp_vector
+      end do
+    end if
+  end subroutine
+
+
+  !! Sorts the matrix columns by corresponding value in increasing order.
+  !! Implements an insertion sort as presented in introduction to algorithms by
+  !! T. H. Cormen et al. 
+  !! 
+  subroutine sort_by_value(values, vectors)
+    real(dp), intent(inout) :: values(3)
+    real(dp), intent(inout) :: vectors(3, 3)
+    integer :: j, i
+    real(dp) :: key
+    real(dp) :: data(3)
+    do j = 2, 3
+      key = values(j)
+      data = vectors(:, j)
+      i = j - 1 
+      do while(i > 0 .and. values(i) > key)
+        values(i + 1) = values(i)
+        vectors(:, i + 1) = vectors(:, i)
+        i = i - 1
+      end do
+      values(i + 1) = key
+      vectors(:, i + 1) = data
+    end do
+  end subroutine
 
 
   pure subroutine orientation_tensor(particles, n_particles, tensor)
