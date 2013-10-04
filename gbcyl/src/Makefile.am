@@ -70,6 +70,7 @@ model_src = \
   class_poly_box.f90 \
   lj.f90 \
   gayberne.f90 \
+  gblj.f90 \
   ljcylinder.f90 \
   particlewall.f90 \
   class_pair_potential.f90 \
