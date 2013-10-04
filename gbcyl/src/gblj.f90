@@ -1,5 +1,7 @@
 module gblj
 use nrtype
+use class_parameterizer
+use class_parameter_writer
 implicit none
 
 private
@@ -7,23 +9,26 @@ private
 !! Parameters for the GB-LJ interaction:
 real(dp), save :: epsilon_0 = 1._dp
 real(dp), save :: sigma_0 = 1._dp
-real(dp), save :: mu = 0.35
+real(dp), save :: mu = 0.35_dp
 
 !! The ratio of well-depths when the LJ particle is at the end or on the side
 !! of the GB particle:
-real(dp), save :: ee_to_es = 0.16
+real(dp), save :: ee_to_es = 0.16_dp
    
 !! The ratio of contact distances when LJ is at the end or on the side of the
 !! GB particle:
-real(dp), save :: se_to_ss = 3.32  
+real(dp), save :: se_to_ss = 3.32_dp
 
 !! These are cached just for efficiency
 real(dp), save :: chisigma
 real(dp), save :: chiepsilon
 
+real(dp), save :: hardcore = 0.3_dp
+
 contains
 
 subroutine gblj_init(reader)
+  type(parameterizer), intent(in) :: reader
   call getparameter(reader, 'gblj_epsilon_0', epsilon_0)
   call getparameter(reader, 'gblj_sigma_0', sigma_0)
   call getparameter(reader, 'gblj_ee_to_es', ee_to_es)
@@ -55,7 +60,7 @@ pure subroutine gblj_potential(ui, rij, energy, overlap)
   real(dp), intent(in) :: ui(3), rij(3)
   real(dp), intent(out) :: energy
   logical, intent(out) :: overlap
-  real(dp) :: rijabs, urij(3), sigma, epsilon, r
+  real(dp) :: rijabs, urij(3), r
   rijabs = sqrt(dot_product(rij, rij))
   urij = rij/rijabs
   r = gblj_r(ui, rij)
@@ -64,19 +69,22 @@ pure subroutine gblj_potential(ui, rij, energy, overlap)
     energy = 0._dp
   else
     overlap = .false.
-    energy = 4._dp * gblj_epsilon(urij, ui) * (gblj_sigma_0 / r) ** 6 * ((gblj_sigma_0 / r) ** 6 - 1._dp)
+    energy = 4._dp * gblj_epsilon(urij, ui) * (sigma_0 / r) ** 6 * ((sigma_0 / r) ** 6 - 1._dp)
   end if
 end subroutine
 
-function gblj_force(ui, rij) 
+pure function gblj_force(ui, rij) 
   real(dp), intent(in) :: ui(3), rij(3)
-  real(dp) :: gblj_force
-  gblj_force =  g_gblj_epsilon(urij, ui) * (gblj_sigma_0 / r) ** 6 * &
-   ((gblj_sigma_0 / r) ** 6 - 1._dp)
+  real(dp) :: gblj_force(3)
+  real(dp) :: urij(3), r
+  r = sqrt(dot_product(rij, rij))
+  urij = rij / r
+  gblj_force =  gblj_grad_epsilon(ui, urij, r) * (sigma_0 / gblj_r(ui, rij)) ** 6 * &
+   ((sigma_0 / gblj_r(ui, rij)) ** 6 - 1._dp)
   gblj_force = gblj_force + gblj_epsilon(urij, ui) * (-6._dp) * &
-    gblj_sigma_0 ** 6 / r ** 7 * (-2._dp * (gblj_sigma_0 / r) ** 6 + 1._dp) * &
-    g_gblj_r(ui, rij)
-  gblj_force = 4._dp * gblj_force
+    sigma_0 ** 6 / gblj_r(ui, rij) ** 7 * (-2._dp * (sigma_0 / gblj_r(ui, rij)) ** 6 + 1._dp) * &
+    gblj_grad_r(ui, rij)
+  gblj_force = -4._dp * gblj_force
 end function
 
 !> Returns the anisotropic contact distance between a Gay-Berne and a Lennard-Jones particle.
@@ -84,19 +92,47 @@ end function
 !! urij = unit vector between particles i and j.
 !! ui   =  the unit vector of orientation for particle i.
 !!
-function gblj_sigma(urij, ui)
+pure function gblj_sigma(urij, ui)
   real(dp), intent(in) :: urij(3), ui(3)
   real(dp) :: gblj_sigma
   gblj_sigma = sigma_0 / sqrt((1._dp - chisigma * dot_product(urij, ui) ** 2))
 end function
 
-function gblj_epsilon(urij, ui)
+pure function gblj_epsilon(urij, ui)
   real(dp), intent(in) :: urij(3), ui(3)
   real(dp) :: gblj_epsilon
   gblj_epsilon = epsilon_0 * (1._dp - chiepsilon * dot_product(urij, ui) ** 2) ** mu
 end function
 
-function gblj_r(ui, rij)
+pure function gblj_grad_es(se_0, ui, urij, rij, mu, chi)
+  real(dp), intent(in) :: se_0, ui(3), urij(3), rij, mu, chi
+  real(dp) :: gblj_grad_es(3)
+  gblj_grad_es = -2._dp * se_0 * chi * mu * dot_product(ui, urij) * (urij * dot_product(ui, urij) + ui) / &
+    (rij * (1._dp - chi * dot_product(ui, urij) ** 2) ** (1._dp - mu))  
+end function
+
+pure function gblj_grad_epsilon(ui, urij, rij)
+  real(dp), intent(in) :: ui(3), urij(3), rij
+  real(dp) :: gblj_grad_epsilon(3)
+  gblj_grad_epsilon = gblj_grad_es(epsilon_0, ui, urij, rij, mu, chiepsilon)
+end function
+
+pure function gblj_grad_sigma(ui, urij, rij)
+  real(dp), intent(in) :: ui(3), urij(3), rij
+  real(dp) :: gblj_grad_sigma(3)
+  gblj_grad_sigma = gblj_grad_es(sigma_0, ui, urij, rij, -0.5_dp, chisigma)
+end function
+
+pure function gblj_grad_r(ui, rij)
+  real(dp), intent(in) :: ui(3), rij(3)
+  real(dp) :: gblj_grad_r(3)
+  real(dp) :: urij(3), r
+  r = sqrt(dot_product(rij, rij))
+  urij = rij / r
+  gblj_grad_r = urij - gblj_grad_sigma(ui, urij, r)
+end function 
+
+pure function gblj_r(ui, rij)
   real(dp), intent(in) :: ui(3)
   real(dp), intent(in) :: rij(3)
   real(dp) :: gblj_r
@@ -105,12 +141,9 @@ function gblj_r(ui, rij)
   gblj_r = sqrt(dot_product(rij, rij)) - gblj_sigma(urij, ui) + sigma_0 
 end function
 
-function get_gblj_sigma_0()
+pure function get_gblj_sigma_0()
   real(dp) :: get_gblj_sigma_0
   get_gblj_sigma_0 = sigma_0
 end function
-
-
-
 
 end module
