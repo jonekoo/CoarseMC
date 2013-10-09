@@ -23,6 +23,7 @@ contains
       write(*, *) 'pov:povout:Failed to open ', povfile
       stop
     end if
+      write(povunit, *) '#version 3.1'
       write(povunit, *) '#include "colors.inc"'
       write(povunit, *) '#include "transforms.inc"'
       write(povunit, *) 'background {color White}'
