@@ -4,11 +4,18 @@ use class_parameterizer
 use class_parameter_writer
 implicit none
 
+public :: gblj_init
+public :: gblj_potential
+public :: gblj_force
+public :: gblj_get_sigma_0
+public :: gblj_r
+public :: test_defaults
+
 private
 
 !! Parameters for the GB-LJ interaction:
-real(dp), save :: epsilon_0 = 1._dp
-real(dp), save :: sigma_0 = 1._dp
+real(dp), save :: epsilon_0 = 1.55_dp
+real(dp), save :: sigma_0 = 3.6_dp / 4.5_dp
 real(dp), save :: mu = 0.35_dp
 
 !! The ratio of well-depths when the LJ particle is at the end or on the side
@@ -27,15 +34,22 @@ real(dp), save :: hardcore = 0.3_dp
 
 contains
 
+subroutine gblj_init_internal()
+  chisigma = 1._dp - se_to_ss ** (-2)
+  chiepsilon = 1._dp - ee_to_es ** (1._dp / mu)
+end subroutine
+
 subroutine gblj_init(reader)
   type(parameterizer), intent(in) :: reader
+  logical :: is_self_test = .false.
+  call getparameter(reader, 'is_self_test', is_self_test)
+  if (is_self_test) call test_defaults()
   call getparameter(reader, 'gblj_epsilon_0', epsilon_0)
   call getparameter(reader, 'gblj_sigma_0', sigma_0)
   call getparameter(reader, 'gblj_ee_to_es', ee_to_es)
   call getparameter(reader, 'gblj_se_to_ss', se_to_ss)
   call getparameter(reader, 'gblj_mu', mu)
-  chisigma = 1._dp - se_to_ss ** (-2)
-  chiepsilon = 1._dp - ee_to_es ** (1._dp / mu)
+  call gblj_init_internal()
 end subroutine
 
 subroutine gblj_writeparameters(writer)
@@ -141,9 +155,30 @@ pure function gblj_r(ui, rij)
   gblj_r = sqrt(dot_product(rij, rij)) - gblj_sigma(urij, ui) + sigma_0 
 end function
 
-pure function get_gblj_sigma_0()
-  real(dp) :: get_gblj_sigma_0
-  get_gblj_sigma_0 = sigma_0
+pure function gblj_get_sigma_0()
+  real(dp) :: gblj_get_sigma_0
+  gblj_get_sigma_0 = sigma_0
 end function
+
+subroutine test_defaults()
+  use m_fileunit
+  real(dp) :: rij(3), ui(3), u
+  integer :: dataunit
+  real(dp) :: energy
+  logical :: overlap
+  integer :: ios
+  call gblj_init_internal()
+  dataunit = fileunit_getfreeunit()
+  open(file = "gblj_testData.dat", unit = dataunit, action = 'READ')
+  do 
+    read(dataunit, fmt=*, iostat=ios) ui, rij, u
+    if (ios /= 0) exit
+    call gblj_potential(ui, rij, energy, overlap)
+    if (.not. overlap .and. abs(u-energy) > 1.e-6_dp) then
+      write(*, *) "gblj:test_defaults: ui=", ui, "rij=", rij, "abs(u-energy)=", abs(u-energy)
+      stop
+    end if
+  end do
+end subroutine
 
 end module
