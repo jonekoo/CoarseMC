@@ -8,7 +8,7 @@ program shielding
   use m_shielding
   use class_parameterizer
   use m_fileunit
-  use gayberne
+  use gblj
   implicit none
   type(particledat), allocatable :: particles(:)
   integer :: io_status
@@ -22,7 +22,7 @@ program shielding
   read(*, *) idchar
   reader = new_parameterizer('inputparameters.'//trim(adjustl(idchar)), logfile = "virial_tensor_log."//trim(adjustl(idchar)))
   !! Initialize the modules needed
-  call gayberne_init(reader)
+  call gblj_init(reader)
   coordinateunit = fileunit_getfreeunit()
   open(unit=coordinateunit, file='configurations.' //trim(adjustl(idchar)), action='READ', status='OLD')
   do  

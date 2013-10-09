@@ -2,6 +2,7 @@ module class_pair_potential
 use nrtype
 use gayberne
 use lj, only: lj_potential, lj_init, lj_writeparameters, lj_force
+use gblj, only: gblj_potential, gblj_init, gblj_force
 use particle
 use class_poly_box
 use class_parameterizer

@@ -3,7 +3,7 @@ use particle
 use class_poly_box
 use nrtype
 use utils, only: rotate_tensor, cross_product
-use gayberne, only: gblj_r, get_gblj_sigma_0
+use gblj, only: gblj_r, gblj_get_sigma_0
 implicit none
 external horner
 !!
@@ -159,7 +159,7 @@ subroutine gblj_shielding(gb_particle, rij, local_tensor)
   !! We can always say that sine is positive because the angle between is
   !! smaller or equal to pi. For definition of the angle see the paper by
   !! Lintuvuori et al., Figure 1.
-  r = gblj_r(orientation(gb_particle), rij) * get_gblj_sigma_0()
+  r = gblj_r(orientation(gb_particle), rij) * gblj_get_sigma_0()
   local_tensor = 0._dp
   local_tensor(1, 1) = sigma(r, s_xx) * si**2 + &
     sigma(r, e_perpendicular) * co**2 !! sigma_xx

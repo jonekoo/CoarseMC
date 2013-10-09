@@ -20,11 +20,7 @@ module gayberne
   public :: gb_R
   public :: g_potential
   public :: chisigma, chiepsilon
-  public :: gblj_potential
   public :: gb_force
-  public :: gblj_force
-  public :: gblj_r
-  public :: get_gblj_sigma_0
  
   !! Parameters of the Gay-Berne potential. Documentation:
   !! @see Luckhurst & et.al J.Chem.Phys, Vol. 110, No. 14
@@ -44,10 +40,6 @@ module gayberne
 
   !! Defines when the particles "overlap"
   real(dp), parameter :: hardcore = 0.6_dp
-
-  !! Parameters for the GB-LJ interaction:
-  real(dp), save :: gblj_epsilon_0 = 1._dp
-  real(dp), save :: gblj_sigma_0 = 1._dp
 
   interface potential
     module procedure potentials
@@ -72,8 +64,6 @@ module gayberne
     call getparameter(reader, 'gb_nu', nu)
     call getparameter(reader, 'gb_sigma_0', sigma0)
     call getparameter(reader, 'gb_epsilon_0', epsilon0)
-    call getparameter(reader, 'gblj_epsilon_0', gblj_epsilon_0)
-    call getparameter(reader, 'gblj_sigma_0', gblj_sigma_0)
     chiepsilon = &
       (kappaepsilon**(1._dp / mu) - 1._dp) / &
       (kappaepsilon**(1._dp / mu)+ 1._dp)
@@ -129,8 +119,6 @@ module gayberne
     call writeparameter(writer, 'gb_nu', nu)
     call writeparameter(writer, 'gb_sigma_0', sigma0)
     call writeparameter(writer, 'gb_epsilon_0', epsilon0)    
-    call writeparameter(writer, 'gblj_epsilon_0', gblj_epsilon_0)
-    call writeparameter(writer, 'gblj_sigma_0', gblj_sigma_0)
   end subroutine
 
   !! Calculates the Gay-Berne potential for two particles 
@@ -423,28 +411,6 @@ end function
   end function
 
 
-  !! Calculates the interaction energy of a GB particle (i) and a Lennard-Jones
-  !! particle (j)
-  pure subroutine gblj_potential(ui, rij, energy, overlap)
-    real(dp), intent(in) :: ui(3), rij(3)
-    real(dp), intent(out) :: energy
-    logical, intent(out) :: overlap
-    real(dp) :: rijabs, urij(3), sigma, epsilon, R
-    rijabs = sqrt(dot_product(rij, rij))
-    urij = rij/rijabs
-    sigma = gblj_sigma_0 / sqrt(1._dp - chisigma * dot_product(ui, urij)**2)
-    epsilon = gblj_epsilon_0 * (1._dp - chiepsilon * dot_product(ui, urij)**2)
-    R = (rijabs - sigma + gblj_sigma_0) / gblj_sigma_0
-    if (hardcore > R) then 
-      overlap = .true.
-      energy = 0._dp
-    else
-      overlap = .false.
-      energy = 4 * epsilon * R**(-6) * (R**(-6) - 1)
-    end if
-  end subroutine
-
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 pure function grad_anisotropic(ui, uj, rij, chi)
   real(dp) :: grad_anisotropic(3)
@@ -489,64 +455,6 @@ pure function gb_force(ui, uj, rij)
   gb_force = -4._dp * (grad_e * (r**(-12) - r**(-6)) + &
     e * (6._dp * r**(-7) - 12._dp * r**(-13)) * grad_gb_R)
 
-end function
-
-!! Helper function for gblj_sigma and gblj_epsilon.
-pure function gblj_a(ui, urij, chi)
-  real(dp), intent(in) :: ui(3), urij(3), chi
-  real(dp) :: gblj_a
-  gblj_a = 1._dp - chi * dot_product(ui, urij)**2
-end function
-
-pure function gblj_grad_a(ui, rij, chi)
-  real(dp), intent(in) :: ui(3), rij(3), chi
-  real(dp) :: gblj_grad_a(3)
-  gblj_grad_a = 2._dp * chi/dot_product(rij, rij) * (rij/dot_product(rij, rij)&
-   * dot_product(ui, rij)**2 - ui * dot_product(ui, rij))
-end function
-
-pure function gblj_force(ui, rij)
-  real(dp), intent(in) :: ui(3), rij(3)
-  real(dp) :: gblj_force(3)
-  real(dp) :: urij(3)
-  real(dp) :: e
-  real(dp) :: grad_e(3)
-  real(dp) :: grad_gblj_r(3)
-  real(dp) :: gblj_r
-
-  urij = rij/sqrt(dot_product(rij, rij))
-
-  !! Potential well depth and its gradient:
-
-  e = gblj_epsilon_0 * gblj_a(ui, urij, chiepsilon)**mu
-  grad_e = gblj_epsilon_0 * mu * gblj_a(ui, urij, chiepsilon)**(mu-1) * &
-    gblj_grad_a(ui, rij, chiepsilon)
-
-  grad_gblj_r = urij/gblj_sigma_0 + 0.5_dp * &
-    gblj_a(ui, urij, chisigma)**(-3/2) * gblj_grad_a(ui, rij, chisigma)
-
-  gblj_r = sqrt(dot_product(rij, rij))/gblj_sigma_0 - &
-    1._dp/sqrt(gblj_a(ui, urij, chisigma)) + 1
-
-  gblj_force = -4._dp * (grad_e * (gblj_r**(-12) - gblj_r**(-6)) + &
-    e * (6._dp * gblj_r**(-7) - 12._dp * gblj_r**(-13)) * grad_gblj_r)
-
-end function
-
-function gblj_r(ui, rij)
-  real(dp), intent(in) :: ui(3)
-  real(dp), intent(in) :: rij(3)
-  real(dp) :: gblj_r
-
-  real(dp) :: urij(3)
-  urij = rij / sqrt(dot_product(rij, rij))
-  gblj_r = sqrt(dot_product(rij, rij))/gblj_sigma_0 - &
-    1._dp/sqrt(gblj_a(ui, urij, chisigma)) + 1
-end function
-
-function get_gblj_sigma_0()
-  real(dp) :: get_gblj_sigma_0
-  get_gblj_sigma_0 = gblj_sigma_0
 end function
 
 end module

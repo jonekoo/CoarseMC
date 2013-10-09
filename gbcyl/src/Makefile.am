@@ -24,7 +24,8 @@ bin_PROGRAMS = \
   remove_every_2nd \
   test_simplelist_with_openmp \
   pair_distribution \
-  xe_shielding
+  xe_shielding \
+  test_gblj
 
 
 ## Scripts to install
@@ -337,6 +338,16 @@ configurationconverter_SOURCES = \
   class_factory.f90 \
   configurationconverter.f90
 
+test_gblj_SOURCES = \
+  ${nr_src} \
+  ${model_src} \
+  utils.f90 \
+  rng.inc mtfort90.f90  \
+  m_fileunit.f90 \
+  test_gblj.f90 
+
+test_gblj_LDADD = ${ldadd_mtstream}
+
 doublezsize_SOURCES = \
   ${nr_src} \
   ${model_src} \
@@ -415,6 +426,7 @@ driver_SOURCES = \
   rng.inc mtfort90.f90 \
   utils.f90 \
   class_parameter_writer.f90 \
+  gblj.f90 \
   gayberne.f90 \
   gayberne_pfunit.f90 \
   particle.f90 \
