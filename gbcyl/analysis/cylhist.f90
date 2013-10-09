@@ -66,6 +66,7 @@ program cylhist
   character(len=200) :: p2_file = ''
   character(len=200) :: tau1_file = ''
   character(len=200) :: density_file = ''
+  character(len=200) :: lj_density_file = ''
   character(len=200) :: n_file = ''
 
   integer :: configuration_unit
@@ -76,10 +77,12 @@ program cylhist
   integer :: p2_unit
   integer :: tau1_unit
   integer :: density_unit
+  integer :: lj_density_unit
   integer :: n_unit
 
   namelist /inputnml/ bin_width, cutoff, psi6_file, smcpsi6_file, smctau1_file, &
-  & layerp2_file, binning_direction, p2_file, tau1_file, density_file, n_file, configuration_file, n_bins
+  & layerp2_file, binning_direction, p2_file, tau1_file, density_file, &
+  & lj_density_file, n_file, configuration_file, n_bins
 
   integer, dimension(:), pointer :: indices 
   integer :: n_bins
@@ -87,7 +90,6 @@ program cylhist
   integer :: allocstat
   integer :: n_bin_particles
   real(dp) :: tensor(3,3)
-  real(dp) :: p2
   real(dp) :: layer_p2
   real(dp) :: layer_normal(3)
   real(sp) :: bin_layer_normal(3) 
@@ -104,6 +106,7 @@ program cylhist
   logical :: write_layerp2 = .false.
   logical :: write_p2 = .false.
   logical :: write_density = .false.
+  logical :: write_lj_density = .false.
   logical :: write_tau1 = .false.
   logical :: write_particle_count = .false.
 
@@ -152,6 +155,10 @@ program cylhist
   if (trim(density_file) /= '') then
     call open_write_unit(density_file, density_unit)
     write_density = .true.
+  end if
+  if (trim(lj_density_file) /= '') then
+    call open_write_unit(lj_density_file, lj_density_unit)
+    write_lj_density = .true.
   end if
   if (trim(n_file) /= '') then
     call open_write_unit(n_file, n_unit)
@@ -235,6 +242,13 @@ program cylhist
         getz(simbox), binning_direction)
       end if
 
+      if (write_lj_density) then
+        !! Calculate and write density profile for LJ particles
+        write(lj_density_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') &
+        real(count(indices==i_bin .and. (.not. particles%rod)), dp)/ &
+        binvolume(i_bin, getx(simbox)/2._dp, getz(simbox), binning_direction)
+      end if
+
       if (write_p2) then
         if(n_bin_particles == 0) then    
           write(p2_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 0._dp
@@ -305,6 +319,10 @@ program cylhist
       write(density_unit, *) ''
     end if
 
+    if (write_lj_density) then
+      write(lj_density_unit, *) ''
+    end if
+
     if (write_p2) then
       write(p2_unit, *) ''
     end if
@@ -351,6 +369,10 @@ program cylhist
 
     if (write_density) then
       close(density_unit)
+    end if
+
+    if (write_lj_density) then
+      close(lj_density_unit)
     end if
 
     if (write_p2) then
