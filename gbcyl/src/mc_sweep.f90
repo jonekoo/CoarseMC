@@ -484,6 +484,9 @@ module mc_sweep
     call scalepositions(oldbox, simbox, particles, nparticles) 
     Vn = volume(simbox)
 
+    !! Check that new dimensions are ok. 
+    call check_simbox(simbox)
+
     if (Vn/Vo < 1._dp/(1._dp + 2._dp * get_max_translation()/get_cutoff())) then
       !! Volume shrank so quickly that the neighbourlist needs updating.
       call update(sl, simbox, particles)
@@ -518,6 +521,13 @@ module mc_sweep
     end if
     nscalingtrials = nscalingtrials + 1
   end subroutine
+
+subroutine check_simbox(simbox)
+  type(poly_box), intent(in) :: simbox
+  if (simbox%xperiodic .and. getx(simbox) < 2._dp * get_cutoff()) stop 'Simulation box too small!'
+  if (simbox%yperiodic .and. gety(simbox) < 2._dp * get_cutoff()) stop 'Simulation box too small!'
+  if (simbox%zperiodic .and. getz(simbox) < 2._dp * get_cutoff()) stop 'Simulation box too small!'
+end subroutine
 
 subroutine total_by_cell(sl, simbox, particles, &
 energy, overlap)
