@@ -193,7 +193,7 @@ module energy
       do j = i + 1, nparticles
         rij = minimage(simbox, position(particles(j))-position(particles(i)))
         if (dot_product(rij, rij) < rcutoff**2) then
-          call pairV(particles(i), particles(j), rij, epair, overlap)
+          call pair_potential(particles(i), particles(j), rij, epair, overlap)
           if (present(n_pairs)) n_pairs = n_pairs + 1
           if(overlap) then
             return
@@ -256,7 +256,7 @@ module energy
     do j = 1, nparticles
       if (cutoff_mask(j)) then
       !if (dot_product(rijs(:, j), rijs(:, j)) < rcutoff**2 .and. j /= i) then
-        call pairV(particles(i), particles(j), rijs(:,j), epair, &
+        call pair_potential(particles(i), particles(j), rijs(:,j), epair, &
           overlap)
         if (present(n_pairs)) n_pairs = n_pairs + 1
         !overlap = overlap .or. overlap_ij
