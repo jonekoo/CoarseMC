@@ -7,6 +7,7 @@ implicit none
 
 real(dp), save :: slice_area
 real(dp), save :: direction(3) !! also slice normal
+real(dp), save :: cutoff = 2._dp
 
 contains
 
@@ -71,7 +72,7 @@ subroutine distribution_func(simbox, particles, mask_i, mask_j, maxbin, delr,&
            r = distance_func(rij)
            bin = int(r/delr) + 1
            !! :NOTE: this last line must be serial, or "locking" 
-           if(bin <= maxbin) histogram(bin) = histogram(bin) + 1._dp
+           if(bin <= maxbin .and. bin > 0) histogram(bin) = histogram(bin) + 1._dp
      end do
   end do
   
@@ -85,6 +86,19 @@ subroutine distribution_func(simbox, particles, mask_i, mask_j, maxbin, delr,&
   end do
      
 end subroutine
+
+function distance_1d_cyl(rij)
+  real(dp), intent(in) :: rij(3)
+  real(dp) :: distance_1d_cyl
+  real(dp) :: r_perp(3)
+  distance_1d_cyl = abs(dot_product(direction, rij))
+  r_perp = rij - dot_product(rij, direction) * direction
+  if (dot_product(r_perp, r_perp) > cutoff**2) then
+    !! Using huge is not a very solid solution but should do for this purpose...
+    distance_1d_cyl = 0.5_dp * huge(0.5_dp)
+  end if
+end function
+
 
 !> Calculates the projection of rij in some direction, which has to be set
 !! beforehand (module variable direction). To be used with distribution_func.
