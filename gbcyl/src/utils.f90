@@ -290,4 +290,14 @@ pure function fmt_char_dp() result(format_char)
   format_char = trim(adjustl(format_char))
 end function
 
+!> Returns a formatting character for a double precision real number. To be 
+!! used when consistent formatting of real numbers is needed. 
+!!
+pure function fmt_char_dp_array(array_size) result(format_char)
+  integer, intent(in) :: array_size
+  character(len = 50) :: format_char
+  write(format_char, *) '(', array_size - 1, '(' // trim(adjustl(fmt_char_dp())) // ',1X),' // trim(adjustl(fmt_char_dp())) // ')'
+  format_char = trim(adjustl(format_char))
+end function
+
 end module
