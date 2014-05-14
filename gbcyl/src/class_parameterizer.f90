@@ -122,67 +122,79 @@ subroutine parameterizer_readstring(p, key, value)
   end if
 end subroutine
 
-subroutine parameterizer_getstring(p, key, value)
+subroutine parameterizer_getstring(p, key, value, found)
   type(parameterizer), intent(in) :: p
   character(len = *), intent(in) :: key
   character(len = *), intent(inout) :: value
+  logical, optional, intent(out) :: found
   character(len = 50) :: string
   call readstring(p, key, string)
   if ('' == string) then 
     write(p%logunit, *) 'Using default value ', key, ' = ', value
+    if (present(found)) found = .false.
   else
     value = string
+    if (present(found)) found = .true.
   end if
 end subroutine
 
-subroutine parameterizer_getinteger(p, key, value)
+subroutine parameterizer_getinteger(p, key, value, found)
   type(parameterizer), intent(in) :: p
   character(len = *), intent(in) :: key
   integer, intent(inout) :: value
-  character(len = 50) :: string
-  integer :: ios
-  call readstring(p, key, string)
-  if ('' == string) then
-    write(p%logunit, *) 'Using default value ', key, ' = ', value
-  else
-    read(string, fmt = *, iostat = ios) value
-    if(0 /= ios) then
-      call conversionwarning(p, key, string, 'integer')
-    end if
-  end if
-end subroutine
-
-subroutine parameterizer_getreal(p, key, value)
-  type(parameterizer), intent(in) :: p
-  character(len = *), intent(in) :: key
-  real(dp), intent(inout) :: value
+  logical, optional, intent(out) :: found
   character(len = 50) :: string
   integer :: ios
   call readstring(p, key, string)
   read(string, fmt = *, iostat = ios) value
   if ('' == string) then
     write(p%logunit, *) 'Using default value ', key, ' = ', value
+    if (present(found)) found = .false.
+  else
+    if(0 /= ios) then
+      call conversionwarning(p, key, string, 'integer')
+    end if
+    if (present(found)) found = .true.
+  end if
+end subroutine
+
+subroutine parameterizer_getreal(p, key, value, found)
+  type(parameterizer), intent(in) :: p
+  character(len = *), intent(in) :: key
+  real(dp), intent(inout) :: value
+  logical, optional, intent(out) :: found
+  character(len = 50) :: string
+  integer :: ios
+  call readstring(p, key, string)
+  read(string, fmt = *, iostat = ios) value
+  if ('' == string) then
+    write(p%logunit, *) 'Using default value ', key, ' = ', value
+    if (present(found)) found = .false.
   else
     if(0 /= ios) then
       call conversionwarning(p, key, string, 'real')
     end if
+    if (present(found)) found = .true.
   end if
 end subroutine
 
-subroutine parameterizer_getlogical(p, key, value)
+subroutine parameterizer_getlogical(p, key, value, found)
   type(parameterizer), intent(in) :: p
   character(len = *), intent(in) :: key
   logical, intent(inout) :: value
+  logical, optional, intent(out) :: found
   character(len = 50) :: string
   integer :: ios
   call readstring(p, key, string)
   read(string, fmt = *, iostat = ios) value
   if ('' == string) then
     write(p%logunit, *) 'Using default value ', key, ' = ', value
+    if (present(found)) found = .false.
   else
     if(0 /= ios) then
       call conversionwarning(p, key, string, 'logical')
     end if
+    if (present(found)) found = .true.
   end if
 end subroutine
 
