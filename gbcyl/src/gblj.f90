@@ -2,9 +2,11 @@ module gblj
 use nrtype
 use class_parameterizer
 use class_parameter_writer
+use m_constants
 implicit none
 
 public :: gblj_init
+public :: gblj_writeparameters
 public :: gblj_potential
 public :: gblj_force
 public :: gblj_get_sigma_0
@@ -15,7 +17,7 @@ private
 
 !! Parameters for the GB-LJ interaction:
 real(dp), save :: epsilon_0 = 1.55_dp
-real(dp), save :: sigma_0 = 3.6_dp / 4.5_dp
+real(dp), save :: sigma_0 = 3.6_dp / sigma0_aengstroms
 real(dp), save :: mu = 0.35_dp
 
 !! The ratio of well-depths when the LJ particle is at the end or on the side
