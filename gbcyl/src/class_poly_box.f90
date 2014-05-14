@@ -16,9 +16,9 @@ public :: isxperiodic, isyperiodic, iszperiodic
 public :: setxperiodicity, setyperiodicity, setzperiodicity
 public :: volume
 public :: writetostdio
-public :: write
 public :: binwrite
-public :: read
+public :: pbox_read
+public :: pbox_write
 
 private
 
@@ -28,7 +28,6 @@ character(len=15), dimension(2), parameter :: typeids = (/'rectangular', 'cylind
 !! Possible values of typeid are listed in the static array typeids.
 !!
 type poly_box
-  private
   character(len=15) :: typeid = 'rectangular'
   real(dp) :: lx = 0._dp
   real(dp) :: ly = 0._dp
@@ -207,7 +206,7 @@ contains
 
   subroutine pbox_read(unit, bp, ios)
     integer, intent(in) :: unit
-    type(poly_box), intent(out) :: bp
+    type(poly_box), intent(inout) :: bp
     integer :: ios
     read(unit, *, iostat=ios) bp%typeid, bp%lx, bp%ly, bp%lz, bp%xperiodic, &
     bp%yperiodic, bp%zperiodic

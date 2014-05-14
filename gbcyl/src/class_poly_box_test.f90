@@ -25,9 +25,9 @@ call setx(boxwritten, lx)
 call sety(boxwritten, ly)
 call setz(boxwritten, lz)
 open(unit, status='SCRATCH')
-call write(unit, boxwritten)
+call pbox_write(unit, boxwritten)
 backspace unit
-call read(unit, boxread, ios) 
+call pbox_read(unit, boxread, ios) 
 close(unit)
 call assert_equal(0, ios, "Box could not be read")
 call assert_comparable(lx, getx(boxread), margin, "Dimensions in x direction &
