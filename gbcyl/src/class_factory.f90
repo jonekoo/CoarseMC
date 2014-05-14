@@ -47,7 +47,7 @@ subroutine factory_writestate(afactory, outunit, simbox, particles)
   integer :: i
   !! Write simulation box.
   write(outunit, '(A)') beginmark
-  call write(outunit, simbox)
+  call pbox_write(outunit, simbox)
   !! Write size of particle array to assist reading.
   write(outunit, '(/,' // fmt_char_int() //')') size(particles)
   !! Write particles
@@ -101,7 +101,7 @@ end subroutine
 subroutine factory_readstate(afactory, inunit, boxread, particles, ios)
   type(factory), intent(in) :: afactory
   integer, intent(in) :: inunit
-  type(poly_box), intent(out) :: boxread
+  type(poly_box), intent(inout) :: boxread
   type(particledat), dimension(:), allocatable, intent(inout) :: particles
   integer, intent(out) :: ios
   integer :: nparticles
@@ -120,7 +120,7 @@ subroutine factory_readstate(afactory, inunit, boxread, particles, ios)
     return
   end if
   !! read boxread
-  call read(inunit, boxread, ios)
+  call pbox_read(inunit, boxread, ios)
   if (0 /= ios) return
   !! read dimension of particlearray
   read(inunit, *, iostat = ios) string
