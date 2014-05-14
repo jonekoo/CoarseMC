@@ -14,6 +14,7 @@ program pair_distribution
   use class_poly_box, only: poly_box
   use distribution
   use utils, only: fmt_char_dp
+  use orientational_ordering
   implicit none
   type(particledat), allocatable :: particles(:)
   integer :: io_status
@@ -24,21 +25,31 @@ program pair_distribution
   integer, parameter :: stdin = 5
   type(poly_box) :: simbox
   character(len=32) :: arg
-  logical :: is_ljgb = .false., is_1D = .false.
+  logical :: is_ljgb = .false., is_1D = .false., is_director = .false.
   logical, allocatable :: mask_i(:)
   integer :: i
+  real(dp) :: p2
+  logical :: is_r_bound = .false.
 
   do i = 1, command_argument_count()
      call get_command_argument(i, arg)
 
      select case (arg)
      case ('-z')
+       !! 1D distributions are calculated with respect to z-axis of the
+       !! simulation box.
        is_1D = .true.
+     case ('-d')
+       !! 1D distributions are calculated with respect to director.
+       is_1D = .true.
+       is_director = .true.
      case ('-h', '--help')
         call print_help()
         stop
      case ('--ljgb')
         is_ljgb = .true.
+     case ('-r')
+        is_r_bound = .true. 
      case default
         print '(a,a,/)', 'Unrecognized command-line option: ', arg
         call print_help()
@@ -57,13 +68,20 @@ program pair_distribution
       else
         mask_i = particles%rod
       end if
-      !call orientation_parameter(pack(particles, particles%rod), count(particles%rod), p2, director)
-      !direction = director
       if (is_1D) then
         direction = (/0._dp, 0._dp, 1._dp/)
-        slice_area = volume(simbox) / getz(simbox)
-        call distribution_func(simbox, particles, mask_i, particles%rod,&
+        if (is_director) call orientation_parameter(pack(particles, &
+          particles%rod), count(particles%rod), p2, direction)
+        if (is_r_bound) then
+          cutoff = 2._dp
+          slice_area = 4._dp * atan(1._dp) * cutoff**2
+          call distribution_func(simbox, particles, mask_i, particles%rod,&
+          maxbin, delr, histogram, distance_1d_cyl, slice_volume)
+        else 
+          slice_area = volume(simbox) / getz(simbox)
+          call distribution_func(simbox, particles, mask_i, particles%rod,&
           maxbin, delr, histogram, distance_1d, slice_volume)
+        end if
       else
         call distribution_func(simbox, particles, mask_i, particles%rod,&
           maxbin, delr, histogram, distance_3d, spherical_shell_volume)
@@ -86,6 +104,7 @@ subroutine print_help()
   write(*, *) "OPTIONS:"
   write(*, *) ""
   write(*, *) "-z calculate 1D pair distribution in z-direction instead."
+  write(*, *) "-d calculate 1D pair distribution with respect to the director instead."
   write(*, *) "-h, --help prints this help message."
   write(*, *) "--ljgb calculate pair distribution only for LJ-GB particle pairs." 
   write(*, *) ""
