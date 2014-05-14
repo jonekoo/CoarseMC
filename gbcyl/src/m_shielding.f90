@@ -1,9 +1,11 @@
 module m_shielding
-use particle
-use class_poly_box
 use nrtype
 use utils, only: rotate_tensor, cross_product
-use gblj, only: gblj_r, gblj_get_sigma_0
+use gblj, only: gblj_r, gblj_get_sigma_0, gblj_init
+use m_constants
+use class_parameterizer !! for initialization
+use lj
+use particlewall
 implicit none
 external horner
 !!
@@ -33,6 +35,10 @@ s_parallel(5) =      [-5.2671604883e1_dp, 4.5165162489_dp,    1.5171022733e1_dp,
 xz(3) =              [ 3.1228263091e1_dp, 5.3141730331_dp,    6.6334674074e-1_dp],&    
 zx(3) =              [ 3.3141615175e1_dp, 4.8095621340_dp,    7.0308516233e-1_dp]
 !!
+!! The Xe-LC fits are reasonable only when r < 5.5. When center-to-center 
+!! distance exceeds this value, the shielding is set to zero.
+real(dp), parameter :: gbxe_cutoff = 5.5_dp 
+!!
 !!
 !! Fit parameters for the Xe-Xe shielding from the paper by M. Hanni, et al. 
 !! Xe-Xe Distance has to be in aengstroms (Å) when using these! The function 
@@ -51,85 +57,30 @@ anisotropy_xexe(4) = [ 6274.20005258_dp, -1.20014259_dp,      0.93600894_dp,    
 !! (**) This is a fit for anisotropy of shielding, not the anisotropic part of
 !! shielding.
 !!
-!! The shielding is cut off (set to zero) when center-to-center distance
-!! exceeds the cutoff value. This is because the Xe-LC fits are reasonable
-!! only when r < 5.5.
-real(dp), parameter :: cutoff = 5.5_dp 
+!! The quantum chemical calculations of Hanni were made in the region
+!! 3...13.5 Å. When the center-to-center distance of two Xe atoms exceeds 13.5 Å 
+!! the shielding is set to zero.
+real(dp), parameter :: xexe_cutoff_A = 13.5_dp
+
+interface xewall_shielding
+  pure function xewall_shielding(k, radiusA, densityA, epsilonratio, &
+    sigmaratio) result(local_tensor)
+    use nrtype
+    real(dp), intent(in) :: k, radiusA, densityA, epsilonratio, sigmaratio
+    real(dp) :: local_tensor(3, 3)
+  end function
+end interface
 
 contains
 
-subroutine avg_shielding(simbox, particles, axes, tensor)
-  !! 
-  !> Calculates the average Xe shielding in a snapshot as defined in
-  !! J. Lintuvuori, M. Straka, and J. Vaara. Nuclear magnetic resonance 
-  !! parameters of atomic xenon dissolved in gay-berne model liquid crystal.
-  !! Physical Review E, 75(3):031707, MAR 2007.
-  !!
-  !! @p simbox the simulation volume defining boundary conditions (e.g. 
-  !!    perioidic boundaries)
-  !! @p particles the array of particles to which the Xe shielding is 
-  !!    calculated.
-  !! @p axes the coordinate system where the shielding tensor is calculated. 
-  !!    axes(:, 1) = x-axis, axes(:, 2) = y-axis, axes(:, 3) = z-axis.
-  !! @p tensor the averaged Xe shielding tensor..
-  !!
-  type(poly_box), intent(in) :: simbox
-  type(particledat), intent(in) :: particles(:)
-  real(dp), intent(in) :: axes(3, 3)
-  real(dp), intent(out) :: tensor(3, 3)
-
-  real(dp) :: local_x(3), local_y(3), local_z(3)
-  real(dp) :: unit_tensor(3, 3)
-  real(dp) :: local_tensor(3, 3)
-  real(dp) :: rotated_tensor(3, 3)
-  real(dp) :: rij(3)
-  integer :: i, j
-
-  tensor = 0._dp
-  do i = 1, size(particles)
-    if (.not. particles(i)%rod) then
-      do j = 1, size(particles)
-        if (i == j) cycle
-        rij = minimage(simbox, position(particles(j)) - position(particles(i)))
-        if(dot_product(rij, rij) > cutoff**2) cycle 
-        local_tensor = 0._dp
-        local_x = (/1._dp, 0._dp, 0._dp/)
-        local_y = (/0._dp, 1._dp, 0._dp/)
-        local_z = (/0._dp, 0._dp, 1._dp/)
-        unit_tensor = reshape((/local_x, local_y, local_z/), (/3, 3/))
-        !! Calculate tensor components in a coordinate frame fixed to the molecule pair j, i.
-        if (particles(j)%rod) then 
-          call gblj_shielding(particles(j), rij, local_tensor)
-          !! determine rotation angles from particles(j)%(ux, uy, uz) and rij
-          local_z = orientation(particles(j))
-          !! take the component of rij perpendicular to local z and normalize
-          local_x = rij - dot_product(rij, local_z) * local_z
-          local_x = local_x / sqrt(dot_product(local_x, local_x))
-        else 
-          call ljlj_shielding(rij, local_tensor)
-          local_z = rij / sqrt(dot_product(rij, rij))
-          local_x = local_x - dot_product(local_x, local_z) * local_x
-          local_x = local_x / sqrt(dot_product(local_x, local_x))
-          !! determine rotation angles from rij
-        end if
-        local_y = cross_product(local_z, local_x)
-        !write(*, *) local_y, dot_product(local_y, local_y)
-        !! rotate local_tensor to laboratory coordinates.
-        ! if laboratory coordinate frame is the frame of the simbox then new_axes = unit_tensor
-        call rotate_tensor(local_tensor, old_axes = &
-          reshape((/local_x, local_y, local_z/), (/3, 3/)), &
-          new_axes = axes, rotated = rotated_tensor)
-        !write(*, *) "Tr(local) = ", local_tensor(1, 1) + local_tensor(2, 2) + local_tensor(3, 3)
-        !write(*, *) "Tr(rotated) = ", rotated_tensor(1, 1) + rotated_tensor(2, 2) + rotated_tensor(3, 3)
-  
-        !! Add contribution of particle j to the total shielding
-        forall(i = 1:3, j = 1:3) tensor(i, j) = tensor(i, j) + rotated_tensor(i, j)      
-      end do 
-    end if
-  end do
-  !! Divide by number of lj particles
-  tensor = tensor / real(count(.not. particles%rod), dp)
+subroutine init_shielding(reader)
+  type(parameterizer), intent(inout) :: reader
+  !! The modules below are needed for the ljwall_shielding calculation
+  call initptwall(reader)
+  call lj_init(reader)   
+  call gblj_init(reader)
 end subroutine
+
 
 
 !> Calculates the NMR shielding tensor for a GB-Xe pair. The shielding tensor
@@ -137,69 +88,62 @@ end subroutine
 !! of the GB particle defines the z-axis and the perpendicular component of the
 !! interparticle distance vector defines the x-axis.
 !! 
-!! @p gb_particle the Gay-Berne particle with respect to which the shielding is
-!! calculated. 
-!! @p lj_particle the Xe atom to which the shielding is calculated. 
-!! @p rij the center to center (minimum image) distance vector of the particles
-!! @p local_tensor the shielding tensor calculated in a coordinate system 
-!! defined by the geometry of the particle pair.
-!! 
-subroutine gblj_shielding(gb_particle, rij, local_tensor)
-  type(particledat), intent(in) :: gb_particle
-  real(dp), intent(in) :: rij(3)
-  real(dp), intent(out) :: local_tensor(3, 3)
+!! @p x the x coordinate of the Xe atom in the local axis system
+!! @p z the z coordinate of the Xe atom in the local axis system
+!!
+pure function gbxe_shielding_local(x, z) result(local_tensor)
+  real(dp), intent(in) :: x, z
+  real(dp) :: local_tensor(3, 3)
   real(dp) :: co, si
-  real(dp) :: urij(3)
   real(dp) :: r
-  urij = rij / sqrt(dot_product(rij, rij))
-  !! cosine and sine of the angle between the orientation of the gb_particle
-  !! and the interparticle vector rij:
-  co = dot_product(orientation(gb_particle), urij)
-  si = sqrt(1._dp - co**2) 
-  !! We can always say that sine is positive because the angle between is
-  !! smaller or equal to pi. For definition of the angle see the paper by
-  !! Lintuvuori et al., Figure 1.
-  r = gblj_r(orientation(gb_particle), rij) * gblj_get_sigma_0()
   local_tensor = 0._dp
-  local_tensor(1, 1) = sigma(r, s_xx) * si**2 + &
-    sigma(r, e_perpendicular) * co**2 !! sigma_xx
-  local_tensor(2, 2) = sigma(r, e_perpendicular) !! sigma_yy
-  local_tensor(3, 3) = sigma(r, s_parallel) * si**2 !! sigma_zz
-  local_tensor(1, 3) = sigma(r, xz) * si * co !! sigma_xz
-  local_tensor(3, 1) = sigma(r, zx) * si * co !! sigma_zx
-end subroutine 
+  if (z**2 + x**2 < gbxe_cutoff**2) then
+     !! cosine and sine of the angle between the orientation of the gb_particle
+     !! and the interparticle vector rij:
+     co = z / sqrt(z**2 + x**2)
+     si = sqrt(1._dp - co**2)
+     r = gblj_r([0._dp, 0._dp, 1._dp], [x, 0._dp, z])
+     local_tensor = 0._dp
+     local_tensor(1, 1) = sigma(r, s_xx) * si**2 + &
+          sigma(r, e_perpendicular) * co**2 !! sigma_xx
+     local_tensor(2, 2) = sigma(r, e_perpendicular) !! sigma_yy
+     local_tensor(3, 3) = sigma(r, s_parallel) * si**2 !! sigma_zz
+     local_tensor(1, 3) = sigma(r, xz) * si * co !! sigma_xz
+     local_tensor(3, 1) = sigma(r, zx) * si * co !! sigma_zx
+  end if
+end function
 
 
-!> Calculates the NMR shielding tensor for two Xe atoms described as LJ 
-!! particles.
+!> Calculates the NMR shielding tensor for two 129/131Xe atoms. 
 !!
-!! @p lj_1 the LJ particle with respect to which the shielding is calculated.
-!! @p lj_2 the LJ particle to which the shielding is calculated.
-!! @p rij the center to center (minimum image) distance vector of the particles
-!! @p local_tensor the tensor calculated in coordinates where rij defines the 
-!! z-axis.
+!! @p r is the center-to-center distance of the atoms.
 !!
-subroutine ljlj_shielding(rij, local_tensor)
-  real(dp), intent(in) :: rij(3)
-  real(dp), intent(out) :: local_tensor(3, 3)
+pure function xexe_shielding_local(rij) result(local_tensor)
+  real(dp), intent(in) :: rij
+  real(dp) :: local_tensor(3, 3)
   real(dp) :: r_aengstroms
   local_tensor = 0._dp
-  r_aengstroms = sqrt(dot_product(rij, rij)) * 4.5_dp !! 1 GB unit is here 4.5 Å 
-  if (r_aengstroms < cutoff) then 
-    local_tensor(1, 1) = sigma(r_aengstroms, xexe_isotropic) - sigma(r_aengstroms, anisotropy_xexe) / 3._dp 
-    local_tensor(2, 2) = sigma(r_aengstroms, xexe_isotropic) - sigma(r_aengstroms, anisotropy_xexe) / 3._dp 
-    local_tensor(3, 3) = sigma(r_aengstroms, xexe_isotropic) + 2._dp/3._dp * sigma(r_aengstroms, anisotropy_xexe)
+  r_aengstroms = rij * sigma0_aengstroms
+  if (r_aengstroms < xexe_cutoff_A) then 
+     local_tensor(1, 1) = sigma(r_aengstroms, xexe_isotropic) - &
+          sigma(r_aengstroms, anisotropy_xexe) / 3._dp 
+     local_tensor(2, 2) = sigma(r_aengstroms, xexe_isotropic) - &
+          sigma(r_aengstroms, anisotropy_xexe) / 3._dp 
+     local_tensor(3, 3) = sigma(r_aengstroms, xexe_isotropic) + 2._dp/3._dp * &
+          sigma(r_aengstroms, anisotropy_xexe)
   end if
-end subroutine 
+end function
 
 
 !> Implements the function (17) from the paper by Lintuvuori et al. 
 !! 
 !! @p r the distance
-!! @p a the parameter A and polynomial coefficients in an array [A, p_A0, p_A1,...]
-!! @p b the parameter B and polynomial coefficients in an array [B, p_B0, p_B1,...] 
+!! @p a the parameter A and polynomial coefficients in an array 
+!!    [A, p_A0, p_A1,...]
+!! @p b the parameter B and polynomial coefficients in an array 
+!!    [B, p_B0, p_B1,...] 
 !!
-function sigma(r, a, b) result(res)
+pure function sigma(r, a, b) result(res)
   real(dp), intent(in) :: R
   real(dp), intent(in) :: a(:)
   real(dp), intent(in), optional :: b(:)
@@ -213,10 +157,38 @@ function sigma(r, a, b) result(res)
     real(dp) :: horner
   end function horner
   end interface
-  if (r > cutoff) write(*, *) 'r=', r, "WTF?!!"
   res = a(1) / (r**horner(a(size(a):2:-1), size(a) - 1, r))
-  !write(*, *) horner(a(size(a):2:-1), size(a) - 1, r)
   if (present(b)) res = res + b(1) / r**horner(b(size(b):2:-1), size(b) - 1, R)
+end function
+
+
+!! Returns the contribution of a smooth, cylindrical Lennard-Jones wall to the
+!! nuclear shielding of a Xe atom. Transforms the units to aengstroms (Å) 
+!! before passing the actual computation to the function xewall_shielding. 
+!!
+!! The computation is performed in the local coordinate system in which the 
+!! z-axis is parallel to the cylinder axis and x axis points to the radial 
+!! direction.
+!!
+!! @see module particlewall
+!!
+!! @p r the distance of the Xe atom from the cylinder axis.
+!! @p radius the inner radius of the cylindrical wall.
+!!
+!! @return the Xe-wall shielding tensor.
+!!
+pure function xewall_shielding_local(r, radius) result(local_tensor)
+  use particlewall, only: ljwall_sigma_0 => sigwall_lj, ljwall_epsilon_0 => &
+  epswall_lj, wall_density
+  use lj, lj_sigma_0 => sigma_0_, lj_epsilon_0 => epsilon_0_
+  real(dp), intent(in) :: radius
+  real(dp), intent(in) :: r
+  real(dp) :: local_tensor(3, 3) 
+  local_tensor = 0._dp
+  local_tensor = xewall_shielding(r / radius, &
+    radius * sigma0_aengstroms, &
+    wall_density / sigma0_aengstroms**3, ljwall_epsilon_0 / lj_epsilon_0, &
+    ljwall_sigma_0 / lj_sigma_0)
 end function
 
 end module
