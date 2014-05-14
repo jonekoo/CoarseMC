@@ -13,8 +13,6 @@ bin_PROGRAMS = \
   smctau1 \
   smcpsi6 \
   cylhist \
-  printgbgb \
-  printljcylinder \
   configurationconverter \
   cylindrical_layerorientation \
   pressurezz \
@@ -24,8 +22,13 @@ bin_PROGRAMS = \
   remove_every_2nd \
   test_simplelist_with_openmp \
   pair_distribution \
-  xe_shielding \
-  test_gblj
+  xe_nmr \
+  xe_nmr_profile \
+  test_gblj \
+  print_gbxe_qcoupling \
+  print_gbxe_shielding \
+  print_xewall_coupling \
+  print_xewall_shielding
 
 
 ## Scripts to install
@@ -39,7 +42,8 @@ dist_bin_SCRIPTS = \
   makerestart.sh \
   replaceparameter.py \
   slowcool.py \
-  gbs2ljs.py
+  gbs2ljs.py \
+  set_inputparameters.py
 
 ##ftnunit : 
 ##	$(MAKE) -C ftnunit
@@ -69,10 +73,12 @@ model_src = \
   class_parameter_writer.f90 \
   particle.f90 \
   class_poly_box.f90 \
+  m_constants.f90 \
   lj.f90 \
   gayberne.f90 \
   gblj.f90 \
   ljcylinder.f90 \
+  ljcylinder_force.f90 \
   particlewall.f90 \
   class_pair_potential.f90 \
   verlet.f90 \
@@ -105,7 +111,7 @@ orientation_parameter_SOURCES = \
   orientational_ordering.f90 \
   orientation_parameter.f90
 
-xe_shielding_SOURCES = \
+xe_nmr_SOURCES = \
   ${nr_src} \
   rng.inc mtfort90.f90  \
   utils.f90 \
@@ -114,10 +120,111 @@ xe_shielding_SOURCES = \
   class_factory.f90 \
   jacobiwrapper.f90 \
   orientational_ordering.f90 \
+  m_rank2_tensor.f90 \
+  odd_n_integral.f90 \
+  xewall_shielding.f90 \
   m_shielding.f90 \
-  shielding.f90 
+  xewall_qcoupling.f90 \
+  m_quadrupole_coupling.f90 \
+  lj_nmr.f90 \
+  xe_nmr.f90 
 
-xe_shielding_LDADD = $(ldadd_mtstream)
+xe_nmr_LDADD = $(ldadd_mtstream)
+
+xe_nmr_profile_SOURCES = \
+  ${nr_src} \
+  rng.inc mtfort90.f90  \
+  utils.f90 \
+  m_fileunit.f90 \
+  ${model_src} \
+  class_factory.f90 \
+  jacobiwrapper.f90 \
+  orientational_ordering.f90 \
+  m_rank2_tensor.f90 \
+  odd_n_integral.f90 \
+  xewall_shielding.f90 \
+  m_shielding.f90 \
+  xewall_qcoupling.f90 \
+  m_quadrupole_coupling.f90 \
+  lj_nmr.f90 \
+  xfunc_module.f90 \
+  histogram.f90 \
+  parse_cmdline.inc \
+  xe_nmr_profile.f90 
+
+xe_nmr_profile_LDADD = $(ldadd_mtstream)
+
+print_xewall_coupling_SOURCES = \
+  ${nr_src} \
+  rng.inc mtfort90.f90  \
+  utils.f90 \
+  m_fileunit.f90 \
+  ${model_src} \
+  class_factory.f90 \
+  jacobiwrapper.f90 \
+  orientational_ordering.f90 \
+  m_rank2_tensor.f90 \
+  odd_n_integral.f90 \
+  xewall_shielding.f90 \
+  m_shielding.f90 \
+  xewall_qcoupling.f90 \
+  m_quadrupole_coupling.f90 \
+  print_xewall_coupling.f90 
+
+print_xewall_coupling_LDADD = $(ldadd_mtstream)
+
+print_xewall_shielding_SOURCES = \
+  ${nr_src} \
+  rng.inc mtfort90.f90  \
+  utils.f90 \
+  m_fileunit.f90 \
+  ${model_src} \
+  class_factory.f90 \
+  jacobiwrapper.f90 \
+  orientational_ordering.f90 \
+  m_rank2_tensor.f90 \
+  odd_n_integral.f90 \
+  xewall_shielding.f90 \
+  m_shielding.f90 \
+  print_xewall_shielding.f90 
+
+print_xewall_shielding_LDADD = $(ldadd_mtstream)
+
+print_gbxe_qcoupling_SOURCES = \
+  ${nr_src} \
+  rng.inc mtfort90.f90  \
+  utils.f90 \
+  m_fileunit.f90 \
+  ${model_src} \
+  class_factory.f90 \
+  jacobiwrapper.f90 \
+  orientational_ordering.f90 \
+  m_rank2_tensor.f90 \
+  odd_n_integral.f90 \
+  xewall_shielding.f90 \
+  m_shielding.f90 \
+  xewall_qcoupling.f90 \
+  m_quadrupole_coupling.f90 \
+  print_gbxe_qcoupling.f90 
+
+print_gbxe_qcoupling_LDADD = $(ldadd_mtstream)
+
+print_gbxe_shielding_SOURCES = \
+  ${nr_src} \
+  rng.inc mtfort90.f90  \
+  utils.f90 \
+  m_fileunit.f90 \
+  ${model_src} \
+  class_factory.f90 \
+  jacobiwrapper.f90 \
+  orientational_ordering.f90 \
+  m_rank2_tensor.f90 \
+  odd_n_integral.f90 \
+  xewall_shielding.f90 \
+  m_shielding.f90 \
+  print_gbxe_shielding.f90
+
+print_gbxe_shielding_LDADD = $(ldadd_mtstream)
 
 remove_every_2nd_SOURCES = \
   ${nr_src} \
@@ -242,6 +349,7 @@ cylhist_SOURCES = \
   class_factory.f90 \
   bin_indices.f90 \
   distribution.f90 \
+  parse_cmdline.inc \
   cylhist.f90 
 
 smctau1_SOURCES = \
@@ -274,11 +382,8 @@ printpotentials_SOURCES = \
   rng.inc mtfort90.f90  \
   utils.f90 \
   m_fileunit.f90 \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
-  gayberne.f90 \
-  ljcylinder.f90 \
-  horner.f90 \
+  ${model_src} \
+  class_factory.f90 \
   printpotentials.f90 
 
 printpotentials_LDADD = ${ldadd_mtstream}
@@ -294,28 +399,8 @@ psi6_LDADD = ${ldadd_mtstream}
 povanimator_LDADD = ${ldadd_mtstream}
 smcpsi6_LDADD = ${ldadd_mtstream}
 cylhist_LDADD = ${ldadd_mtstream}
-printgbgb_LDADD = ${ldadd_mtstream}
-printljcylinder_LDADD = ${ldadd_mtstream}
 configurationconverter_LDADD = ${ldadd_mtstream}
 cylindrical_layerorientation_LDADD = ${ldadd_mtstream}
-
-printljcylinder_SOURCES = \
-  ${nr_src} \
-  rng.inc mtfort90.f90  \
-  utils.f90 \
-  ljcylinder.f90 \
-  horner.f90 \
-  printljcylinder.f90 
-
-printgbgb_SOURCES = \
-  nrtype.f90 \
-  rng.inc mtfort90.f90  \
-  utils.f90 \
-  m_fileunit.f90 \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
-  gayberne.f90 \
-  printgbgb.f90 
 
 createbox_SOURCES = \
   nrtype.f90 \
