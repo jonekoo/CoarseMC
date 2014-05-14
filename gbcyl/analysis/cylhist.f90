@@ -12,20 +12,11 @@
 !! - The orientation parameter of the smectic layer layerp2
 !! - Translational order smctau1 and 
 !! - short range hexagonal order smcpsi6. 
-!! These latter ones have the average layer normal as their reference direction.
+!! These latter ones have the average layer normal as their reference 
+!! direction.
 !! 
-!! Usage: The output files for different quantities are given in standard input
-!! in the F95 namelist format as in the example below:
-!!
-!! &inputnml configuration_file='configurations.0', n_file, bin_width=0.25, \
-!! n_bins=36, [binning_direction=-1,] \
-!! [smctau1_file='smctau1.hist',] [smcpsi6_file='smcpsi6.hist',] \
-!! [density_file='density.hist',] [psi6_file='psi6.hist',] \
-!! [p2_file='p2.hist',] [tau1_file='tau1.hist',]/
-!!
-!! A parameter is calculated and printed only if its output file is given. 
-!! binning_direction=-1 means the division to bins is started from the 
-!! cylinder wall.
+!! For options and their descriptions run with 
+!! ./cylhist --help 
 !! 
 program cylhist
   use state_reader
@@ -44,7 +35,7 @@ program cylhist
   use m_fileunit
   implicit none
 
-  type(particledat), allocatable :: particles(:)
+  type(particledat), allocatable :: particles(:), temp(:)
   integer :: io_status
   integer :: n_particles
   
@@ -66,8 +57,8 @@ program cylhist
   character(len=200) :: p2_file = ''
   character(len=200) :: tau1_file = ''
   character(len=200) :: density_file = ''
-  character(len=200) :: lj_density_file = ''
   character(len=200) :: n_file = ''
+  character(len=200) :: xe_shielding_file = ''
 
   integer :: configuration_unit
   integer :: psi6_unit 
@@ -77,15 +68,16 @@ program cylhist
   integer :: p2_unit
   integer :: tau1_unit
   integer :: density_unit
-  integer :: lj_density_unit
   integer :: n_unit
+  integer :: xe_shielding_unit
+  character(80) :: particletype = 'gb'
 
-  namelist /inputnml/ bin_width, cutoff, psi6_file, smcpsi6_file, smctau1_file, &
-  & layerp2_file, binning_direction, p2_file, tau1_file, density_file, &
-  & lj_density_file, n_file, configuration_file, n_bins
+  namelist /cmd/ bin_width, cutoff, psi6_file, smcpsi6_file, &
+       smctau1_file, layerp2_file, binning_direction, p2_file, tau1_file, &
+       density_file, n_file, configuration_file, n_bins, particletype
 
   integer, dimension(:), pointer :: indices 
-  integer :: n_bins
+  integer :: n_bins = 100
   integer :: i_bin
   integer :: allocstat
   integer :: n_bin_particles
@@ -97,6 +89,7 @@ program cylhist
   real(sp) :: smctau1_value
   real(sp) :: layer_distance
   real(sp) :: smclayer_distance
+  real(dp) :: xe_shielding_tensor
   real(sp), dimension(3), parameter :: z_axis=(/0._sp, 0._sp, 1._sp/)
 
   !! Parameters to control which observables are calculated and written.
@@ -106,23 +99,48 @@ program cylhist
   logical :: write_layerp2 = .false.
   logical :: write_p2 = .false.
   logical :: write_density = .false.
-  logical :: write_lj_density = .false.
   logical :: write_tau1 = .false.
   logical :: write_particle_count = .false.
+  logical :: write_xe_shielding = .false.
 
   type(poly_box) :: simbox
   type(factory) :: afactory
-  integer, parameter :: stdin = 5
- 
-  !! Read input parameters
-  read(stdin, NML = inputnml) 
+  integer :: i_conf
 
-  if (n_bins==0) stop 'Give n_bins!'
+  character(len=*), parameter :: options_str = &
+       'configuration_file=configurations.0, n_bins=100, bin_width=0.1, ' // &
+       'n_file, particletype="gb", [other_options]'
+  character(len=1000) :: cmd_line = ""
+
+  call get_command(cmd_line)
+  call parse_cmdline(cmd_line)
+
+  if (configuration_file == "") then
+     write(*, *) 'Give configuration_file!'
+     call print_usage()
+     stop
+  else if (n_bins < 1) then
+     write(*, *) 'Give n_bins >= 1 !'
+     call print_usage()
+     stop
+  else if(bin_width <= 0._dp) then
+     write(*, *) 'Give bin_width > 0 !'
+     call print_usage() 
+     stop
+  else if (trim(n_file) == "") then
+     write(*, *) 'Give n_file!'
+     call print_usage
+     stop 
+  end if
+
+  call open_write_unit(n_file, n_unit)
+  write_particle_count = .true.
 
   !! Open configuration_file
   if (trim(configuration_file) /= '') then
     configuration_unit=fileunit_getfreeunit()
-    open(unit=configuration_unit, file=configuration_file, action='READ', status='OLD')
+    open(unit=configuration_unit, file=configuration_file, action='READ', &
+         status='OLD')
   else 
     write(*, *) 'Set configuration_file!' 
     stop
@@ -156,23 +174,57 @@ program cylhist
     call open_write_unit(density_file, density_unit)
     write_density = .true.
   end if
-  if (trim(lj_density_file) /= '') then
-    call open_write_unit(lj_density_file, lj_density_unit)
-    write_lj_density = .true.
-  end if
-  if (trim(n_file) /= '') then
-    call open_write_unit(n_file, n_unit)
-    write_particle_count = .true.
-  else 
-    stop 'n_file not given'
-  end if
 
+  i_conf = 0
   do  
-    call readstate(afactory, configuration_unit, simbox, particles, io_status)
-    if (io_status < 0) then
+    call readstate(afactory, configuration_unit, simbox, temp, io_status)
+    if (io_status /= 0) then
       exit
     end if
-    n_particles = size(particles)
+
+    if (allocated(particles)) deallocate(particles)
+    if (particletype == 'lj') then
+      n_particles = count(.not. temp%rod)
+      allocate(particles(n_particles))
+      particles(1:n_particles) = pack(temp, .not. temp%rod)
+      if(allocated(temp)) deallocate(temp)
+    else if (trim(adjustl(particletype)) == 'gb') then
+      n_particles = count(temp%rod)
+      allocate(particles(n_particles))
+      particles(1:n_particles) = pack(temp, temp%rod)
+      if(allocated(temp)) deallocate(temp)
+    else 
+      n_particles = size(temp)
+      call move_alloc(temp, particles)
+    end if
+    i_conf = i_conf + 1
+    if (i_conf > 1) then
+       !! Append a newline after each row of bins
+       write(n_unit, '(/)', ADVANCE='NO')
+       if (write_density) then
+          write(density_unit, '(/)', ADVANCE='NO')
+       end if
+
+       if (write_p2) then
+          write(p2_unit, '(/)', ADVANCE='NO')
+       end if
+       if (write_tau1) then
+          write(tau1_unit, '(/)', ADVANCE='NO')
+       end if
+       if (write_psi6) then
+          write(psi6_unit, '(/)', ADVANCE='NO')
+       end if
+       
+       if (write_layerp2) then
+          write(layerp2_unit, '(/)', ADVANCE='NO')
+       end if
+       if (write_smctau1) then
+          write(smctau1_unit, '(/)', ADVANCE='NO')
+       end if
+       if (write_smcpsi6) then
+          write(smcpsi6_unit, '(/)', ADVANCE='NO')
+       end if
+    end if
 
     if (write_p2) then
       !! Calculate and save orientation parameter for the whole system with 
@@ -203,8 +255,10 @@ program cylhist
 
     if (write_smctau1) then
       !! Calculate and write global tau1
-      call tau1_routine(particles, real(layer_normal, sp), tau1_value, smclayer_distance)
-      write(smctau1_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') smctau1_value
+      call tau1_routine(particles, real(layer_normal, sp), smctau1_value, &
+           smclayer_distance)
+      write(smctau1_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') &
+           smctau1_value
     end if
 
     if (write_smcpsi6) then
@@ -242,27 +296,20 @@ program cylhist
         getz(simbox), binning_direction)
       end if
 
-      if (write_lj_density) then
-        !! Calculate and write density profile for LJ particles
-        write(lj_density_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') &
-        real(count(indices==i_bin .and. (.not. particles%rod)), dp)/ &
-        binvolume(i_bin, getx(simbox)/2._dp, getz(simbox), binning_direction)
-      end if
-
       if (write_p2) then
         if(n_bin_particles == 0) then    
-          write(p2_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 0._dp
+          write(p2_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 'NaN'
         else
           !! Calculate and write orientation parameter profile
-          call orientation_tensor(pack(particles(1:n_particles), &
-          & indices==i_bin), n_bin_particles, tensor)
-          write(p2_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') tensor(3,3) 
+          write(p2_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') &
+               orientation_parameter_v(pack(particles(1:n_particles), &
+               indices==i_bin), real(z_axis, dp))
         end if
       end if
 
       if (write_tau1) then
         if(n_bin_particles == 0) then    
-          write(tau1_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 0._dp
+          write(tau1_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 'NaN'
         else
           !! Calculate and write tau1 profile        
           write(tau1_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') &
@@ -272,7 +319,7 @@ program cylhist
 
       if (write_psi6) then
         if(n_bin_particles == 0) then         
-          write(psi6_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 0._dp
+          write(psi6_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 'NaN'
         else
           !! Calculate and write psi6 profile
           write(psi6_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') &
@@ -282,7 +329,7 @@ program cylhist
 
       if (write_layerp2) then
         if(n_bin_particles == 0) then    
-          write(layerp2_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 0._dp
+          write(layerp2_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 'NaN'
         else
           !! Write the orientation parameter for layer normals.
           write(layerp2_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') &
@@ -292,7 +339,7 @@ program cylhist
 
       if (write_smctau1) then
         if(n_bin_particles == 0) then    
-          write(smctau1_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 0._dp
+          write(smctau1_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 'NaN'
         else
           !! Calculate and write smctau1 profile        
           write(smctau1_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') &
@@ -302,7 +349,7 @@ program cylhist
     
       if (write_smcpsi6) then
         if(n_bin_particles == 0) then    
-          write(smcpsi6_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 0._dp
+          write(smcpsi6_unit, '('//fmt_char_dp()//',1X)', ADVANCE='NO') 'NaN'
         else
           !! Calculate and write psi6 profile with respect to averaged layer 
           !! normal for i_bin.
@@ -313,101 +360,149 @@ program cylhist
 
     end do
 
-    !! Append a newline after each row of bins
-    write(n_unit, *) ''
-    if (write_density) then
-      write(density_unit, *) ''
-    end if
-
-    if (write_lj_density) then
-      write(lj_density_unit, *) ''
-    end if
-
-    if (write_p2) then
-      write(p2_unit, *) ''
-    end if
-    if (write_tau1) then
-      write(tau1_unit, *) ''
-    end if
-    if (write_psi6) then
-      write(psi6_unit, *) ''
-    end if
-
-    if (write_layerp2) then
-      write(layerp2_unit, *) ''
-    end if
-    if (write_smctau1) then
-      write(smctau1_unit, *) ''
-    end if
-    if (write_smcpsi6) then
-      write(smcpsi6_unit, *) ''
-    end if
   end do
 
   call finalize
 
-  contains
+contains
 
-  function binvolume(i_bin, maxr, height, binning_direction)
-    integer, intent(in) :: i_bin
-    real(dp), intent(in) :: maxr
-    real(dp), intent(in) :: height
-    integer, intent(in) :: binning_direction
-    real(dp) :: binvolume
-    if (binning_direction == -1) then
-      binvolume = 4._dp * atan(1._dp) * height * ((maxr - real(i_bin-1, dp) * &
-      bin_width)**2 - max(maxr - real(i_bin, dp) * bin_width, 0._dp)**2)    
-    else
-      binvolume = 4._dp * atan(1._dp) * height * ((max(real(i_bin, dp) * &
-      bin_width, maxr))**2 - (real(i_bin-1, dp) * bin_width)**2)    
-    end if    
-  end function 
+include 'parse_cmdline.inc'
 
-  subroutine finalize
-    if(associated(indices)) deallocate(indices)
-    close(configuration_unit)
+subroutine print_help
+  call print_usage
+  write(*, *) "This is a program to compute structural and order parameters"
+  write(*, *) "for a Gay-Berne liquid crystal (and LJ particles) confined to"
+  write(*, *) "a cylindrical cavity. The properties are calculated by dividing"
+  write(*, *) "the molecules to cylindrical shells (bins) of thickness"
+  write(*, *) "bin_width. This gives us information about them as a function of"
+  write(*, *) "distance to the wall or to the cavity center. Results are"
+  write(*, *) "printed to separate outputfiles for each quantity. In the"
+  write(*, *) "output files one line corresponds to one snapshot of molecules"
+  write(*, *) "one record is an average over the molecules in one bin. Order"
+  write(*, *) "is determined with option binning_direction."
+  write(*, *) ""
+  write(*, *) ""
+  write(*, *) "The options for the program are listed below." 
+  write(*, *) ""
+  write(*, *) "configuration_file"
+  write(*, *) "    molecular coordinates are given in this file"
+  write(*, *) ""
+  write(*, *) "n_file=filename"
+  write(*, *) "    file to write number of molecules in each bin."
+  write(*, *) ""
+  write(*, *) "bin_width=number"
+  write(*, *) "    thickness of the cylindrical shell"
+  write(*, *) ""
+  write(*, *) "binning_direction=1 or -1"
+  write(*, *) "    if -1 the first bin is the outermost and if 1 the first"
+  write(*, *) "    bin is the innermost."
+  write(*, *) ""
+  write(*, *) "n_bins=integer"
+  write(*, *) "    gives the number of cylindrical shells into which the"
+  write(*, *) "    system is divided. Restrictions: n_bins > 0 and" 
+  write(*, *) "    n_bins * bin_width <= system radius."
+  write(*, *) ""
+  write(*, *) "particletype='gb'"
+  write(*, *) "    the particle type which are subjected to computations. If"
+  write(*, *) "    one wants to compute the density_profile for LJ particles"
+  write(*, *) "    he/she should select 'lj' default value is 'gb'"
+  write(*, *) ""
+  write(*, *) "All of the following are options which set an outputfile."
+  write(*, *) "the name of the option is related to the calculated quantity."
+  write(*, *) "None of them are necessary to run the program and should be"
+  write(*, *) "given only if the calculation of the respected quantity is"
+  write(*, *) "desired. All filenames must be different!"
+  write(*, *) ""
+  write(*, *) "p2_file=filename"
+  write(*, *) "    orientational ordering parameter"
+  write(*, *) ""
+  write(*, *) "tau1_file=filename"
+  write(*, *) "    1D translational order parameter"
+  write(*, *) ""
+  write(*, *) "psi6_file=filename"
+  write(*, *) "    bond-orientational order parameter"
+  write(*, *) ""
+  write(*, *) "density_file=filename"
+  write(*, *) "    number density"
+  write(*, *) ""
+  write(*, *) "layerp2_file=filename"
+  write(*, *) "    order parameter for molecular layers."
+  write(*, *) ""
+  write(*, *) "smctau1_file=filename"
+  write(*, *) "    translational order for possibly tilted smectic-C like" 
+  write(*, *) "    layers."
+  write(*, *) ""
+  write(*, *) "smcpsi6_file=filename"
+  write(*, *) "    bond-orientational order in tilted layers"
+  write(*, *) ""
+  write(*, *) "Other options:"
+  write(*, *) ""
+  write(*, *) "cutoff=number"
+  write(*, *) "    determines a cutoff radius to the molecules which are"
+  write(*, *) "    included in the local layer for the layerp2."
+  write(*, *) ""
+end subroutine
 
-    if (write_density) then
-      close(density_unit)
-    end if
+function binvolume(i_bin, maxr, height, binning_direction)
+  integer, intent(in) :: i_bin
+  real(dp), intent(in) :: maxr
+  real(dp), intent(in) :: height
+  integer, intent(in) :: binning_direction
+  real(dp) :: binvolume
+  if (binning_direction == -1) then
+     binvolume = 4._dp * atan(1._dp) * height * ((maxr - real(i_bin-1, dp) * &
+          bin_width)**2 - max(maxr - real(i_bin, dp) * bin_width, 0._dp)**2)    
+  else
+     binvolume = 4._dp * atan(1._dp) * height * ((max(real(i_bin, dp) * &
+          bin_width, maxr))**2 - (real(i_bin-1, dp) * bin_width)**2)    
+  end if
+end function binvolume
 
-    if (write_lj_density) then
-      close(lj_density_unit)
-    end if
 
-    if (write_p2) then
-      close(p2_unit)
-    end if
-    if (write_tau1) then
-      close(tau1_unit)
-    end if
-    if (write_psi6) then
-      close(psi6_unit)
-    end if
+subroutine finalize
+  if(associated(indices)) deallocate(indices)
+  close(configuration_unit)
+  
+  if (write_density) then
+     close(density_unit)
+  end if
+  
+  if (write_p2) then
+     close(p2_unit)
+  end if
+  if (write_tau1) then
+     close(tau1_unit)
+  end if
+  if (write_psi6) then
+     close(psi6_unit)
+  end if
+  
+  if (write_layerp2) then
+     close(layerp2_unit)
+  end if
+  if (write_smctau1) then
+     close(smctau1_unit)
+  end if
+  if (write_smcpsi6) then
+     close(smcpsi6_unit)
+  end if
+end subroutine finalize
 
-    if (write_layerp2) then
-      close(layerp2_unit)
-    end if
-    if (write_smctau1) then
-      close(smctau1_unit)
-    end if
-    if (write_smcpsi6) then
-      close(smcpsi6_unit)
-    end if
-  end subroutine
 
-  subroutine open_write_unit(file_name, write_unit)
-    implicit none
-    character(len = *), intent(in) :: file_name
-    integer, intent(out) :: write_unit
-    integer :: opened
-    write_unit=fileunit_getfreeunit()
-    open(write_unit, FILE = file_name, status = 'replace', &
-      position = 'append', iostat = opened)
-    if(opened/=0) then
-      write(*,*) 'Opening of file ', file_name, ' failed.'
-      stop 
-    end if
-  end subroutine open_write_unit
-end program
+subroutine open_write_unit(file_name, write_unit)
+  implicit none
+  character(len = *), intent(in) :: file_name
+  integer, intent(out) :: write_unit
+  integer :: opened
+  write_unit=fileunit_getfreeunit()
+  open(write_unit, FILE = file_name, status = 'replace', &
+       position = 'append', iostat = opened)
+  if(opened/=0) then
+     write(*,*) 'Opening of file ', file_name, ' failed.'
+     stop 
+  end if
+end subroutine open_write_unit
+
+
+end program cylhist
 
