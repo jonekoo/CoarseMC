@@ -2,25 +2,17 @@ module class_pair_potential
 use nrtype
 use gayberne
 use lj, only: lj_potential, lj_init, lj_writeparameters, lj_force
-use gblj, only: gblj_potential, gblj_init, gblj_force
+use gblj, only: gblj_potential, gblj_init, gblj_force, gblj_writeparameters
 use particle
-use class_poly_box
 use class_parameterizer
 use class_parameter_writer
 implicit none
 private
 
-public :: pairv
+public :: pair_potential
 public :: pp_init
 public :: pp_writeparameters
 public :: pair_force
-
-real(dp), save :: rcutoff = 5.5_dp
-
-type pairpotential
-  private
-  real(dp) :: cutoff
-end type
 
 interface pp_init
   module procedure pp_initwith
@@ -39,12 +31,14 @@ subroutine pp_initwith(reader)
   type(parameterizer), intent(in) :: reader
   call gayberne_init(reader)
   call lj_init(reader)
+  call gblj_init(reader)
 end subroutine
 
 subroutine pp_writeparameters(writer)
   type(parameter_writer), intent(in) :: writer
   call gb_writeparameters(writer)
   call lj_writeparameters(writer)
+  call gblj_writeparameters(writer)
 end subroutine
 
 !! Calculates the interaction energy of a pair of particles. 
@@ -62,7 +56,7 @@ end subroutine
 !! A poly_particle class could be used. This class could be quered for
 !! the true type of the particles since it knows it anyway.
 !! 
-pure subroutine pairv(particlei, particlej, rij, potE, overlap)
+pure subroutine pair_potential(particlei, particlej, rij, potE, overlap)
   type(particledat), intent(in) :: particlei 
   type(particledat), intent(in) :: particlej
   real(dp), intent(in) :: rij(3)
