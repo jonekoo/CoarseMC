@@ -123,13 +123,14 @@ module gf2xe
 contains
 
 !!DEC$ ATTRIBUTES FORCEINLINE :: get_size
-function get_size(deg) result(size)
-  integer(INT32) :: deg,size
+pure function get_size(deg) result(size)
+  integer(INT32), intent(in) :: deg
+  integer(INT32) :: size
   size = CEILING(real(deg+1,kind=REAL64)/32.0_REAL64)
   return
 end function
 
-subroutine gf2x_new(this,deg)
+pure subroutine gf2x_new(this,deg)
   type(gf2x_obj), intent(inout) :: this
   integer(INT32), intent(in) :: deg
   integer(INT32) :: isize
@@ -155,7 +156,7 @@ subroutine gf2x_new(this,deg)
   return
 end subroutine
 
-subroutine gf2x_delete(this)
+pure subroutine gf2x_delete(this)
   type(gf2x_obj), intent(inout) :: this
   integer(INT32) :: ierr
   if (associated(this%c)) then
@@ -207,7 +208,7 @@ subroutine gf2x_print_hex(this)
   return
 end subroutine
 
-subroutine gf2x_assign(c,a)
+pure subroutine gf2x_assign(c,a)
   type(gf2x_obj), intent(inout) :: c  ! c := a
   type(gf2x_obj), intent(in)    :: a
   integer(INT32) :: ia,isa,i
@@ -227,7 +228,7 @@ subroutine gf2x_assign(c,a)
   return
 end subroutine
 
-function is_zero(a) result(is)
+pure function is_zero(a) result(is)
   type(gf2x_obj), intent(in) :: a
   logical :: is
   integer(INT32) :: deg
@@ -241,7 +242,7 @@ function is_zero(a) result(is)
 end function
 
 !!DEC$ ATTRIBUTES FORCEINLINE :: get_deg
-function get_deg(a) result(deg)
+pure function get_deg(a) result(deg)
   type(gf2x_obj), intent(in) :: a
   integer(INT32) :: deg
   integer(INT32) :: isize,i,top_deg
@@ -259,7 +260,7 @@ function get_deg(a) result(deg)
   return
 end function
 
-subroutine gf2x_set_coef(a,i)
+pure subroutine gf2x_set_coef(a,i)
   type(gf2x_obj), intent(inout) :: a
   integer(INT32), intent(in) :: i
   type(gf2x_obj), pointer :: w
@@ -282,7 +283,7 @@ subroutine gf2x_set_coef(a,i)
   return
 end subroutine
 
-subroutine gf2x_add_assign(c,a)
+pure subroutine gf2x_add_assign(c,a)
   type(gf2x_obj), intent(inout) :: c  ! c := c + a
   type(gf2x_obj), intent(in)    :: a
   type(gf2x_obj), pointer :: w
@@ -323,7 +324,7 @@ subroutine gf2x_add_assign(c,a)
   return
 end subroutine
 
-subroutine gf2x_add(c,a,b)
+pure subroutine gf2x_add(c,a,b)
   type(gf2x_obj), intent(inout) :: c   ! c := a + b
   type(gf2x_obj), intent(in)    :: a,b
   integer(INT32) :: ia,ib,ic
@@ -364,10 +365,11 @@ subroutine gf2x_add(c,a,b)
   return
 end subroutine
 
-subroutine gf2x_pow(c,a,e)
+pure subroutine gf2x_pow(c,a,e, err)
   type(gf2x_obj), intent(inout) :: c ! c = a**e
   type(gf2x_obj), intent(in)    :: a
   integer(INT32), intent(in) :: e
+  character(len=72), optional, intent(out) :: err
   type(gf2x_obj), pointer :: w
   integer(INT32) :: ch,cl
   integer(INT32) :: i,deg
@@ -382,9 +384,14 @@ subroutine gf2x_pow(c,a,e)
     return
   endif
   if (e<0) then
-    write(*,*)"pow: c = a^e : exponent should be e>=0."
-    stop
+    if (present(err)) err = "pow: c = a^e : exponent should be e>=0."
+    !write(*,*)"pow: c = a^e : exponent should be e>=0."
+    !stop
+    return
+  else
+    if (present(err)) err = ""
   endif
+  
   if (is_zero(a)) return
 
   deg = deg_i32(e)
@@ -406,7 +413,7 @@ subroutine gf2x_pow(c,a,e)
   return
 end subroutine
 
-subroutine gf2x_square(c,a)
+pure subroutine gf2x_square(c,a)
   type(gf2x_obj), intent(inout) :: c ! c := a**2
   type(gf2x_obj), intent(in)    :: a
   integer(INT32) :: ch,cl
@@ -426,7 +433,7 @@ subroutine gf2x_square(c,a)
   return
 end subroutine
 
-recursive subroutine gf2x_mult_kara(c,a,b)
+pure recursive subroutine gf2x_mult_kara(c,a,b)
 !
 ! multiply 2 polyomials using Karatsuba algorithm
 !
@@ -537,7 +544,7 @@ recursive subroutine gf2x_mult_kara(c,a,b)
   return
 end subroutine
 
-subroutine gf2x_mult_assign_kara(a,b)
+pure subroutine gf2x_mult_assign_kara(a,b)
   type(gf2x_obj), intent(inout) :: a  ! a := a * b
   type(gf2x_obj), intent(in)    :: b
   type(gf2x_obj), pointer :: w
@@ -559,7 +566,7 @@ subroutine gf2x_mult_assign_kara(a,b)
   return
 end subroutine
 
-subroutine gf2x_mult_assign_normal(a,b)
+pure subroutine gf2x_mult_assign_normal(a,b)
   type(gf2x_obj), intent(inout) :: a  ! a := a * b
   type(gf2x_obj), intent(in)    :: b
   type(gf2x_obj), pointer :: w
@@ -577,7 +584,7 @@ subroutine gf2x_mult_assign_normal(a,b)
   return
 end subroutine
 
-subroutine gf2x_mult_normal(c,a,b)
+pure subroutine gf2x_mult_normal(c,a,b)
   type(gf2x_obj), intent(inout) :: c    ! c := a * b
   type(gf2x_obj), intent(in)    :: a,b
   integer(INT32) :: ch,cl
@@ -633,7 +640,7 @@ subroutine gf2x_mult_normal(c,a,b)
   return
 end subroutine
 
-subroutine gf2x_shift(c,a,i)
+pure subroutine gf2x_shift(c,a,i)
   type(gf2x_obj), intent(inout) :: c  ! c := shift(a,i)
   type(gf2x_obj), intent(in)    :: a
   integer(INT32), intent(in) :: i
@@ -672,7 +679,7 @@ subroutine gf2x_shift(c,a,i)
   return
 end subroutine
 
-subroutine gf2x_divrem(q,r,a,b)
+pure subroutine gf2x_divrem(q,r,a,b)
  ! a =: q * b + r
   type(gf2x_obj), intent(inout) :: q  ! q := a div b
   type(gf2x_obj), intent(inout) :: r  ! r := a mod b
@@ -708,7 +715,7 @@ subroutine gf2x_divrem(q,r,a,b)
   return
 end subroutine
 
-subroutine gf2x_div(q,a,b)
+pure subroutine gf2x_div(q,a,b)
  ! a =: q * b + r
   type(gf2x_obj), intent(inout) :: q  ! q := a div b
   type(gf2x_obj), intent(in)    :: a,b
@@ -740,7 +747,7 @@ subroutine gf2x_div(q,a,b)
   return
 end subroutine
 
-subroutine gf2x_rem(r,a,b)
+pure subroutine gf2x_rem(r,a,b)
   type(gf2x_obj), intent(inout) :: r   ! r := a mod b
   type(gf2x_obj), intent(in)    :: a,b
   type(gf2x_obj), pointer :: w,t
@@ -770,7 +777,7 @@ subroutine gf2x_rem(r,a,b)
   return
 end subroutine
 
-subroutine gf2x_set_prime(mp,m)
+pure subroutine gf2x_set_prime(mp,m)
 !
 ! Set a primitive polynomial to the cotainer.
 ! the container contains the prime poly and precomputed polynomial for Barrett reduciont.
@@ -796,14 +803,14 @@ subroutine gf2x_set_prime(mp,m)
   return
 end subroutine
 
-subroutine gf2x_delete_prime(mp)
+pure subroutine gf2x_delete_prime(mp)
   type(gf2x_prime_obj), intent(inout) :: mp
   call delete(mp%prime_poly)
   call delete(mp%barrett_poly)
   return
 end subroutine
 
-subroutine gf2x_rem_barrett(r,a,m)
+pure subroutine gf2x_rem_barrett(r,a,m)
 !
 ! compute  r := a mod m using Barrett algorithm
 !
@@ -843,10 +850,11 @@ subroutine gf2x_rem_barrett(r,a,m)
   return
 end subroutine
 
-subroutine gf2x_mod_by_x(c,a,i)
+pure subroutine gf2x_mod_by_x(c,a,i, err)
   type(gf2x_obj), intent(inout) :: c  ! c := a mod x^i
   type(gf2x_obj), intent(in)    :: a
   integer(INT32), intent(in) :: i
+  character(len=72), intent(out), optional :: err
   type(gf2x_obj), pointer :: w
   integer(INT32) :: iw,ib,j
   call delete(c)
@@ -859,8 +867,12 @@ subroutine gf2x_mod_by_x(c,a,i)
     return
   endif
   if (i < 0) then
-    write(*,'("mod_by_x: error, negative i:",I10)')i
-    stop
+    if (present(err)) write(err,'("mod_by_x: error, negative i:",I10)')i 
+    !write(*,'("mod_by_x: error, negative i:",I10)')i
+    !stop
+    return
+  else
+    if (present(err)) err = ""
   endif
   iw = i/32
   ib = mod(i,32)
@@ -878,13 +890,18 @@ subroutine gf2x_mod_by_x(c,a,i)
   return
 end subroutine
 
-subroutine gf2x_mult_by_x(c,a,i)
+pure subroutine gf2x_mult_by_x(c,a,i, err)
   type(gf2x_obj), intent(inout) :: c  ! c := a * x^i
   type(gf2x_obj), intent(in)    :: a
   integer(INT32), intent(in) :: i
+  character(len=72), intent(out), optional :: err
   if (i < 0) then
-    write(*,'("mult_by_x: error, negative i:",I10)')i
-    stop
+    if (present(err)) write(err,'("mult_by_x: error, negative i:",I10)')i
+    return
+    !write(*,'("mult_by_x: error, negative i:",I10)')i
+    !stop
+  else
+    if (present(err)) err = ""
   endif
   if (i == 0) then
     call assign(c,a)
@@ -894,13 +911,18 @@ subroutine gf2x_mult_by_x(c,a,i)
   return
 end subroutine
 
-subroutine gf2x_div_by_x(c,a,i)
+pure subroutine gf2x_div_by_x(c,a,i, err)
   type(gf2x_obj), intent(inout) :: c  ! c := a div x^i
   type(gf2x_obj), intent(in)    :: a
   integer(INT32), intent(in) :: i
+  character(len=72), intent(out), optional :: err
   if (i < 0) then
-    write(*,'("div_by_x: error, negative i:",I10)')i
-    stop
+    if (present(err)) write(err,'("div_by_x: error, negative i:",I10)')i
+    return
+    !write(*,'("div_by_x: error, negative i:",I10)')i
+    !stop
+  else 
+    if (present(err)) err = ""
   endif
   if (i == 0) then
     call assign(c,a)
@@ -911,7 +933,7 @@ subroutine gf2x_div_by_x(c,a,i)
 end subroutine
 
 
-subroutine gf2x_pow_pow_2(c,e,m)
+pure subroutine gf2x_pow_pow_2(c,e,m)
   type(gf2x_obj), intent(inout) :: c  ! c := x**(2**e) mod m
   integer(INT32), intent(in)           :: e
   type(gf2x_prime_obj), intent(in) :: m  ! precomputed polynomial for Barrett algorithm
@@ -941,11 +963,12 @@ subroutine gf2x_pow_pow_2(c,e,m)
   return
 end subroutine
 
-subroutine gf2x_pow_mod(c,a,e,m)
+pure subroutine gf2x_pow_mod(c,a,e,m, err)
   type(gf2x_obj), intent(inout) :: c  ! c := a**e mod m
   type(gf2x_obj), intent(in)    :: a
   integer(INT32), intent(in)           :: e
   type(gf2x_prime_obj), intent(in) :: m  ! precomputed polynomial for Barrett algorithm
+  character(len=72), intent(out), optional :: err
   type(gf2x_obj), pointer :: w
   integer(INT32) :: i,deg
   NULLIFY(w)
@@ -964,8 +987,12 @@ subroutine gf2x_pow_mod(c,a,e,m)
     return
   endif
   if (e<0) then
-    write(*,*)"pow: c = a^e mod m : exponent should be e>=0."
-    stop
+    if (present(err)) write(err,*)"pow: c = a^e mod m : exponent should be e>=0."
+    return
+    !write(*,*)"pow: c = a^e mod m : exponent should be e>=0."
+    !stop
+  else
+    if (present(err)) err = ""
   endif
   if (is_zero(a)) return
 
@@ -988,8 +1015,9 @@ subroutine gf2x_pow_mod(c,a,e,m)
 end subroutine
 
 !========================================================================
-function deg_i32(a) result(d)
-  integer(INT32) :: a,d,i
+pure function deg_i32(a) result(d)
+  integer(INT32), intent(in) :: a
+  integer(INT32) :: d,i
   d=-1
   do i=31,0,-1
     if (BTEST(a,i)) then
@@ -1000,8 +1028,8 @@ function deg_i32(a) result(d)
   return
 end function
 
-function deg_i64(a) result(d)
-  integer(INT64) :: a
+pure function deg_i64(a) result(d)
+  integer(INT64), intent(in) :: a
   integer(INT32) :: d,i
   do i=63,0,-1
     if (BTEST(a,i)) then
@@ -1012,7 +1040,7 @@ function deg_i64(a) result(d)
   return
 end function
 
-subroutine square_i32(a,ch,cl)
+pure subroutine square_i32(a,ch,cl)
   integer(INT32), intent(in) :: a
   integer(INT32), intent(out) :: ch,cl   ! (ch,cl) = a**2
   integer(INT32) :: ia,i
@@ -1032,7 +1060,7 @@ subroutine square_i32(a,ch,cl)
 end subroutine
 
 !DEC$ ATTRIBUTES FORCEINLINE :: mult_i32
-subroutine mult_i32(a,b,ch,cl)
+pure subroutine mult_i32(a,b,ch,cl)
   integer(INT32), intent(in) :: a,b
   integer(INT32), intent(out) :: ch,cl  ! (ch,cl) = a*b
   integer(INT32) :: tmp,u(0:3)
@@ -1083,7 +1111,7 @@ subroutine mult_i32(a,b,ch,cl)
 end subroutine
 
 
-subroutine mult_i32_old(a,b,ch,cl)
+pure subroutine mult_i32_old(a,b,ch,cl)
   integer(INT32), intent(in) :: a,b
   integer(INT32), intent(out) :: ch,cl  ! (ch,cl) = a*b
   integer(INT32) :: ia,ib,i
@@ -1110,14 +1138,19 @@ subroutine mult_i32_old(a,b,ch,cl)
   return
 end subroutine
 
-subroutine shift_i32(a,i,ch,cm,cl)
+pure subroutine shift_i32(a,i,ch,cm,cl, err)
   integer(INT32), intent(in) :: a
   integer(INT32), intent(in) :: i
   integer(INT32), intent(out) :: ch,cm,cl  ! (ch,cm,cl) = shift(a,i)
+  character(len=72), intent(out), optional :: err
   integer(INT64) :: dc
   if (abs(i) >= 32) then
-    write(*,*)"shift_int32: error i=",i
-    stop
+    if (present(err)) write(err,*)"shift_int32: error i=",i
+    return
+    !write(*,*)"shift_int32: error i=",i
+    !stop
+  else
+    if (present(err)) err = ""
   endif
   select case (i)
   case (0)

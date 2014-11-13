@@ -1,4 +1,4 @@
-subroutine f_get_coeff(nn,mm,rr,ww,avec,nj,id,pp,np)
+pure subroutine f_get_coeff(nn,mm,rr,ww,avec,nj,id,pp,np)
 !===============================================================================
 ! Compute MT jump ahead polynomial coefficients
 ! uses GF(2)[x] computation

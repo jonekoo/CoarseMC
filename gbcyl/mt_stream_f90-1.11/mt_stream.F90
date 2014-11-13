@@ -609,7 +609,7 @@ end subroutine
 
 
 
-subroutine mt_matvec(this,v,w)
+pure subroutine mt_matvec(this,v,w)
 !
 != Multiply transition matrix on a state vector v
 !
@@ -648,19 +648,50 @@ subroutine mt_create_stream(this,that,id)
   integer(INT32), intent(in) :: id
   character(256), parameter :: myname="mt_create_stream"
   integer(INT32), parameter :: jp = MT_JUMP_DISTANCE_EXP
+  ! begin cut-paste from mt_jumpahead (by J.K.)
+  character(256) :: str,str2
+  ! end cut-paste from mt_jumpahead (by J.K.)
   if (id < 0) then
     write(*,'(A,": Positive ID is requried.")')TRIM(myname)
     write(*,'(A,": Stop!")')TRIM(myname)
     stop
   endif
+
+  !! begin cut-paste from mt_jumpahead (by J.K.)
+  !==================================
+  ! state copy: this => that
+  !==================================
+  call mt_copy(this,that)
+  
+  write(str,'(I12)')id
+  write(str2,'(I12)')jp
+  write(*,'("# ID ",I12)')id
+  write(*,'("# Jump Ahead by (",A,")*2^",A)')TRIM(ADJUSTL(str)),TRIM(ADJUSTL(str2))
+  !$OMP CRITICAL
+  if ( this%i /= this%nn) then
+    write(*,'("Error in jumpahead: input state pointer should point nn.")')
+    write(*,'("this%i  = ",I12)')this%i
+    write(*,'("this%nn = ",I12)')this%nn
+    write(str,*)this%i
+    write(str2,*)this%nn-1
+    write(*,'(A,"-",A," random numbers are dropped.")') &
+ &                         TRIM(ADJUSTL(str)),TRIM(ADJUSTL(str2))
+    write(*,'("forced to point nn")')
+    this%i = this%nn
+  endif
+  !$OMP END CRITICAL
+  !! end cut-paste from mt_jumpahead 
+
   call mt_jumpahead(this,that,jp,id)
   that%stream_id = id
+  !$OMP CRITICAL
   total_stream = total_stream + 1 
   this%i = this%nn
+  !$OMP END CRITICAL
   return
 end subroutine
 
-subroutine mt_jumpahead(this,that,jp,id)
+pure subroutine mt_jumpahead(this,that,jp,id)
 !
 != Jump ahead by (id+1) * 2^jp steps.
 !
@@ -668,7 +699,7 @@ subroutine mt_jumpahead(this,that,jp,id)
 !  that : output state, proceeds by id*2^jp steps.
 !
   implicit none
-  type(mt_state), intent(inout) :: this ! input state
+  type(mt_state), intent(in) :: this ! input state
   type(mt_state), intent(inout) :: that ! output state
   integer(INT32), intent(in) :: jp     ! exponent (jump step = id*2^jp)
   integer(INT32), intent(in) :: id     ! id       (jump step = id*2^jp)
@@ -676,7 +707,6 @@ subroutine mt_jumpahead(this,that,jp,id)
   integer(INT32) :: w(0:this%nn-1)
   integer(INT32) :: s(0:this%nn-1)
   integer(INT32) :: i,iwp,ibp
-  character(256) :: str,str2
   integer(INT32) :: p(0:this%nn-1)
   integer(INT32) :: np
   !
@@ -694,33 +724,12 @@ subroutine mt_jumpahead(this,that,jp,id)
   end interface get_coeff_interface
 #else
   interface f_get_coeff_interface
-    subroutine f_get_coeff(nn,mm,rr,ww,avec,nj,id,pp,np)
+    pure subroutine f_get_coeff(nn,mm,rr,ww,avec,nj,id,pp,np)
       integer, intent(in) :: nn,mm,rr,ww,avec,nj,id
       integer, intent(inout) :: pp(0:nn-1),np
     end subroutine f_get_coeff 
   end interface f_get_coeff_interface
 #endif
-
-  !==================================
-  ! state copy: this => that
-  !==================================
-  call mt_copy(this,that)
-  
-  write(str,'(I12)')id
-  write(str2,'(I12)')jp
-  write(*,'("# ID ",I12)')id
-  write(*,'("# Jump Ahead by (",A,")*2^",A)')TRIM(ADJUSTL(str)),TRIM(ADJUSTL(str2))
-  if ( this%i /= this%nn) then
-    write(*,'("Error in jumpahead: input state pointer should point nn.")')
-    write(*,'("this%i  = ",I12)')this%i
-    write(*,'("this%nn = ",I12)')this%nn
-    write(str,*)this%i
-    write(str2,*)this%nn-1
-    write(*,'(A,"-",A," random numbers are dropped.")') &
- &                         TRIM(ADJUSTL(str)),TRIM(ADJUSTL(str2))
-    write(*,'("forced to point nn")')
-    this%i = this%nn
-  endif
 
   !==================================
   ! compute jump ahead polynomial
