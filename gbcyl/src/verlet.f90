@@ -2,7 +2,7 @@ module verlet
   !! Module for calculating pair interactions of particles using a Verlet 
   !! neighbour list. 
   use nrtype, only: dp
-  use particle, only: particledat, position, getmaxmoves
+  use particle, only: particledat, position
   use class_poly_box
   use class_parameterizer
   use class_parameter_writer
