@@ -25,7 +25,8 @@ program xe_nmr_profile
   type(rank2_tensor) :: xexe_tensor
   type(rank2_tensor) :: xewall_tensor
   type(rank2_tensor) :: tensor
-  real(dp) :: values(3), vectors(3, 3) = reshape([1, 0, 0, 0, 1, 0, 0, 0, 1], [3, 3])
+  real(dp) :: values(3), vectors(3, 3) = reshape([1, 0, 0, 0, 1, 0, 0, 0, 1], &
+       [3, 3])
   type(parameterizer) :: reader
   integer :: coordinateunit
   logical :: is_wall_on
@@ -42,16 +43,18 @@ program xe_nmr_profile
   integer, allocatable :: indices(:)
   logical :: volume_norm = .false.
   logical :: n_xe_norm = .false.
-  logical :: eigensystem = .false.
-  character(len=255) :: configuration_file = '', parameter_file = '', logfile=''
+  logical :: is_eigensystem = .false.
+  character(len=255) :: configuration_file = '', parameter_file = '', &
+       logfile=''
   logical :: q = .false.
   
   !!---- Command line parsing ------------------------------------------------
   character(len=1000) :: cmd_line = ""
   namelist /cmd/ q, configuration_file, parameter_file, bin_width, n_bins, &
-       binning_direction, volume_norm, n_xe_norm, eigensystem, logfile
-  character(len=*), parameter :: options_str = 'configuration_file="configurations.txt", ' // &
-       'parameter_file="inputparameters.txt", n_bins=100, bin_width=0.1, ' // & 
+       binning_direction, volume_norm, n_xe_norm, is_eigensystem, logfile
+  character(len=*), parameter :: options_str = &
+       'configuration_file="configurations.txt", ' // &
+       'parameter_file="inputparameters.txt", n_bins=100, bin_width=0.1, ' //& 
        '[other options]'
 
   call get_command(cmd_line)
@@ -118,7 +121,7 @@ program xe_nmr_profile
   do  
     call readstate(afactory, coordinateunit, simbox, particles, io_status)  
     if (io_status < 0) exit
-    if (eigensystem) then
+    if (is_eigensystem) then
        call eigens(pack(particles, particles%rod), count(particles%rod), &
             values, vectors)
        call cycle_largest_to_3rd(values, vectors)
@@ -127,10 +130,11 @@ program xe_nmr_profile
     if (.not. allocated(indices)) then
       allocate(indices(size(particles)))
     else if (size(indices) /= size(particles)) then
-      deallocate(indices)
+      if (allocated(indices)) deallocate(indices)
       allocate(indices(size(particles)))
     end if  
-    !! Solve indices 
+    !! Solve indices
+
     if (binning_direction == -1) then
       call bin_indices(particles, size(particles), xfunc, bin_width, indices, &
       getx(simbox) / 2._dp, binning_direction)
@@ -145,7 +149,7 @@ program xe_nmr_profile
       if (.not. allocated(xes)) then
         allocate(xes(n_xe(i_bin)))
       else if (size(xes) /= n_xe(i_bin)) then
-        deallocate(xes)
+        if (allocated(xes)) deallocate(xes)
         allocate(xes(n_xe(i_bin)))
       end if
       xes = pack(particles, (.not. particles%rod) .and. indices == i_bin)
@@ -226,7 +230,8 @@ contains
 
 include 'parse_cmdline.inc'
 
-subroutine print_help()
+subroutine print_help
+  call print_usage
   write(*, *) 'This program computes the shielding/quadrupole coupling tensor'
   write(*, *) 'for a 129/131Xe atom dissolved in a Gay-Berne(4.4, 20, 1, 1)'
   write(*, *) 'liquid crystal confined to a cylindrical cavity. The Xe'
@@ -242,9 +247,6 @@ subroutine print_help()
   write(*, *) ""
   write(*, *) "parameter_file=filename"
   write(*, *) "    input parameters of the simulation are given in this file"
-  write(*, *) ""
-  write(*, *) "n_file=filename"
-  write(*, *) "    file to write number of molecules in each bin."
   write(*, *) ""
   write(*, *) "bin_width=number"
   write(*, *) "    thickness of the cylindrical shell"
@@ -270,8 +272,8 @@ subroutine print_help()
   write(*, *) '    xe in each bin. Note that this can result in NaN in the'
   write(*, *) '    output'
   write(*, *) ''
-  write(*, *) 'eigensystem=F'
-  write(*, *) '    when eigensystem=T, the shielding/quadrupole coupling is'
+  write(*, *) 'is_eigensystem=F'
+  write(*, *) '    when is_eigensystem=T, the shielding/quadrupole coupling is'
   write(*, *) '    computed in the principal axis system of the orientational'
   write(*, *) '    ordering tensor, so that the eigenvector corresponding to'
   write(*, *) '    the largest eigenvalue of the orientational ordering tensor'
