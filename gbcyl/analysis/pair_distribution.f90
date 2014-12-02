@@ -87,7 +87,7 @@ program pair_distribution
           maxbin, delr, histogram, distance_3d, spherical_shell_volume)
       end if
       write(*, '(100(' // fmt_char_dp() //',1X))') histogram
-      deallocate(mask_i)
+      if (allocated(mask_i)) deallocate(mask_i)
     end if
   end do
 
