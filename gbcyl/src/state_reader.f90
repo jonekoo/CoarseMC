@@ -79,7 +79,7 @@ module state_reader
         particleArray(i)%rod=.false.
       end if
     end do
-    deallocate(help)
+    if (allocated(help)) deallocate(help)
   end subroutine read_configuration
 
 

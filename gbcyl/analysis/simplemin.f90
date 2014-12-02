@@ -30,7 +30,8 @@ function simple_min(a, b, func, resolution, xmin)
   minpos = minloc(trial_fs)
   xmin = trial_xs(minpos(1))
   simple_min = minval(trial_fs)
-  deallocate(trial_xs, trial_fs)
+  if (allocated(trial_xs)) deallocate(trial_xs)
+  if (allocated(trial_fs)) deallocate(trial_fs)
 end function simple_min
 
 end module
