@@ -3,6 +3,17 @@ use nrtype
 implicit none
 intrinsic index
 
+interface
+   subroutine eigensystem(matrix, values)
+     !! Computes the eigenvectors and eigenvalues of @p matrix.
+     !! @p matrix is replaced by the eigenvectors on output.
+     use nrtype, only: dp
+     implicit none
+     real(dp), intent(inout) :: matrix(3, 3)
+     real(dp), intent(out) :: values(3)
+   end subroutine eigensystem
+end interface
+
 contains 
 
 !> Returns the number of @param substr occurences in string @param str.
@@ -176,33 +187,6 @@ end subroutine
 
 
 
-pure subroutine nvec(nx, ny, nz, genstate)
-  !!
-  !! Generates a random unit vector (nx, ny, nz). 
-  !!
-  !! @see Understanding Mol. Sim. 2nd Ed.  Frenkel, Smit p. 578
-  !!
-  include 'rng.inc'
-  intrinsic sqrt
-  double precision, intent(out) :: nx, ny, nz
-  type(rngstate), intent(inout) :: genstate
-  double precision :: l, u1, u2, s
-  double precision :: r
-  l = 0.0_dp
-  do
-     call rng(genstate, r)
-     u1 = 1._dp - 2._dp * r
-     call rng(genstate, r)
-     u2 = 1._dp - 2._dp * r
-     l = u1 * u1 + u2 * u2
-     if(l <= 1._dp) exit
-  end do
-  s = 2.0_dp * sqrt(1._dp - l)
-  nx = u1 * s
-  ny = u2 * s
-  nz = 1._dp - 2._dp * l
-end subroutine
-
 pure SUBROUTINE XVEC2(X, Y, Z, NX, NY, NZ, PHI, XP, YP, ZP)
   intrinsic cos
   intrinsic sin
@@ -224,6 +208,11 @@ pure SUBROUTINE XVEC2(X, Y, Z, NX, NY, NZ, PHI, XP, YP, ZP)
   ZP = Z * COS(PHI) + NZ * DOTP * (1._dp - COS(PHI)) + ZP * SIN(PHI)
 END SUBROUTINE
 
+!> Returns  (cz, cy, cz) = (ax, ay, az) x (bx, by, bz)
+!!
+!! @param a first vector 
+!! @param b second vector
+!!
 pure function cross_product(a, b) result(c)
   real(dp), intent(in) :: a(3), b(3)
   real(dp) :: c(3)
@@ -244,16 +233,26 @@ pure SUBROUTINE CROSSP(AX,AY,AZ,BX,BY,BZ,CX,CY,CZ)
   CZ = AX * BY - AY * BX
 END SUBROUTINE
 
-pure function crossproduct(a, b) result(c)
-  !
-  ! calculates (ax,ay,az) x (bx,by,bz) = (cz,cy,cz)
-  !
-  real(dp), dimension(3), intent(in) :: a, b
-  real(dp), dimension(3) :: c
-  c(1) = a(2) * b(3) - a(3) * b(2)
-  c(2) = a(3) * b(1) - a(1) * b(3)
-  c(3) = a(1) * b(2) - a(2) * b(1)
-end function
+!> Returns the value of a polynomial of order n-1 in the point x. 
+!! Coefficients of the polynomial are given in table a, where 
+!! a(i) is the coefficient of the x^(n-i) term
+!! Calculation is done with the Horner method.
+!!
+!! @param a coefficients of the polynomial in decreasing order. 
+!!
+!! @return the value of the polynomial at x.
+!!
+pure function horner(a, x) 
+  real(dp), dimension(:), intent(in) :: a
+  real(dp), intent(in) :: x 
+  real(dp) :: horner
+  integer :: i
+  horner = a(1)
+  do i = 2, size(a)
+    horner = horner * x + a(i)
+  end do 
+end function horner
+
 
 !> Returns a formatting character for the default integer type. To be used when
 !! consistent formatting for integer output is needed.
