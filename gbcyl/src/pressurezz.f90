@@ -1,7 +1,7 @@
 program pressurezz
-use mc_sweep, mc_sweep_init => init
 use class_factory
 use particle
+use particle_mover
 use class_poly_box
 use class_parameterizer
 use m_fileunit
@@ -23,6 +23,7 @@ integer, parameter :: ndlz = 3
 real(dp), dimension(ndlz) :: dLzs = (/0.001_dp, 0.003_dp, 0.01_dp/)
 real(dp) :: dlz
 integer :: i
+logical :: overlap = .false.
 character(len=3) :: idchar = '0'
 character(len=1) :: direction = 'z'
 type(poly_nbrlist) :: nbrlist
@@ -30,10 +31,8 @@ real(dp) :: newvolume, oldvolume, dVdec, dVinc
 real(dp) :: temperature
 read(*, *) idchar, direction
 reader = new_parameterizer('parameters.in.' // trim(adjustl(idchar)))
-call initparticle(reader) !! This reads in the maximum translation of a particle
-                          !! the potential cutoff. Yes, a little messy.
-call mc_sweep_init(reader, simbox, particles) !! Potentially dangerous.
-temperature = gettemperature()
+!call initparticle(reader)
+call getparameter(reader, 'temperature', temperature)
 coordinateunit = fileunit_getfreeunit()
 open(unit=coordinateunit, file='configurations.' //trim(adjustl(idchar)), action='READ', status='OLD')
 write(*, '(6(A6,18X))') '#dV   ', 'P ', 'dV ', 'P', 'dV ', 'P '
@@ -43,9 +42,10 @@ do
     exit
   end if
   nparticles = size(particles)
-  call set_system(simbox, particles)
+  !call set_system(simbox, particles)
   !! Calculate initial volume and potential energy
-  oldenergy = get_total_energy()
+  call total_by_cell(nbrlist, simbox, particles, oldenergy, overlap)
+  !oldenergy = get_total_energy()
   oldvolume = volume(simbox)
 
   !! Start repeat for different dLz
@@ -63,8 +63,9 @@ do
       call setx(simbox, getx(simbox) + dLz)
     end if
     !! Record new potential energy and volume
-    call set_system(simbox, particles)
-    newenergy = get_total_energy()
+    !call set_system(simbox, particles)
+    !newenergy = get_total_energy()
+    call total_by_cell(nbrlist, simbox, particles, oldenergy, overlap)
     newvolume = volume(simbox)
     !! record dV/V and change in energy dU
     dUinc = newenergy - oldenergy
@@ -97,8 +98,9 @@ do
     end if
 
     !! Record new potential energy and volume
-    call set_system(simbox, particles)
-    newenergy = get_total_energy()
+    !call set_system(simbox, particles)
+    !newenergy = get_total_energy()
+    call total_by_cell(nbrlist, simbox, particles, newenergy, overlap)
     newvolume = volume(simbox)
     !! record dV/V and change in energy dU
     dUdec = newenergy - oldenergy
@@ -128,6 +130,6 @@ do
   write(*, *) ''
 
 end do
-call delete(nbrlist)
+call simplelist_deallocate(nbrlist)
 
 end program
