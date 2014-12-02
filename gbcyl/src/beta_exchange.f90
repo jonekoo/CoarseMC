@@ -1,3 +1,6 @@
+!> Implements the parallel tempering algorithm via exchange of inverse
+!! temperatures (betas) with MPI.
+!!
 module beta_exchange
 use mpi
 use nrtype
@@ -5,13 +8,24 @@ use utils
 include 'rng.inc'
 implicit none
 
-integer, allocatable :: temperature_index(:)
-integer, allocatable :: n_accepted(:,:)
-integer, allocatable :: n_trials(:,:)
+public :: init, finalize, reset_counters, try_beta_exchanges, write_stats
+
+private
+
+integer, allocatable, save :: temperature_index(:)
+integer, allocatable, save :: n_accepted(:,:)
+integer, allocatable, save :: n_trials(:,:)
 integer, parameter :: root_id = 0
 
 contains
 
+
+!> Initializes the module variables.
+!!
+!! @pre MPI must be initialized.
+!!
+!! @param beta the inverse temperature of the MPI task calling this.
+!!
 subroutine init(beta)
   real(dp), intent(in) :: beta
   integer :: n_tasks, task_id, ierr
@@ -65,6 +79,15 @@ subroutine init(beta)
   if (allocated(betas)) deallocate(betas)
 end subroutine
 
+
+!> Deallocates the module variables.
+subroutine finalize
+  if (allocated(temperature_index)) deallocate(temperature_index)
+  if (allocated(n_trials)) deallocate(n_trials)
+  if (allocated(n_accepted)) deallocate(n_accepted)
+end subroutine
+
+!> Resets the counters for temperature swap trials and accepted swaps.
 subroutine reset_counters()
   n_accepted = 0
   n_trials = 0
@@ -135,6 +158,12 @@ subroutine try_beta_exchanges(beta, energy, p, genstate)
   if (allocated(energies)) deallocate(energies)
 end subroutine
 
+
+!> Writes simple statistics about the acceptance of swaps to the output
+!! @p unit.
+!!
+!! @param unit the output unit to write the statistics to.
+!!
 subroutine write_stats(unit)
   integer, intent(in) :: unit
   integer :: j, k
