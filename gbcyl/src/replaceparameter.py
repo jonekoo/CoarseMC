@@ -6,7 +6,9 @@ def main():
     filename = sys.argv[1]
     parameter = sys.argv[2]
     value = sys.argv[3]
+    replace(filename, parameter, value)
 
+def replace(filename, parameter, value):
     lines = []
 
     f = open(filename, 'r')
