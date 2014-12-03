@@ -1,8 +1,9 @@
-!> A module for reading and writing coordinates of particles and simulation 
-!! box in a file in a general way. The routines in the module don't define how
-!! the particle is written or read but defines where it is read from or written
-!! to. Basicly it defines the structure of the coordinate file but leaves 
-!! details of writing and reading to the particle and simulation box modules.
+!> A module for reading and writing coordinates of the particles and
+!! the dimensions of the simulation box in a file in a general way. The
+!! routines in the module don't define how the particle is written or
+!! read but defines where it is read from or written to. Basicly it
+!! defines the structure of the coordinate file but leaves details of
+!! writing and reading to the particle and simulation box modules.
 module class_factory
 use particle
 use class_poly_box
@@ -17,27 +18,16 @@ type factory
   integer :: unit = 5 
 end type
 
-interface writestate
-  module procedure factory_writestate
-end interface
-
-!interface binwritestate
-!  module procedure factory_binwritestate
-!end interface
-
-interface readstate
-  module procedure factory_readstate
-end interface
-
 contains
 
-!> Writes the coordinates of @param particles and the dimensions of the 
-!! cylindrical simulation cell to the file specified by @param factory.
+!> Writes the coordinates of @p particles and the dimensions of the 
+!! cylindrical simulation cell to the output unit specified by @p
+!! factory.
 !! 
-!! @param factory the object conducting the writing. 
-!! @param outunit the Fortran io unit to write to. 
-!! @param simbox the simulation box to be written.
-!! @param particles the array of particles to write to the file.
+!! @param[in] factory the object conducting the writing. 
+!! @param[in] outunit the Fortran io unit to write to. 
+!! @param[in] simbox the simulation box to be written.
+!! @param[in] particles the array of particles to write to the file.
 !! 
 subroutine factory_writestate(afactory, outunit, simbox, particles)
   type(factory), intent(in) :: afactory
@@ -58,45 +48,15 @@ subroutine factory_writestate(afactory, outunit, simbox, particles)
   write(outunit, '(A)') endmark
 end subroutine
 
-!> Writes the coordinates of @param particles and the dimensions of the 
-!! cylindrical simulation cell to the file specified by @param factory.
-!! 
-!! @param factory the object conducting the writing. 
-!! @param outunit the Fortran io unit to write to. 
-!! @param simbox the simulation box to be written.
-!! @param particles the array of particles to write to the file.
-!! 
-!subroutine factory_binwritestate(afactory, outunit, simbox, particles)
-!  type(factory), intent(in) :: afactory
-!  integer, intent(in) :: outunit
-!  type(poly_box), intent(in) :: simbox
-!  type(particledat), dimension(:), intent(in) :: particles
-!  integer :: i
-!  !! Write simulation box.
-!  write(outunit) beginmark
-!  call binwrite(outunit, simbox)
-!  !! Write size of particle array to assist reading.
-!  write(outunit) size(particles)
-!  !! Write particles
-!  do i = 1, size(particles) 
-!    call binwrite(outunit, particles(i))
-!    write(outunit) ''
-!  end do
-!  write(outunit) endmark
-!end subroutine
-
 !> Conducts the reading of the simulation box and particles from a file. 
 !! 
-!! @param afactory the factory object that defines the order of reads.
-!! @param inunit the Fortran io unit to read data from.
-!! @param boxread the simulation box read. 
-!! @param particles the particles read.
-!! @param iostatus the status of the read operation at return. Negative value
+!! @param[in] afactory the factory object that defines the order of reads.
+!! @param[in] inunit the Fortran io unit to read data from.
+!! @param[in,out] boxread the simulation box read. 
+!! @param[in,out] particles the particles read.
+!! @param[out] iostatus the status of the read operation at return. Negative value
 !! means an end of file condition and a positive value indicates an error as
 !! dictated in the Fortran 90/95 standard.
-!!
-!! :TODO: Add iostatus variables to component reading routines such as the one 
-!! :TODO: used to read individual particles?
 !!
 subroutine factory_readstate(afactory, inunit, boxread, particles, ios)
   type(factory), intent(in) :: afactory
@@ -130,12 +90,9 @@ subroutine factory_readstate(afactory, inunit, boxread, particles, ios)
     return
   end if
 
-  !! allocate space for particles.
-  !if(associated(particles)) then
   if (allocated(particles)) then
     if (size(particles) /= nparticles) then
       deallocate(particles)
-      !particles=>NULL()
     end if
   end if
   if( .not. allocated(particles)) then
