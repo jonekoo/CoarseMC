@@ -24,7 +24,7 @@ contains
 !! cylindrical simulation cell to the output unit specified by @p
 !! factory.
 !! 
-!! @param[in] factory the object conducting the writing. 
+!! @param[in] afactory the object conducting the writing. 
 !! @param[in] outunit the Fortran io unit to write to. 
 !! @param[in] simbox the simulation box to be written.
 !! @param[in] particles the array of particles to write to the file.
@@ -54,7 +54,7 @@ end subroutine
 !! @param[in] inunit the Fortran io unit to read data from.
 !! @param[in,out] boxread the simulation box read. 
 !! @param[in,out] particles the particles read.
-!! @param[out] iostatus the status of the read operation at return. Negative value
+!! @param[out] ios the status of the read operation at return. Negative value
 !! means an end of file condition and a positive value indicates an error as
 !! dictated in the Fortran 90/95 standard.
 !!
