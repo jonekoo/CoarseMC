@@ -1,3 +1,5 @@
+!> Implements functions for reading parameters from a file. Conforms to
+!! the same format as the module class_parameter_writer. 
 module class_parameterizer
 use nrtype
 use m_fileunit
@@ -11,6 +13,8 @@ public :: delete
 
 character(len=*), parameter :: logfile = 'parameterizer.log'
 
+!> Holds the input unit for reading parameters and the output unit for
+!! logging what was read. 
 type parameterizer
   private
   integer :: unit
@@ -18,16 +22,21 @@ type parameterizer
   integer :: logunit = 6
 end type
 
+!> Generic interface for reading a parameter value as a string from the
+!! input, so that minimal changes are needed to change input source to
+!! e.g. a list of strings.
 interface readstring
   module procedure parameterizer_readstring
 end interface
 
 interface new_parameterizer
-  module procedure new_parameterizers !, new_parameterizeri
+  module procedure new_parameterizers
 end interface
 
+!> Interface for reading parameters.
 interface getparameter
-  module procedure parameterizer_getstring, parameterizer_getinteger, parameterizer_getreal, parameterizer_getlogical
+  module procedure parameterizer_getstring, parameterizer_getinteger, &
+       parameterizer_getreal, parameterizer_getlogical
 end interface
 
 interface delete
@@ -36,14 +45,10 @@ end interface
 
 contains
 
-!> Returns a parameter reader trying to read parameters from @param 
-!! parameterfile. Optionally @param logfile can be given in which case the
-!! parameterizer will write information about parameters read into a file
-!! instead of standard output. 
-!! 
-!! @param parameterfile the file parameters are read from.
-!! @param logfile the optional logfile.
-!!
+!> Returns a parameterizer which reads parameters from @p parameterfile.
+!! Optionally @p logfile can be given in which case the parameterizer
+!! will write information about parameters read into a file instead of
+!! standard output. An error has occurred, if @p iostat /= 0 at return.
 function new_parameterizers(parameterfile, logfile, iostat) result(p)
   character(len = *), intent(in) :: parameterfile
   character(len = *), intent(in), optional :: logfile
@@ -52,7 +57,8 @@ function new_parameterizers(parameterfile, logfile, iostat) result(p)
   type(parameterizer) :: p
   integer :: logunit
   p%unit = fileunit_getfreeunit()
-  open(file=parameterfile, unit=p%unit, status='OLD', action='READ', iostat=ios)
+  open(file=parameterfile, unit=p%unit, status='OLD', action='READ', & 
+       iostat=ios)
   if (present(iostat)) iostat=ios
   if (0/=ios) then 
     write(*, *) 'new_parameterizers: Failed opening ', parameterfile
@@ -71,13 +77,20 @@ function new_parameterizers(parameterfile, logfile, iostat) result(p)
   end if
 end function
 
+!> Closes the output and input units of the parameterizer @p p.
 subroutine parameterizer_delete(p)
   type(parameterizer), intent(inout) :: p
   close(p%unit)
   if(p%logunit /= 6) close(p%logunit)
 end subroutine
 
-!! :TODO: Change searching from file to searching from table.
+!> Searches the input unit of @p p for a parameter with @p key and
+!! @p value. If @p key is not found @p value is an empty string and
+!! a warning is written to the logunit of @p p.
+!!
+!! @todo@ Change searching from file to searching from table.
+!! @todo@ Return error code when key is not found.
+!!
 subroutine parameterizer_readstring(p, key, value)
   type(parameterizer), intent(in) :: p
   character(len = *), intent(in) :: key
@@ -122,6 +135,9 @@ subroutine parameterizer_readstring(p, key, value)
   end if
 end subroutine
 
+
+!> Reads a string parameter with @p key to @p value from the input
+!! specified by @p p. @p found is .true. if the parameter was found.
 subroutine parameterizer_getstring(p, key, value, found)
   type(parameterizer), intent(in) :: p
   character(len = *), intent(in) :: key
@@ -138,6 +154,8 @@ subroutine parameterizer_getstring(p, key, value, found)
   end if
 end subroutine
 
+!> Reads an integer parameter with @p key to @p value from the input
+!! specified by @p p. @p found is .true. if the parameter was found.
 subroutine parameterizer_getinteger(p, key, value, found)
   type(parameterizer), intent(in) :: p
   character(len = *), intent(in) :: key
@@ -158,6 +176,8 @@ subroutine parameterizer_getinteger(p, key, value, found)
   end if
 end subroutine
 
+!> Reads a real type parameter with @p key to @p value from the input
+!! specified by @p p. @p found is .true. if the parameter was found.
 subroutine parameterizer_getreal(p, key, value, found)
   type(parameterizer), intent(in) :: p
   character(len = *), intent(in) :: key
@@ -178,6 +198,8 @@ subroutine parameterizer_getreal(p, key, value, found)
   end if
 end subroutine
 
+!> Reads a logical-type parameter with @p key to @p value from the input
+!! specified by @p p. @p found is .true. if the parameter was found.
 subroutine parameterizer_getlogical(p, key, value, found)
   type(parameterizer), intent(in) :: p
   character(len = *), intent(in) :: key
@@ -198,6 +220,9 @@ subroutine parameterizer_getlogical(p, key, value, found)
   end if
 end subroutine
 
+!> Writes a warning to the logunit of @p p if @p value of the parameter
+!! with @p key could not be converted to the format given in
+!! @p typestring.
 subroutine conversionwarning(p, key, value, typestring)
   type(parameterizer), intent(in) :: p
   character(len = *), intent(in) :: key
