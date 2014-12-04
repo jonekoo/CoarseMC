@@ -1,3 +1,5 @@
+!> Implements a cell list for computation of short-ranged non-bonded
+!! interactions between particles.
 module class_simplelist
 use nrtype
 use particle
@@ -6,24 +8,22 @@ implicit none
 private
 
 public :: new_simplelist
-public :: simplelist_delete
-public :: delete
+public :: simplelist_deallocate
 public :: update
 public :: simplelist_nbrmask
 public :: simplelist_allocate
 public :: simplelist
 
-interface new_celllist
-  module procedure new_simplelist
-end interface
-
 interface update
   module procedure simplelist_update
 end interface
 
+!> Stores the cell list. 
 type simplelist
+  real(dp) :: threshold = 0.0
   real(dp) :: min_length
   integer :: nx, ny, nz
+  real(dp) :: lx, ly, lz
   logical :: is_x_even = .false., is_y_even = .false., is_z_even = .false.
   integer, allocatable, dimension(:,:,:,:) :: indices
   integer, allocatable, dimension(:,:,:) :: counts
@@ -35,55 +35,65 @@ interface simplelist_nbrmask
   module procedure simplelist_nbrmask, simplelist_cell_nbrmask
 end interface
 
-interface delete
-  module procedure simplelist_delete
-end interface
-
 contains
 
-!! Constructs a new cell list of @p particles. Given simulation box 
-!! dimensions in @p simbox and the minimum cell side length in @p minlength
-!! the new list is returned in the variable cl. Note that cell side lengths 
-!! may be different in different directions. 
-!! 
-!! @p cl is the cell list. 
-!! @p simbox is the simulation box. 
-!! @p particles are the particles to be distributed to the cells.
-!! @p nparticles is the number of particles.
-!! @p min_length is the minimum length of a cell side. 
+!> Constructs a new cell list @p sl for @p particles in @p simbox.
+!! @p min_length is the minimum cell side length. @p is_x_even,
+!! @p is_y_even and @p is_z_even define if an even number of cells is
+!! wanted in x, y, and/or z-directions. @p threshold is the minimum
+!! change in the position of a particle that can take place in either
+!! the x, y, or z-direction before the cell list is updated. The update
+!! threshold is computed based on @p cutoff if @p threshold is not
+!! given but @p cutoff is. @p cutoff should be the cutoff radius of the
+!! interactions between particles.
 !!
-function new_simplelist(simbox, particles, min_length, is_x_even, is_y_even, is_z_even) result(sl)
+!! Note that the resulting cell side lengths may be different in
+!! different directions. 
+!! 
+subroutine new_simplelist(sl, simbox, particles, min_length, is_x_even, is_y_even, is_z_even, threshold, cutoff)
   type(poly_box), intent(in) :: simbox
   type(particledat), intent(in) :: particles(:)
   real(dp), intent(in) :: min_length
   logical, intent(in), optional :: is_x_even, is_y_even, is_z_even
-  type(simplelist) :: sl
+  real(dp), intent(in), optional :: threshold, cutoff
+  type(simplelist), intent(out) :: sl
   sl%min_length = min_length
   if(present(is_x_even)) sl%is_x_even = is_x_even
   if(present(is_y_even)) sl%is_y_even = is_y_even
   if(present(is_z_even)) sl%is_z_even = is_z_even
   call calculate_dimensions(sl, simbox)
+  if(present(threshold)) then
+     sl%threshold = threshold
+  else if (present(cutoff)) then
+     !! Compute threshold from cell dimensions
+     sl%threshold = minval([sl%lx, sl%ly, sl%lz] - cutoff) / 2.0
+  end if
   call simplelist_allocate(sl, size(particles))
   !! :TODO: Could make the indices list size parameterizable or optimizable
   call simplelist_populate(sl, simbox, particles)
-end function
+end subroutine
 
+!> Allocates the memory for the cell list @p sl for a system containing
+!! @p n particles.
 subroutine simplelist_allocate(sl, n)
   type(simplelist), intent(inout) :: sl
   integer, intent(in) :: n
-  allocate(sl%indices(n, 0:sl%nx-1, 0:sl%ny-1, 0:sl%nz-1))
-  allocate(sl%counts(0:sl%nx-1,0:sl%ny-1,0:sl%nz-1))
-  allocate(sl%coords(n,3))
-  allocate(sl%xyzlist(n,3))
-end subroutine
+  allocate(sl%indices(n, 0:sl%nx - 1, 0:sl%ny - 1, 0:sl%nz - 1))
+  allocate(sl%counts(0:sl%nx - 1, 0:sl%ny - 1, 0:sl%nz - 1))
+  allocate(sl%coords(n, 3))
+  allocate(sl%xyzlist(n, 3))
+end subroutine simplelist_allocate
 
+!> Sets the dimensions and the number of cells in @p sl based on
+!! @p simbox dimensions and the attributes is_even_x, is_even_y,
+!! is_even_z and min_length of @p sl.
 subroutine calculate_dimensions(sl, simbox)
   type(simplelist), intent(inout) :: sl
   type(poly_box), intent(in) :: simbox
 
-  sl%nx = max(int(getx(simbox)/sl%min_length), 1)
-  sl%ny = max(int(gety(simbox)/sl%min_length), 1)
-  sl%nz = max(int(getz(simbox)/sl%min_length), 1)
+  sl%nx = max(int(getx(simbox) / sl%min_length), 1)
+  sl%ny = max(int(gety(simbox) / sl%min_length), 1)
+  sl%nz = max(int(getz(simbox) / sl%min_length), 1)
 
   if (sl%is_x_even) sl%nx = (sl%nx / 2) * 2
   if (sl%is_y_even) sl%ny = (sl%ny / 2) * 2
@@ -96,31 +106,54 @@ subroutine calculate_dimensions(sl, simbox)
   if (sl%nx < 4 .and. isxperiodic(simbox)) sl%nx = 1
   if (sl%ny < 4 .and. isyperiodic(simbox)) sl%ny = 1
   if (sl%nz < 4 .and. iszperiodic(simbox)) sl%nz = 1
+
+  !! Calculate cell side lengths
+  sl%lx = getx(simbox) / sl%nx
+  sl%ly = gety(simbox) / sl%ny
+  sl%lz = getz(simbox) / sl%nz
 end subroutine
 
+!> Updates the cell list @p sl based on @p simbox size and the positions
+!! of @p particles.
 subroutine simplelist_update(sl, simbox, particles)
   type(simplelist), intent(inout) :: sl
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
-  call calculate_dimensions(sl, simbox)
-  call simplelist_delete(sl)
-  call simplelist_allocate(sl, size(particles))
-  call simplelist_populate(sl, simbox, particles)
+  real(dp) :: maxdiff
+  integer :: i
+  maxdiff = 0.0
+  !$OMP PARALLEL DO shared(sl, particles), reduction(max:maxdiff), private(i)
+  do i = 1, size(particles)
+     maxdiff = maxval([maxval(abs(sl%xyzlist(i, :) - position(particles(i)))), maxdiff])
+  end do
+  !$OMP END PARALLEL DO
+
+  if (maxdiff > sl%threshold) then
+     call simplelist_deallocate(sl)
+     call calculate_dimensions(sl, simbox)
+     call simplelist_allocate(sl, size(particles))
+     call simplelist_populate(sl, simbox, particles)
+  end if
 end subroutine
 
-subroutine simplelist_delete(sl)
+!> Frees the memory used by @p sl.
+subroutine simplelist_deallocate(sl)
   type(simplelist), intent(inout) :: sl
-  deallocate(sl%indices)
-  deallocate(sl%counts)
-  deallocate(sl%coords)
-  deallocate(sl%xyzlist)
+  if (allocated(sl%indices)) deallocate(sl%indices)
+  if (allocated(sl%counts)) deallocate(sl%counts)
+  if (allocated(sl%coords)) deallocate(sl%coords)
+  if (allocated(sl%xyzlist)) deallocate(sl%xyzlist)
 end subroutine
 
+!> Stores the cell indices of @p particles to @p sl. @p simbox
+!! dimensions are used to compute the cell indices.
+!!
+!! @todo make this routine vectorizable.
 pure subroutine simplelist_populate(sl, simbox, particles)
   type(simplelist), intent(inout) :: sl
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
-  integer :: ix,iy,iz
+  integer :: ix, iy, iz
   integer :: iparticle
   sl%indices = 0
   sl%counts = 0
@@ -133,66 +166,15 @@ pure subroutine simplelist_populate(sl, simbox, particles)
     iz = int(((particles(iparticle)%z / getz(simbox) + 0.5_dp) * & 
       real(sl%nz, dp)))
     !! add to the right position in simplelist
-    sl%counts(ix,iy,iz)=sl%counts(ix,iy,iz)+1
-    sl%indices(sl%counts(ix,iy,iz), ix, iy, iz)=iparticle
-    sl%coords(iparticle,:)=(/ix, iy, iz/)
-    sl%xyzlist(iparticle,:)=position(particles(iparticle))
+    sl%counts(ix, iy, iz) = sl%counts(ix, iy, iz) + 1
+    sl%indices(sl%counts(ix, iy, iz), ix, iy, iz) = iparticle
+    sl%coords(iparticle, :) = (/ix, iy, iz/)
+    sl%xyzlist(iparticle, :) = position(particles(iparticle))
   end do
 end subroutine
 
-function maskarray(n, periodic, i)
-  integer, intent(in) :: n
-  logical, intent(in) :: periodic 
-  integer, intent(in) :: i
-  logical, dimension(0:n-1) :: maskarray
-  integer :: j
-  if (periodic) then
-    do j=i+2, i+n-2
-       maskarray(mod(i,n))=.false.
-    end do
-  else
-    maskarray(:i-2)=.false.
-    maskarray(i+2:)=.false.
-  end if
-end function
-
-function maskcells(nx, ny, nz, xperiodic, yperiodic, zperiodic, ix, iy, iz)
-  integer, intent(in) :: nx, ny, nz
-  logical, intent(in) :: xperiodic, yperiodic, zperiodic
-  integer, intent(in) :: ix, iy, iz
-  logical, dimension(0:nx-1, 0:ny-1, 0:nz-1) :: maskcells
-  integer :: x, y, z
-  maskcells=.true.
-  
-  if (xperiodic) then
-    do x=ix+2, ix+nx-2
-       maskcells(mod(ix,nx), :, :)=.false.
-    end do
-  else
-    maskcells(:ix-2,:,:)=.false.
-    maskcells(ix+2:,:,:)=.false.
-  end if
-
-  if (yperiodic) then
-    do y=iy+2, iy+ny-2
-       maskcells(:, mod(iy,ny), :)=.false.
-    end do
-  else
-    maskcells(:,:iy-2,:)=.false.
-    maskcells(:,iy+2:,:)=.false.
-  end if
-
-  if (zperiodic) then
-    do z=iz+2, iz+nz-2
-       maskcells(:, :, mod(iz,nz))=.false.
-    end do
-  else
-    maskcells(:,:,:iz-2)=.false.
-    maskcells(:,:,iz+2:)=.false.
-  end if
-
-end function
-
+!> Sets @p mask(j) true if @p particles(j) is a neighbour of
+!! @p particles(@p i) in the @p simbox.
 pure subroutine simplelist_nbrmask(sl, simbox, particles, i, mask)
   type(simplelist), intent(in) :: sl
   type(poly_box), intent(in) :: simbox
@@ -208,6 +190,10 @@ pure subroutine simplelist_nbrmask(sl, simbox, particles, i, mask)
   mask(i)=.false.
 end subroutine
 
+!> Sets @p cell_nbrmask(j) true if @p particles(j) is in cell @p ix, 
+!! @p iy, @p iz or one of its nearest neighbouring cells in the cell
+!! list @p sl. @p simbox is the simulation box where the particles
+!! reside.
 pure subroutine simplelist_cell_nbrmask(sl, simbox, ix, iy, iz, cell_nbrmask)
   implicit none
   type(simplelist), intent(in) :: sl
