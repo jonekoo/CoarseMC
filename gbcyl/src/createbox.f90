@@ -76,7 +76,7 @@ program createbox
     write(6, *) 'Virhe tiedoston ', trim(adjustl(filename)), ' luomisessa!'
     stop 
   end if
-  call writestate(thefactory, 20, simbox, pack(particles,cutmask)) 
+  call factory_writestate(thefactory, 20, simbox, pack(particles,cutmask)) 
   close(20)
 
 contains
