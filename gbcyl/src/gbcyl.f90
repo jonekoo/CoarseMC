@@ -1,9 +1,11 @@
-!> This is the main program of the ptgbcyl liquid crystal simulation software.
-!! Its purpose is just to call the necessary routines from the simulation 
-!! engine which should be exchangeable.
+!> This is the main program of the ptgbcyl simulation software for
+!! anisotropic particles. 
+!!
+!! @todo create two different simulation programs: with MPI and without
+!!       using e.g. conditional compilation.
 !!
 program gbcyl
-  use mc_engine, only: init, run, finalize
+  use mc_engine
   use mpi
   implicit none
   integer :: ierr
@@ -15,7 +17,7 @@ program gbcyl
   end if
   call mpi_comm_rank(MPI_COMM_WORLD, id, ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
-  call init(id, ntasks)
+  call mce_init(id, ntasks)
   call run 
   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
   call finalize(id)
