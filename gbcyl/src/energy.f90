@@ -1,273 +1,332 @@
+!> This module provides functions and subroutines for computing the
+!! interaction energies for the particles in the system. The module is
+!! responsible for selecting which interactions are calculated. The
+!! details of the calculation such as the form of the potential
+!! function of the interaction of two particles are handled by other
+!! modules.
 module energy
-  use nrtype, only: dp
-  use particle
-  use particlewall
-  use class_simplelist
-  use class_poly_box
-  use class_parameter_writer
-  use class_parameterizer
-  use class_pair_potential
-  implicit none
-  private
+use nrtype, only: dp
+use particle
+use particlewall
+use class_simplelist
+use class_poly_box
+use class_parameter_writer
+use class_parameterizer
+use class_pair_potential
+implicit none
+private
  
-  public :: potentialenergy
-  public :: totwallprtclV
-  public :: energy_init
-  public :: energy_writeparameters
-  public :: get_cutoff
+public :: totalparticlewallenergy
+public :: energy_init
+public :: energy_writeparameters
+public :: get_cutoff
+public :: total_by_cell
+public :: totalenergy
+public :: singleparticleenergy
 
-  logical, save :: iswall
-  real(dp), save :: rcutoff = 5.5_dp
-  logical :: is_initialized = .false.
+!> True if interactions between a wall and the particles should
+!! be computed.
+logical, save :: iswall
 
-  interface potentialenergy
-    module procedure totalenergy, singleenergy, simple_singleenergy
-  end interface
+!> Cutoff radius for pair interactions. 
+real(dp), save :: rcutoff = 5.5_dp
 
-  contains
+!> True when the module has been correctly initialized using
+!! energy_init.
+logical :: is_initialized = .false.
 
-  real(dp) function get_cutoff()
-    if (.not. is_initialized) stop 'Trying to access all_pairs:get_cutoff before the module is initialized.'
-    get_cutoff = rcutoff
-  end function
+interface totalenergy
+   module procedure simple_totalenergy, total_by_cell
+end interface
+  
+interface singleparticleenergy
+   module procedure simple_singleparticleenergy
+end interface
 
-  subroutine energy_init(reader)
-    type(parameterizer), intent(in) :: reader
-    call getparameter(reader, 'is_wall_on', iswall)
-    if (iswall) call initptwall(reader)
-    call getparameter(reader, 'r_cutoff', rcutoff)
-    call pp_init(reader)
-    is_initialized = .true.
-  end subroutine
+contains
+
+!> Returns the cutoff radius for the interparticle interactions.
+real(dp) function get_cutoff()
+  if (.not. is_initialized) stop 'Trying to access all_pairs:get_cutoff ' // &
+       'before the module is initialized.'
+  get_cutoff = rcutoff
+end function get_cutoff
+
+!> Initializes this module and its dependencies.
+!!
+!! @param reader the object responsible for reading the parameters.
+!!
+subroutine energy_init(reader)
+  type(parameterizer), intent(in) :: reader
+  call getparameter(reader, 'is_wall_on', iswall)
+  if (iswall) call initptwall(reader)
+  call getparameter(reader, 'r_cutoff', rcutoff)
+  call pp_init(reader)
+  is_initialized = .true.
+end subroutine
  
-  subroutine energy_writeparameters(writer)
-    type(parameter_writer), intent(in) :: writer
-    call writeparameter(writer, 'is_wall_on', iswall)
-    if (iswall) call particlewall_writeparameters(writer)
-    call writeparameter(writer, 'r_cutoff', rcutoff)
-    call pp_writeparameters(writer)
-  end subroutine
+!> Outputs the parameters of the module and its dependencies using the
+!! format and unit defined by @p writer. 
+subroutine energy_writeparameters(writer)
+  type(parameter_writer), intent(in) :: writer
+  call writeparameter(writer, 'is_wall_on', iswall)
+  if (iswall) call particlewall_writeparameters(writer)
+  call writeparameter(writer, 'r_cutoff', rcutoff)
+  call pp_writeparameters(writer)
+end subroutine
 
-  !> Calculates the total potential energy of @param particles with respect to 
-  !! each other and any external fields. 
-  !!
-  !! @param simbox the simulation box where the particles are.
-  !! @param particles the array of particles to which the energy is calculated.
-  !! @param nbrlist the neighbourlist used to calculate interactions of 
-  !! particles with each other. 
-  !! @param Etot the total energy when the routine returns.
-  !! @param overlap tells if there's an overlap meaning an infinite 
-  !! interaction energy.
-  !! 
-  subroutine totalenergy(simbox, particles, Etot, overlap, n_pairs)
-    type(poly_box), intent(in) :: simbox
-    type(particledat), dimension(:), intent(in) :: particles
-    real(dp), intent(out) :: Etot
-    logical, intent(out) :: overlap
-    integer, intent(out), optional :: n_pairs
-    real(dp) :: Vpairtot
-    real(dp) :: Vwalltot
-    Etot = 0._dp
-    Vwalltot = 0._dp
-    Vpairtot = 0._dp
-    overlap = .false.
-    call allpairinteractions(simbox, particles, Vpairtot, overlap, n_pairs)
-    if (iswall .and. (.not. overlap)) then
-      call totwallprtclV(simbox, particles, Vwalltot, overlap)
-    end if  
-    if (.not. overlap) then
-      Etot = Vpairtot + Vwalltot
-    end if
-  end subroutine totalenergy
+
+!> Computes the total @p energy of the system. Interactions are computed
+!! cell-by-cell for the @p particles in the cell list @p sl. @p simbox
+!! is the simulation cell. If any two particles are too close to each
+!! other, @p overlap is true. 
+subroutine total_by_cell(sl, simbox, particles, energy, overlap)
+  type(simplelist), intent(in) :: sl
+  type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:), intent(in) :: particles
+  real(dp), intent(out) :: energy
+  logical, intent(out) :: overlap 
+  integer :: i, j, ix, iy, iz
+  logical :: mask(size(particles))
+  real(dp) :: energy_j
+  logical :: overlap_j
+  integer :: helper(size(particles))
+  integer, allocatable :: temp_helper(:)
+  integer :: n_mask
+  integer :: temp_j
+  type(particledat), allocatable :: temp_particles(:)
+
+  helper = (/(i, i=1, size(particles))/) !! ifort vectorizes
+  energy = 0._dp
+  overlap = .false.
+  
+  !$OMP PARALLEL default(shared) reduction(+:energy) reduction(.or.:overlap)& 
+  !$OMP& private(energy_j, overlap_j, i, j, mask, temp_particles, temp_j, temp_helper, n_mask)
+  allocate(temp_particles(size(particles)), temp_helper(size(particles))) 
+  !$OMP DO collapse(3) schedule(dynamic)
+  do ix=0, sl%nx-1 
+  do iy=0, sl%ny-1
+  do iz=0, sl%nz-1
+    call simplelist_nbrmask(sl, simbox, ix, iy, iz, mask)
+    n_mask = count(mask) 
+    temp_particles(1:n_mask) = pack(particles, mask)
+    temp_helper(1:n_mask) = pack(helper, mask)
+    do i=1, sl%counts(ix, iy, iz)
+      j = sl%indices(i, ix, iy, iz)
+      ! Find position of particles(j) in temp_particles:
+      do temp_j = 1, n_mask 
+         if(temp_helper(temp_j) == j) exit
+      end do
+      call singleparticleenergy(simbox, temp_particles(temp_j:n_mask), 1,&
+           energy_j, overlap_j)
+      overlap = overlap .or. overlap_j 
+      energy = energy + energy_j
+    end do 
+  end do
+  end do
+  end do
+  !$OMP END DO 
+  if (allocated(temp_particles)) deallocate(temp_particles)
+  if (allocated(temp_helper)) deallocate(temp_helper)
+  !$OMP END PARALLEL  
+end subroutine total_by_cell
+
+
+!> Calculates the total potential energy of @p particles with
+!! respect to each other and any external fields. 
+!!
+!! @param simbox the simulation box where the @p particles are.
+!! @param particles the array of particles to which the @p energy is
+!!        calculated.
+!! @param energy the total energy when the routine returns.
+!! @param overlap tells if e.g. two particles are too close to each
+!!        other.
+!! @param n_pairs optionally returns the number of pair interactions
+!!        computed.
+!! 
+subroutine simple_totalenergy(simbox, particles, energy, overlap, n_pairs)
+  type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:), intent(in) :: particles
+  real(dp), intent(out) :: energy
+  logical, intent(out) :: overlap
+  integer, intent(out), optional :: n_pairs
+  real(dp) :: energy_pairs
+  real(dp) :: energy_wall
+  energy = 0._dp
+  energy_wall = 0._dp
+  energy_pairs = 0._dp
+  overlap = .false.
+  call allpairinteractions(simbox, particles, energy_pairs, overlap, n_pairs)
+  if (iswall .and. (.not. overlap)) then
+     call totalparticlewallenergy(simbox, particles, energy_wall, overlap)
+  end if
+  if (.not. overlap) then
+     energy = energy_pairs + energy_wall
+  end if
+end subroutine simple_totalenergy
+
           
-  !> Accumulates the particle-wall interaction for @param particles.
-  !! 
-  !! @param simbox the simulation box where the particles are.
-  !! @param particles the array of particles.
-  !! @param Eptwlltot the total particle-wall interaction at return.
-  !! @param overlap is true at return only if the interaction is infinitely 
-  !! large.
-  !! 
-  subroutine totwallprtclV(simbox, particles, Eptwlltot, overlap)
-    type(poly_box), intent(in) :: simbox
-    type(particledat), dimension(:), intent(in) :: particles
-    real(dp), intent(out) :: Eptwlltot
-    logical, intent(out) :: overlap 
-    integer :: i
-    real(dp) :: oneprtclV 
-    Eptwlltot = 0._dp
-    overlap = .false.
-    !! Could this be replaced with forall or where construct?
-    !! If volume scaling trials are done only in the direction of the axis of
-    !! the cylinder, then yes since no overlap can occur. It is also possible
-    !! otherwise but may not give any performance benefit. 
-    do i = 1, size(particles)
-      call particlewall_potential(particles(i), simbox, oneprtclV, overlap)
-      if (overlap) return
-      Eptwlltot = Eptwlltot + oneprtclV
-    end do
-  end subroutine
+!> Calculates the particle-wall interaction for @p particles.
+!! 
+!! @param simbox the simulation box where the particles and the wall
+!!        are.
+!! @param particles the array of particles.
+!! @param energy the total particle-wall interaction at return.
+!! @param overlap is true at if a particle is too close to the wall.
+!! 
+subroutine totalparticlewallenergy(simbox, particles, energy, overlap)
+  type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:), intent(in) :: particles
+  real(dp), intent(out) :: energy
+  logical, intent(out) :: overlap 
+  integer :: i
+  real(dp) :: oneprtclV 
+  energy = 0._dp
+  overlap = .false.
+  do i = 1, size(particles)
+     call particlewall_potential(particles(i), simbox, oneprtclV, overlap)
+     if (overlap) return
+     energy = energy + oneprtclV
+  end do
+end subroutine totalparticlewallenergy
 
-  !> Returns the potential energy of @param particles(@param i) in the system.
-  !! 
-  !! @param simbox the simulation box where the particles are.
-  !! @param particles the particles in the system.
-  !! @param nbrlist the neighbourlist to be used to calculate short-ranged
-  !! pair interactions.
-  !! @param i the index of the particle in @param particles.
-  !! @param Vitot the potential energy at return.
-  !! @param overlap is .true. if an infinitely large interaction occurs. 
-  !!
-  pure subroutine singleenergy(simbox, particles, nbrlist, i, Vitot, overlap)
-    type(poly_box), intent(in) :: simbox
-    type(particledat), dimension(:), intent(in) :: particles
-    type(simplelist), intent(in) :: nbrlist
-    integer, intent(in) :: i
-    real(dp), intent(out) :: Vitot
-    logical, intent(out) :: overlap
-    real(dp) :: Vipair 
-    real(dp) :: Viwall 
-    Viwall = 0._dp 
-    Vipair = 0._dp
-    Vitot = 0._dp
-    overlap = .false.
-    if (iswall) then
-      call particlewall_potential(particles(i), simbox, Viwall, overlap)
-    end if
-    if (.not. overlap) then
-      call pairinteractions(simbox, particles, i, Vipair, overlap)
-    end if
-    if (.not. overlap) then 
-      Vitot = Vipair + Viwall
-    end if
-  end subroutine
 
-  !> Returns the potential energy of @param particles(@param i) in the system.
-  !! 
-  !! @param simbox the simulation box where the particles are.
-  !! @param particles the particles in the system.
-  !! @param nbrlist the neighbourlist to be used to calculate short-ranged
-  !! pair interactions.
-  !! @param i the index of the particle in @param particles.
-  !! @param Vitot the potential energy at return.
-  !! @param overlap is .true. if an infinitely large interaction occurs. 
-  !!
-  pure subroutine simple_singleenergy(simbox, particles, i, Vitot, overlap)
-    type(poly_box), intent(in) :: simbox
-    type(particledat), dimension(:), intent(in) :: particles
-    integer, intent(in) :: i
-    real(dp), intent(out) :: Vitot
-    logical, intent(out) :: overlap
-    real(dp) :: Vipair 
-    real(dp) :: Viwall 
-    Viwall = 0._dp 
-    Vipair = 0._dp
-    Vitot = 0._dp
-    overlap = .false.
-    if (iswall) then
-      call particlewall_potential(particles(i), simbox, Viwall, overlap)
-    end if
-    if (.not. overlap) then
-      call pairinteractions(simbox, particles, i, Vipair, overlap)
-    end if
-    if (.not. overlap) then 
-      Vitot = Vipair + Viwall
-    end if
-  end subroutine
+!> Returns the potential energy of @p particles(@p i).
+!! 
+!! @param simbox the simulation box where the @p particles are.
+!! @param particles the particles in the system.
+!! @param i the index of the particle in @p particles.
+!! @param energy the potential energy of @p particles(@p i)
+!! @param overlap is .true. if e.g. @p particles(@p i) is too close to
+!!        some other particle.
+!!
+pure subroutine simple_singleparticleenergy(simbox, particles, i, energy, overlap)
+  type(poly_box), intent(in) :: simbox
+  type(particledat), intent(in) :: particles(:)
+  integer, intent(in) :: i
+  real(dp), intent(out) :: energy
+  logical, intent(out) :: overlap
+  real(dp) :: e_particles 
+  real(dp) :: e_wall 
+  e_wall = 0._dp 
+  e_particles = 0._dp
+  energy = 0._dp
+  overlap = .false.
+  if (iswall) then
+     call particlewall_potential(particles(i), simbox, e_wall, overlap)
+  end if
+  if (.not. overlap) then
+     call pairinteractions(simbox, particles, i, e_particles, overlap)
+  end if
+  if (.not. overlap) then 
+     energy = e_particles + e_wall
+  end if
+end subroutine simple_singleparticleenergy
 
-  pure subroutine allpairinteractions(simbox, particles, energy, overlap, n_pairs)
-    type(poly_box), intent(in) :: simbox
-    type(particledat), dimension(:), intent(in) :: particles
-    real(dp), intent(out) :: energy
-    logical, intent(out) :: overlap
-    integer, intent(out), optional :: n_pairs
-    integer :: nparticles
-    integer :: i, j
-    real(dp) :: epair
-    real(dp) :: rij(3)
-    if (present(n_pairs)) n_pairs = 0 
-    energy = 0._dp
-    overlap = .false.
-    nparticles = size(particles)
-    do i = 1, nparticles - 1
-      do j = i + 1, nparticles
+
+!> Computes the sum of the pair interaction energies of
+!! @p particles(@p i) interacting with other particles.
+!! 
+!! @param simbox the simulation box for the minimum image calculation.
+!! @param particles the array of particles.
+!! @param i the particle to which the interactions are calculated.
+!! @param energy sum of all pair interactions for particles(i) and other
+!!        particles.
+!! @param overlap is true if some two particles overlap. Correct energy
+!!        is not guaranteed when overlap = .true. 
+!! @param n_pairs optionally gives the number of pairs to which the
+!!        interactions were computed.
+!! 
+pure subroutine pairinteractions(simbox, particles, i, energy, overlap, n_pairs)
+  type(particledat), dimension(:), intent(in) :: particles
+  type(poly_box), intent(in) :: simbox
+  integer, intent(in) :: i
+  real(dp), intent(out) :: energy
+  logical, intent(out) :: overlap
+  integer, intent(out), optional :: n_pairs
+  integer :: nparticles
+  integer :: j
+  real(dp) :: epair
+  logical :: cutoff_mask(size(particles))
+  real(dp) :: rijs(3, size(particles))
+  logical :: overlap_ij
+  energy = 0._dp
+  overlap = .false.
+  overlap_ij = .false.
+  nparticles = size(particles)
+  if (present(n_pairs)) n_pairs = 0
+
+  !! Select the calculated interactions by cutoff already here
+  do j = 1, nparticles
+     !! :NOTE: The chosen way is better than
+     !! :NOTE: rij = minimage(simbox, position(particlei), position(particlej))
+     !! It is significantly faster to use direct references to particle coordinates.
+     rijs(:, j) = minimage(simbox, (/particles(j)%x-particles(i)%x,& 
+          particles(j)%y-particles(i)%y, particles(j)%z-particles(i)%z/))
+  end do !! ifort does not vectorize
+  do j = 1, nparticles
+     cutoff_mask(j) = dot_product(rijs(:,j), rijs(:,j)) < rcutoff**2
+  end do
+  !! Remove the particle i from the cutoff mask 
+  cutoff_mask(i) = .false. 
+  
+  !! :TODO: test overlap conditions also here?
+  !! :TODO: sort particles by type here as well?  
+  do j = 1, nparticles
+     if (cutoff_mask(j)) then
+        call pair_potential(particles(i), particles(j), rijs(:,j), epair, &
+             overlap)
+        if (present(n_pairs)) n_pairs = n_pairs + 1
+        if(overlap) then
+           return
+        else
+           energy = energy + epair
+        end if
+     end if
+  end do 
+end subroutine pairinteractions
+
+!> Computes all pair interactions without any neighbourlist. Used for
+!! debugging.
+!!
+!! @param simbox the simulation box in which the particles reside.
+!! @param particles the array of particles.
+!! @param energy the contribution to total energy from all pair
+!!        interactions.
+!! @param overlap is true if e.g. two particles are too close to each
+!!        other.
+!! @param n_pairs optionally gives the number of pair interactions
+!!        computed.
+!!
+pure subroutine allpairinteractions(simbox, particles, energy, overlap, n_pairs)
+  type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:), intent(in) :: particles
+  real(dp), intent(out) :: energy
+  logical, intent(out) :: overlap
+  integer, intent(out), optional :: n_pairs
+  integer :: nparticles
+  integer :: i, j
+  real(dp) :: epair
+  real(dp) :: rij(3)
+  if (present(n_pairs)) n_pairs = 0 
+  energy = 0._dp
+  overlap = .false.
+  nparticles = size(particles)
+  do i = 1, nparticles - 1
+     do j = i + 1, nparticles
         rij = minimage(simbox, position(particles(j))-position(particles(i)))
         if (dot_product(rij, rij) < rcutoff**2) then
-          call pair_potential(particles(i), particles(j), rij, epair, overlap)
-          if (present(n_pairs)) n_pairs = n_pairs + 1
-          if(overlap) then
-            return
-          else
-            energy = energy + epair
-          end if
-        end if 
-      end do
-    end do
-  end subroutine
-
-  !> Calls the pair potential calculation for particles(i) and all particles in
-  !! @p particles for which the center-to-center distance is less than cutoff
-  !! radius.
-  !! 
-  !! @param simbox the simulation box for the minimum image calculation.
-  !! @param particles the array of particles.
-  !! @param i the particle to which the interactions are calculated.
-  !! @param energy sum of all pair interactions for particles(i) and other
-  !! particles.
-  !! @param overlap is true if some two particles overlap. Correct energy is not
-  !! guaranteed when overlap = .true. 
-  !! 
-  pure subroutine pairinteractions(simbox, particles, i, energy, overlap, n_pairs)
-    type(particledat), dimension(:), intent(in) :: particles
-    type(poly_box), intent(in) :: simbox
-    integer, intent(in) :: i
-    real(dp), intent(out) :: energy
-    logical, intent(out) :: overlap
-    integer, intent(out), optional :: n_pairs
-    integer :: nparticles
-    integer :: j
-    real(dp) :: epair
-    logical :: cutoff_mask(size(particles))
-    real(dp) :: rijs(3, size(particles))
-    logical :: overlap_ij
-    energy = 0._dp
-    overlap = .false.
-    overlap_ij = .false.
-    nparticles = size(particles)
-    if (present(n_pairs)) n_pairs = 0
-
-    !! Select the calculated interactions by cutoff already here
-    do j = 1, nparticles
-      !! :NOTE: The chosen way is better than
-      !! :NOTE: rij = minimage(simbox, position(particlei), position(particlej))
-      !! It is notably faster to use direct references to particle coordinates.
-      rijs(:, j) = minimage(simbox, (/particles(j)%x-particles(i)%x,&
-        particles(j)%y-particles(i)%y, particles(j)%z-particles(i)%z/))
-    end do
-    do j = 1, nparticles
-      cutoff_mask(j) = dot_product(rijs(:,j), rijs(:,j)) < rcutoff**2
-    end do
-    !! Remove the particle i from the cutoff mask 
-    cutoff_mask(i) = .false. 
-
-    !! :TODO: test overlap conditions also here?
-
-    !! :TODO: sort particles by type here as well?  
-    do j = 1, nparticles
-      if (cutoff_mask(j)) then
-      !if (dot_product(rijs(:, j), rijs(:, j)) < rcutoff**2 .and. j /= i) then
-        call pair_potential(particles(i), particles(j), rijs(:,j), epair, &
-          overlap)
-        if (present(n_pairs)) n_pairs = n_pairs + 1
-        !overlap = overlap .or. overlap_ij
-        if(overlap) then
-          !write(*, *) 'Overlap in all_pairs:singleparticlepairs'
-          return
-        else
-          energy = energy + epair
+           call pair_potential(particles(i), particles(j), rij, epair, overlap)
+           if (present(n_pairs)) n_pairs = n_pairs + 1
+           if(overlap) then
+              return
+           else
+              energy = energy + epair
+           end if
         end if
-      end if
-    end do
-  end subroutine
+     end do
+  end do
+end subroutine allpairinteractions
+
 
 end module
