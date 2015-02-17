@@ -1,79 +1,83 @@
-!! :TODO: Think what functions and subroutines could be made elemental.
+!> Implements routines for creating trial Monte Carlo translations and
+!! rotations for uniaxial particles, such as in the Gay-Berne model.
 module particle_mover
-  use particle
-  use nrtype
-  use utils
-  use class_parameterizer
-  use class_parameter_writer
-  include 'rng.inc'
-  implicit none
-  private
+use particle
+use nrtype
+use utils
+use class_parameterizer
+use class_parameter_writer
+include 'rng.inc'
+implicit none
+private
 
-  public :: initparticle
-  public :: particle_writeparameters
-  public :: getmaxmoves
-  public :: move
-  public :: setmaxmoves
-  public :: get_max_translation
+public :: particlemover_writeparameters
+public :: getmaxmoves
+public :: move
+public :: setmaxmoves
+public :: get_max_translation
+public :: particlemover_init
   
-  real(dp), save :: dthetamax = -1._dp
-  real(dp), save :: max_translation = -1._dp
-  logical, save :: is_initialized = .false.
+!> The maximum angle for a trial rotation.
+real(dp), save :: max_rotation = -1._dp
 
-  !! Generic interface for initialization of the module..
+!> The maximum change in position for a trial translation.
+real(dp), save :: max_translation = -1._dp
+
+!> True when this module has been initialized.
+logical, save :: is_initialized = .false.
+
+!> Initializes the module. 
+interface particlemover_init
+  module procedure particlemover_init1, particlemover_init2
+end interface
+
+!> Moves a particle.
+interface move
+   module procedure move1, move2
+end interface
+
+contains
+
+  !> Initializes this module using a parameterizer object.
   !! 
-  interface initparticle
-    module procedure init_particleold, init_particleparameterizer
-  end interface
-
-  !! Interface for creating trial moves for the particle.. 
-  !!
-  interface move
-    module procedure move1, move2
-  end interface
-
-  contains
-
-  !! Initializes this module using a parameterizer object.
-  !! 
-  !! @p reader the parameterizer object which gives (reads) the parameters to
+  !! @param reader the parameterizer object which gives (reads) the parameters to
   !! this module.
   !! 
-  subroutine init_particleparameterizer(reader)
+  subroutine particlemover_init1(reader)
     type(parameterizer), intent(in) :: reader
     call getparameter(reader, 'max_translation', max_translation)
-    call getparameter(reader, 'max_rotation', dthetamax)
+    call getparameter(reader, 'max_rotation', max_rotation)
     if(max_translation < 0._dp) stop 'No max_translation given. Stopping.'
-    if(dthetamax < 0._dp) then
-      !! Set rotation to move end of molecule about as much as translation.
-      dthetamax = 2._dp * asin(max_translation / 4.4_dp)
-      write(*, *) 'init_particle: Assuming molecule length is 4.4.'
+    if(max_rotation < 0._dp) then
+       !! Set rotation to move end of molecule about as much as translation.
+       max_rotation = 2._dp * asin(max_translation / 4.4_dp)
+       write(*, *) 'init_particle: Assuming molecule length is 4.4.'
     end if
     is_initialized = .true.
-  end subroutine
+  end subroutine particlemover_init1
 
-  !! Initializes the module parameters max_translation and dthetamax.
-  !!
-  subroutine init_particleold(maxTranslation, maxRotation)
+  !> Initializes the module by setting the maximum translation and
+  !! rotation to @p distance and @p angle, respectively. 
+  subroutine particlemover_init2(distance, angle)
     implicit none
-    real(dp), intent(in) :: maxTranslation 
-    real(dp), intent(in) :: maxRotation
-    dthetamax = maxRotation
-    max_translation = maxTranslation
+    real(dp), intent(in) :: distance 
+    real(dp), intent(in) :: angle
+    max_rotation = angle
+    max_translation = distance
     is_initialized = .true.
   end subroutine
 
-  !! Saves the module parameters. The method for saving is defined by @p writer.
-  !! 
-  !! @p writer the object that implements the saving method for parameters.
-  !!
-  subroutine particle_writeparameters(writer)
+  !> Writes the module parameters. Output unit and format are defined
+  !! by @p writer.
+  subroutine particlemover_writeparameters(writer)
     type(parameter_writer), intent(in) :: writer
-    call writecomment(writer, 'Particle parameters')
+    call writecomment(writer, 'Particle moving parameters')
     call writeparameter(writer, 'max_translation', max_translation)
-    call writeparameter(writer, 'max_rotation', dthetamax)    
+    call writeparameter(writer, 'max_rotation', max_rotation)    
   end subroutine
 
+  !> Performs a combined translation and rotation of @p particle. 
+  !! @p genstate is the random number generator state.
   pure subroutine move1(aparticle, genstate)    
     type(particledat), intent(inout) :: aparticle
     type(rngstate), intent(inout) :: genstate
@@ -82,6 +86,9 @@ module particle_mover
     aparticle = temp
   end subroutine
 
+  !> Creates a new particle @p newp by applying a combined translation
+  !! and rotation to @p oldp. @p genstate is the random number
+  !! generator state.
   pure subroutine move2(oldp, newp, genstate)
     type(particledat), intent(in) :: oldp
     type(particledat), intent(out) :: newp
@@ -93,6 +100,9 @@ module particle_mover
     end if
   end subroutine
   
+  !> Creates a new position @p xn, @p yn, @p zn from @p xo, @p yo, @p zo by applying a
+  !! random displacement to each of the three coordinates. @p genstate
+  !! is the random number generator state. 
   pure subroutine transmove(xo, yo, zo, xn, yn, zn, genstate)
     real(dp), intent(in) :: xo, yo, zo
     real(dp), intent(out) :: xn, yn, zn
@@ -108,65 +118,69 @@ module particle_mover
     zn = zo + (2._dp * r - 1._dp) * max1d
   end subroutine
 
+  !> Creates a new unit vector @p uxn, @p uyn, @p uzn by applying a random
+  !! rotation to unit vector @p uxo, @p uyo, @p uzo.
   pure subroutine rotate(uxo, uyo, uzo, uxn, uyn, uzn, genstate)
-    real(dp), intent(in) :: uxo,uyo,uzo
-    real(dp), intent(out) :: uxn,uyn,uzn
+    real(dp), intent(in) :: uxo, uyo, uzo
+    real(dp), intent(out) :: uxn, uyn, uzn
     type(rngstate), intent(inout) :: genstate
     real(dp) :: theta, nx, ny, nz
     real(dp) :: r
     call nvec(nx, ny, nz, genstate)
     call rng(genstate, r)
-    theta = (2._dp * r - 1._dp) * dthetamax
+    theta = (2._dp * r - 1._dp) * max_rotation
     call XVEC2(uxo, uyo, uzo, nx, ny, nz, theta, uxn, uyn, uzn)
   end subroutine
 
+  !> Sets the maximum translation @p distance and maximum rotation
+  !! @p angle for a single particle move.
   subroutine setmaxmoves(distance, angle)
     implicit none
     real(dp), intent(in) :: distance, angle
     max_translation = distance
-    dthetamax = angle
+    max_rotation = angle
   end subroutine
 
+  !> Getter for the maximum translation @p distance and maximum rotation
+  !! @p angle for a single particle move.
   subroutine getmaxmoves(distance, angle)
     implicit none
     real(dp), intent(out) :: distance, angle
     distance = max_translation
-    angle = dthetamax
+    angle = max_rotation
   end subroutine 
 
-  !> Returns the maximum translation of a particle. Can be used by other modules
-  !! to get the private max_translation value.
-  !!
+  !> Returns the maximum possible translation of a particle.
   real(dp) function get_max_translation()
     if (.not. is_initialized) stop 'Trying to access max_translation before module particle is initialized.'
     get_max_translation = max_translation
   end function
-  
-pure subroutine nvec(nx, ny, nz, genstate)
-  !!
-  !! Generates a random unit vector (nx, ny, nz). 
+    
+  !> Generates a random unit vector (@p nx, @p ny, @p nz). @p genstate
+  !! is the random number generator state.
   !!
   !! @see Understanding Mol. Sim. 2nd Ed.  Frenkel, Smit p. 578
   !!
-  include 'rng.inc'
-  intrinsic sqrt
-  double precision, intent(out) :: nx, ny, nz
-  type(rngstate), intent(inout) :: genstate
-  double precision :: l, u1, u2, s
-  double precision :: r
-  l = 0.0_dp
-  do
-     call rng(genstate, r)
-     u1 = 1._dp - 2._dp * r
-     call rng(genstate, r)
-     u2 = 1._dp - 2._dp * r
-     l = u1 * u1 + u2 * u2
-     if(l <= 1._dp) exit
-  end do
-  s = 2.0_dp * sqrt(1._dp - l)
-  nx = u1 * s
-  ny = u2 * s
-  nz = 1._dp - 2._dp * l
-end subroutine
+  pure subroutine nvec(nx, ny, nz, genstate)
+    include 'rng.inc'
+    intrinsic sqrt
+    double precision, intent(out) :: nx, ny, nz
+    type(rngstate), intent(inout) :: genstate
+    double precision :: l, u1, u2, s
+    double precision :: r
+    l = 0.0_dp
+    do
+       call rng(genstate, r)
+       u1 = 1._dp - 2._dp * r
+       call rng(genstate, r)
+       u2 = 1._dp - 2._dp * r
+       l = u1 * u1 + u2 * u2
+       if(l <= 1._dp) exit
+    end do
+    s = 2.0_dp * sqrt(1._dp - l)
+    nx = u1 * s
+    ny = u2 * s
+    nz = 1._dp - 2._dp * l
+  end subroutine nvec
 
 end module particle_mover
