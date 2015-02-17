@@ -1,3 +1,11 @@
+!> Module for computing particle-wall interactions for a Lennard-Jones
+!! (LJ)  or Gay-Berne (GB) particle in a cylindrical cavity. The cavity
+!! walls are smooth and consist of evenly distributed LJ particles. A
+!! GB particle interacts with the wall through two embedded LJ sites in
+!! the particle.
+!! 
+!! @see Micheletti et. al. Journal of Chemical Physics 123, 224705.
+!!
 module particlewall
   use particle, only: particledat, position, orientation 
   use nrtype
@@ -8,38 +16,59 @@ module particlewall
   use ljcylinder
   implicit none
     
-  !! @see Micheletti et. al. Journal of Chemical Physics 123, 224705 for 
-  !! definitions of these parameters.
-  !!
-  real(dp), save :: alphaA = 1._dp
-  real(dp), save :: alphaB = 1._dp
-  real(dp), save :: eps = 1._dp
-  real(dp), save :: sig=1._dp
+  !> The relative strength of attractive term as compared to the
+  !! repulsive term for the LJ site A of the GB particle. 
+  real(dp), save :: alpha_a = 1.
+
+  !> The relative strength of attractive term as compared to the
+  !! repulsive term for the LJ site B of the GB particle. 
+  real(dp), save :: alpha_b = 1.
+
+  !> The well-depth parameter of the interaction between the wall and the
+  !! LJ site.
+  real(dp), save :: eps = 1.
+
+  !> The range parameter of the interaction between the LJ site and the
+  !! wall.
+  real(dp), save :: sig = 1.
   
-  !! The distance of LJ interaction sites from the Gay-Berne particle center
-  !! along the unique axis.
-  real(dp), save :: LJdist = 1.7_dp 
+  !> The distance of LJ interaction sites from the Gay-Berne particle
+  !! center along the unique axis.
+  real(dp), save :: LJdist = 1.7 
+
+  !> If true, the wall interaction favors uniform alignment of GB 
+  !! particles along the z-axis of the simulation box.
   logical, save :: isuniformalignment = .false.
 
-  real(dp), save :: epswall_lj = 1._dp
-  real(dp), save :: alpha_lj = 1._dp
-  real(dp), save :: sigwall_lj = 0.8_dp
+  !> Well-depth parameter for the interaction of a LJ particle with the
+  !! wall.
+  real(dp), save :: epswall_lj = 1.
 
-  !! General wall properties
-  real(dp), save :: wall_density = 1._dp
+  !> The strength of the attractive term with respect to the repulsive
+  !! term for the interaction of a LJ particle with the wall.
+  real(dp), save :: alpha_lj = 1.
+  
+  !> Range parameter for the interaction of a LJ particle with the
+  !! wall.
+  real(dp), save :: sigwall_lj = 0.8
 
-interface initptwall
-  module procedure initptwallparameterizer
-end interface
+  !> Number density of virtual LJ particles in the wall.
+  real(dp), save :: wall_density = 1.
+
+  !> Initializes the module.
+  interface particlewall_init
+     module procedure particlewall_init1
+  end interface
 
 contains 
 
-  subroutine initptwallparameterizer(reader)
+  !> Initializes the module with parameters read by @p reader.
+  subroutine particlewall_init1(reader)
     type(parameterizer), intent(in) :: reader
     real(dp) :: Kw_LJ = 5.48819_dp, Kw = 8._dp
     logical :: found
-    call getparameter(reader, 'alpha_A', alphaA) 
-    call getparameter(reader, 'alpha_B', alphaB) 
+    call getparameter(reader, 'alpha_A', alpha_a) 
+    call getparameter(reader, 'alpha_B', alpha_b) 
     call getparameter(reader, 'LJ_dist', LJdist) 
     call getparameter(reader, 'is_uniform_alignment', isuniformalignment)
     call getparameter(reader, 'sigwall', sig)
@@ -59,19 +88,43 @@ contains
     end if 
   end subroutine
 
+
+  !> Initializes the module. All arguments correspond to similarly
+  !! named ones in the module description.
+  subroutine particlewall_init2(alpha_a_, alpha_b_, LJdist_, &
+       isuniformalignment_, sig_, alpha_lj_, sigwall_lj_, wall_density_, &
+       epswall_lj_, eps_)
+    real(dp), intent(in), optional :: alpha_a_, alpha_b_, LJdist_, sig_, &
+         alpha_lj_, sigwall_lj_, wall_density_, epswall_lj_, eps_
+    logical, intent(in), optional :: isuniformalignment_
+    if (present(alpha_a_)) alpha_a = alpha_a_
+    if (present(alpha_b_)) alpha_b = alpha_b_
+    if (present(LJdist_)) LJdist = LJdist_
+    if (present(isuniformalignment_)) isuniformalignment = isuniformalignment_
+    if (present(sig_)) sig = sig_
+    if (present(alpha_lj_)) alpha_lj = alpha_lj_
+    if (present(sigwall_lj_)) sigwall_lj = sigwall_lj_
+    if (present(wall_density_)) wall_density = wall_density_
+    if (present(epswall_lj_)) epswall_lj = epswall_lj_
+    if (present(eps_)) eps = eps_
+  end subroutine
+
+
+  !> Writes the parameters of this module with the format and output
+  !! unit defined by @p writer.
   subroutine particlewall_writeparameters(writer)
     type(parameter_writer), intent(in) :: writer
     call writecomment(writer, 'General wall parameters')
     call writeparameter(writer, 'wall_density', wall_density)
-    !! GB-wall parameters
+
     call writecomment(writer, 'GB-wall interaction parameters')
-    call writeparameter(writer, 'alpha_A', alphaA) 
-    call writeparameter(writer, 'alpha_B', alphaB) 
+    call writeparameter(writer, 'alpha_A', alpha_a) 
+    call writeparameter(writer, 'alpha_B', alpha_b) 
     call writeparameter(writer, 'LJ_dist', LJdist) 
     call writeparameter(writer, 'is_uniform_alignment', isuniformalignment)
     call writeparameter(writer, 'sigwall', sig)
     call writeparameter(writer, 'epswall', eps)
-    !! LJ-wall parameters
+
     call writecomment(writer, 'LJ-wall interaction parameters')
     call writeparameter(writer, 'alpha_LJ', alpha_lj)
     call writeparameter(writer, 'sigwall_LJ', sigwall_lj)
@@ -79,6 +132,10 @@ contains
   end subroutine
 
 
+  !> Calculates the potential @p energy for a @p particle inside a
+  !! cylindrical Lennard-Jones cavity. The radius of the cavity is
+  !! defined by @p simbox. If the particle is too close to the wall or
+  !! inside the wall @p overlap == true.
   pure subroutine particlewall_potential(particle, simbox, energy, overlap)
     type(particledat), intent(in) :: particle
     type(poly_box), intent(in) :: simbox
@@ -92,7 +149,10 @@ contains
   end subroutine
 
 
-  pure function particlewall_force(particle, simbox) result(f)
+  !> Returns the force acting on @p particle by the wall of a
+  !! cylindrical cavity. Radius of the cavity is defined by @p simbox.
+  !! See module description for details.
+  function particlewall_force(particle, simbox) result(f)
     type(particledat), intent(in) :: particle
     type(poly_box), intent(in) :: simbox
     real(dp) :: f(3)
@@ -104,75 +164,85 @@ contains
   end function
 
 
-  !> Calculates the potential energy of a Lennard-Jones (LJ) particle with 
-  !! respect to a wall of a cylindrical cavity.
+  !> Calculates the interaction energy of a Lennard-Jones (LJ) particle
+  !! and the wall of a cylindrical cavity.
   !! 
-  !! @p ljparticle the LJ particle.
-  !! @p simbox the simulation box defining the dimensions of the cavity.
-  !! @p energy the interaction energy of the wall and the particle.
-  !! @p ovrlp tells if the @p ljparticle has penetrated the wall too much.
+  !! @param ljparticle the LJ particle.
+  !! @param simbox the simulation box defining the radius of the
+  !!        cavity.
+  !! @param energy the interaction energy.
+  !! @param overlap is true if the @p ljparticle has penetrated the
+  !! wall too much.
   !! 
-  !! @see D. Micheletti et al. J. Chem. Phys. 123, 224705, 2005.
-  !!
-  pure subroutine ljwall(ljparticle, simbox, energy, ovrlp)
+  pure subroutine ljwall(ljparticle, simbox, energy, overlap)
     implicit none
     type(particledat), intent(in) :: ljparticle
     type(poly_box), intent(in) :: simbox
     real(dp), intent(out) :: energy
-    logical, intent(out) :: ovrlp
+    logical, intent(out) :: overlap
     real(dp) :: r
-    real(dp) :: Rc
-    ovrlp = .false.
+    real(dp) :: r_cylinder
+    overlap = .false.
     energy = 0._dp
-    Rc = getx(simbox)/2._dp 
+    r_cylinder = getx(simbox)/2._dp 
     r = sqrt(ljparticle%x**2 + ljparticle%y**2)
-    if(r >= Rc) then
-      ovrlp = .true.
+    if(r >= r_cylinder) then
+      overlap = .true.
       return
     end if
-    energy = ljcylinderpotential(epswall_lj, wall_density, sigwall_lj, alpha_lj, r, Rc)
+    energy = ljcylinderpotential(epswall_lj, wall_density, sigwall_lj, alpha_lj, r, r_cylinder)
   end subroutine
 
-  !! Returns the force exerted to a LJ particle by the wall
-  pure function ljwall_force(ljparticle, simbox) result(f)
+
+  !> Returns the force exerted on a LJ particle @p ljparticle by the
+  !! wall of the cylindrical cavity. The radius of the cavity is
+  !! defined by the @p simbox.
+  function ljwall_force(ljparticle, simbox) result(f)
     implicit none
     type(particledat), intent(in) :: ljparticle
     type(poly_box), intent(in) :: simbox
     real(dp) :: f(3)
 
     real(dp) :: r
-    real(dp) :: Rc
-    Rc = getx(simbox)/2._dp 
+    real(dp) :: r_cylinder
+    r_cylinder = getx(simbox)/2._dp 
     r = sqrt(ljparticle%x**2 + ljparticle%y**2)
-    f = [ljparticle%x, ljparticle%y, 0._dp]
-    f = f / r * ljcylinder_force(epswall_lj, wall_density, sigwall_lj, alpha_lj, r, Rc)
+    !! Set the direction of f:
+    f = [ljparticle%x, ljparticle%y, 0._dp] / r
+    !! What should be done when r is near zero in the division above?
+    f = f * ljcylinderforce(epswall_lj, wall_density, sigwall_lj, alpha_lj, r, r_cylinder)
   end function
 
-  !> Calculates the potential energy of a rodlike particle with two embedded 
-  !! Lennard-Jones interaction sites with respect to a wall of a cylindrical 
-  !! cavity.
+
+  !> Calculates the potential energy of a rodlike particle which
+  !! interacts with the wall of a cylindrical cavity. The particle
+  !! interacts with the wall via two embedded Lennard-Jones interaction
+  !! sites.
   !! 
-  !! @p gbparticle the rodlike particle.
-  !! @p simbox the simulation box defining the dimensions of the cavity.
-  !! @p energy the interaction energy of the wall and the particle.
-  !! @p ovrlp tells if the @p gbparticle has penetrated the wall too much.
+  !! @param gbparticle the rodlike particle.
+  !! @param simbox the simulation box defining the dimensions of the
+  !!        cavity.
+  !! @param energy the interaction energy of the wall and the particle.
+  !! @param overlap is true if the @p gbparticle has penetrated the
+  !!        wall too much.
   !! 
-  !! @see D. Micheletti et al. J. Chem. Phys. 123, 224705, 2005.
+  !! @see D. Micheletti et al. J. Chem. Phys. 123, 224705, 2005 for the
+  !! interaction site model.
   !!
-  pure subroutine gbwall(gbparticle, simbox, energy,ovrlp)
+  pure subroutine gbwall(gbparticle, simbox, energy, overlap)
     implicit none
     type(particledat), intent(in) :: gbparticle
     type(poly_box), intent(in) :: simbox
     real(dp), intent(out) :: energy
-    logical, intent(out) :: ovrlp
-    real(dp) :: rsiteA, rsiteB
-    real(dp) :: fu, Rc
-    ovrlp = .false.
+    logical, intent(out) :: overlap
+    real(dp) :: rsite_a, rsite_b
+    real(dp) :: fu, r_cylinder
+    overlap = .false.
     energy = 0._dp
-    Rc = getx(simbox)/2._dp 
-    call rArB(gbparticle, rsiteA, rsiteB)
-    if(rsiteA >= Rc .or. rsiteB >= Rc) then
-      ovrlp = .true.
+    r_cylinder = getx(simbox)/2._dp 
+    call rarb(gbparticle, rsite_a, rsite_b)
+    if(rsite_a >= r_cylinder .or. rsite_b >= r_cylinder) then
+      overlap = .true.
       return
     end if
     if (isuniformalignment) then
@@ -180,69 +250,65 @@ contains
     else 
       fu = 1._dp
     end if
-    energy = fu * (ljcylinderpotential(eps, wall_density, sig, alphaA, rsiteA, Rc) + &
-    ljcylinderpotential(eps, wall_density, sig, alphaB, rsiteB, Rc))
+    energy = fu * (ljcylinderpotential(eps, wall_density, sig, alpha_a, rsite_a, r_cylinder) + &
+    ljcylinderpotential(eps, wall_density, sig, alpha_b, rsite_b, r_cylinder))
   end subroutine gbwall
 
-  pure function gbwall_force(gbparticle, simbox) result(f)
-    implicit none
+
+  !> Returns the force exerted on a GB particle @p gbparticle by the
+  !! wall of a cylindrical cavity. The @p gbparticle interacts with the
+  !! wall via two embedded LJ sites.
+  function gbwall_force(gbparticle, simbox) result(f)
     type(particledat), intent(in) :: gbparticle
     type(poly_box), intent(in) :: simbox
     real(dp) :: f(3)
-    real(dp) :: fA(3), fB(3)
-    real(dp) :: rsiteA, rsiteB
-    real(dp) :: fu, Rc
-    Rc = getx(simbox)/2._dp 
-    call rArB(gbparticle, rsiteA, rsiteB)
+    real(dp) :: f_a(3), f_b(3)
+    real(dp) :: rsite_a, rsite_b
+    real(dp) :: fu, r_cylinder
+    r_cylinder = getx(simbox) / 2. 
+    call rarb(gbparticle, rsite_a, rsite_b)
     if (isuniformalignment) then
       fu = angular(gbparticle)  
     else 
-      fu = 1._dp
+      fu = 1.
     end if
 
-    fA = position(gbparticle) + orientation(gbparticle) * LJdist
-    fA(3) = 0._dp
-    fA = fA / sqrt(dot_product(fA, fA))
+    f_a = position(gbparticle) + orientation(gbparticle) * LJdist
+    f_a(3) = 0._dp
+    f_a = f_a / sqrt(dot_product(f_a, f_a))
 
-    fB = position(gbparticle) - orientation(gbparticle) * LJdist
-    fB(3) = 0._dp
-    fB = fB / sqrt(dot_product(fB, fB))
+    f_b = position(gbparticle) - orientation(gbparticle) * LJdist
+    f_b(3) = 0._dp
+    f_b = f_b / sqrt(dot_product(f_b, f_b))
 
-    f = fu * (fA * ljcylinder_force(eps, wall_density, sig, alphaA, rsiteA, Rc) + &
-    fB * ljcylinder_force(eps, wall_density, sig, alphaB, rsiteB, Rc))
+    f = fu * (f_a * ljcylinderforce(eps, wall_density, sig, alpha_a, rsite_a, r_cylinder) + &
+    f_b * ljcylinderforce(eps, wall_density, sig, alpha_b, rsite_b, r_cylinder))
   end function
 
-  !! Returns the distances of the interaction sites from the axis of the 
-  !! cylinder.
-  !! 
-  !! @p particle the particle of which interaction sites are calcula 
-  !! @p ra the distance of site A from the cylinder center
-  !! @p rb the distance of site B from the cylinder center
-  !!
+
+  !> Returns the distances from cavity axis @p ra, @p rb for
+  !! interaction sites embedded in @p particle.
   pure subroutine rarb(particle, ra, rb)
-    implicit none
-    intrinsic sqrt
     type(particledat), intent(in) :: particle
     real(dp), intent(out) :: ra, rb
     real(dp) :: xa, ya, xb, yb
-    xa=particle%x+LJdist*particle%ux
-    ya=particle%y+LJdist*particle%uy
-    xb=particle%x-LJdist*particle%ux
-    yb=particle%y-LJdist*particle%uy
-    ra=sqrt(xa**2 + ya**2)
-    rb=sqrt(xb**2 + yb**2)
+    xa = particle%x + LJdist * particle%ux
+    ya = particle%y + LJdist * particle%uy
+    xb = particle%x - LJdist * particle%ux
+    yb = particle%y - LJdist * particle%uy
+    ra = sqrt(xa**2 + ya**2)
+    rb = sqrt(xb**2 + yb**2)
   end subroutine
 
 
-  !! Returns the angular dependence of the potential with respect to the 
+  !> Returns the angular dependence of the potential with respect to the 
   !! cylinder axis (z-direction). 
   !!
-  !! @p particle the particle to which the potential is calculated. 
+  !! @param particle the particle to which the potential is calculated. 
   !! 
   pure real(dp) function angular(particle)
-    implicit none
     type(particledat), intent(in) :: particle
-    angular=(particle%uz)**2
+    angular = (particle%uz)**2
   end function angular
 
 end module particlewall
