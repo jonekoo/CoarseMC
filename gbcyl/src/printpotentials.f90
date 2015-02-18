@@ -1,3 +1,21 @@
+!> This program prints the pair interactions present in the given
+!! set of molecules and geometry, specified in the inputfiles.
+!! Symbols in the output are:
+!!
+!! Usage (in Linux or similar POSIX terminal environment). Input read
+!! from inputparameter.0 and inputconfiguration.0: 
+!! echo 0 | ./printpotentials 
+!!
+!! r    - distance between the two objects.
+!! GB   - Gay-Berne particle.
+!! x    - the molecule is oriented along x-axis e.g. GBx is a Gay-Berne
+!!        particle oriented along the x-axis.
+!! y    - the molecule is oriented along y-axis.
+!! z    - the molecule is oriented along z-axis.
+!! LJ   - Lennard Jones particle.
+!! Wall - the wall of a cylindrical cavity. The wall consists of
+!!        smoothly and evenly distributed LJ particles.
+!!
 program printpotentials
 use nrtype
 use class_pair_potential
@@ -13,6 +31,9 @@ implicit none
 real(dp), dimension(3), parameter :: ex = (/1._dp, 0._dp, 0._dp/)
 real(dp), dimension(3), parameter :: ey = (/0._dp, 1._dp, 0._dp/)
 real(dp), dimension(3), parameter :: ez = (/0._dp, 0._dp, 1._dp/)
+
+!> The input is read from files inputparameters.idchar and 
+!! inputconfiguration.idchar.
 character(4) :: idchar
 logical :: is_wall_on
 
@@ -32,8 +53,14 @@ integer, parameter :: n = 1000
 real(dp) :: energy
 logical :: overlap
 type(particledat) :: temp
+
+!> The distance between subsequent r values.
 real(dp), parameter :: step = 0.01_dp
+
+!> The distance between particles / to wall.
 real(dp) :: r
+
+!> The maximum distance
 real(dp) :: rmax
 
 read(*, *) idchar
@@ -44,7 +71,7 @@ call pp_init(reader)
 
 call getparameter(reader, 'is_wall_on', is_wall_on)
 if (is_wall_on) then
-  call initptwall(reader)
+  call particlewall_init(reader)
 end if
 
 !! Read inputconfiguration
