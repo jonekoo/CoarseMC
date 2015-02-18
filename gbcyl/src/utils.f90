@@ -4,9 +4,9 @@ implicit none
 intrinsic index
 
 interface
+   !> Computes the eigenvectors and eigenvalues @p values of @p matrix.
+   !! @p matrix is replaced by the eigenvectors on output.
    subroutine eigensystem(matrix, values)
-     !! Computes the eigenvectors and eigenvalues of @p matrix.
-     !! @p matrix is replaced by the eigenvectors on output.
      use nrtype, only: dp
      implicit none
      real(dp), intent(inout) :: matrix(3, 3)
@@ -16,11 +16,7 @@ end interface
 
 contains 
 
-!> Returns the number of @param substr occurences in string @param str.
-!!
-!! @param str the string to analyze.
-!! @param substr the substring to be looked for. 
-!! 
+!> Returns the number of @p substr occurences in string @p str.
 function substrcount(str, substr)
   character(len=*), intent(in) :: str
   character(len=*), intent(in) :: substr
@@ -42,13 +38,9 @@ function substrcount(str, substr)
 end function
 
 
-!> Returns a string that has been created by joining the strings in str_array.
-!! Whitespace is trimmed away from elements of str_array but not from separator.
-!!
-!! @param str_array the array to be joined.
-!! @param separator the separator used to join the strings.
-!! @param joined the elements of @p str_array joined with @p separator.
-!! 
+!> Returns a string @p joined that has been created by joining the
+!! strings in @p str_array. Whitespace is trimmed away from elements of
+!! str_array but not from @p separator.
 subroutine join(str_array, separator, joined)
   character(len=*), intent(in) :: str_array(:)
   character(len=*), intent(in) :: separator
@@ -68,18 +60,13 @@ subroutine join(str_array, separator, joined)
 end subroutine
 
 
-!> Splits a given string @param str to the array @param strarr using @param 
+!> Splits a given string @p str to the array @p strarr using @p 
 !! delimiterstr as the delimiter. Delimiters are not included in the results.
 !! Result may contain empty strings. 
-!!
-!! @param str the string to be splitted.
-!! @param delimiterstr the delimiter to use in the splitting.
-!! @param strarr the resulting pointer array of strings.
-!!
 subroutine splitstr(str, delimiterstr, strarr)
   character(len=*), intent(in) :: str
   character(len=*), intent(in) :: delimiterstr
-  character(len=len(str)), dimension(:), allocatable, intent(inout) :: strarr
+  character(len=*), dimension(:), allocatable, intent(inout) :: strarr
   integer :: dim, i 
   integer :: lastpos
   integer :: step
@@ -97,14 +84,9 @@ subroutine splitstr(str, delimiterstr, strarr)
   end do
 end subroutine
 
-!> Returns the components of the orientation vector in cylindrical coordinates
-!!
-  !! @param orientation the orientation vector.
-!! @param position the position of the orientation vector.
-!! @return the orientation vector in cylindrical coordinates.
-!! 
+!> Returns the components of the vector @p orientation in cylindrical
+!! coordinates when the vector is at @p position.
 pure function unitvec(orientation, position)
-  intrinsic atan2
   real(dp), dimension(3), intent(in) :: orientation
   real(dp), dimension(3), intent(in), optional :: position
   real(dp), dimension(3) :: unitvec
@@ -120,9 +102,9 @@ pure function unitvec(orientation, position)
 end function
   
 
-!> Rotates the vector (x,y,z) into (xp,yp,zp) around axis
-!! (nx,ny,nz) [unit vector of the direction] through angle @p angle
-!! Goldstein: Classical Mechanics 2nd ed., p. 165
+!> Rotates the vector (@p x, @p y, @p z) into (@p xp, @p yp, @p zp)
+!! around axis (@p nx, @p ny, @p nz) [unit vector of the direction]
+!! through angle @p angle. 
 !!
 !! Author Juho Lintuvuori.
 !! Modified by Jouni Karjalainen to use nrtype dp and intrinsic dot_product
@@ -130,11 +112,10 @@ end function
 !! The angle is defined counterclockwise when looking at the direction of 
 !! (nx, ny, nz).
 !!
+!! @see Goldstein: Classical Mechanics 2nd ed., p. 165
+!!
 pure subroutine rotate_vector(x, y, z, nx, ny, nz, angle, xp, yp, zp)
   implicit none
-  intrinsic dot_product
-  intrinsic cos
-  intrinsic sin
   real(dp), intent(in) :: x, y, z, nx, ny, nz, angle
   real(dp), intent(out) :: xp, yp, zp
   real(dp) :: dotpr, cp, sp
@@ -155,10 +136,10 @@ end subroutine rotate_vector
 
 !> Rotates a rank 2 tensor defined in @p old_axes to @p new_axes. 
 !!
-!! @p original the tensor to be rotated.
-!! @p old_axes the axes in which the original tensor is defined. 
-!! @p new_axes the axes in which we want to represent the tensor.
-!! @p rotated the @p original tensor rotated from @p old_axes to @p new_axes.
+!! @param original the tensor to be rotated.
+!! @param old_axes the axes in which the original tensor is defined. 
+!! @param new_axes the axes in which we want to represent the tensor.
+!! @param rotated the @p original tensor rotated from @p old_axes to @p new_axes.
 !!
 subroutine rotate_tensor(original, old_axes, new_axes, rotated)
   real(dp), intent(in) :: original(3, 3), old_axes(3, 3), new_axes(3, 3)
@@ -187,32 +168,7 @@ end subroutine
 
 
 
-pure SUBROUTINE XVEC2(X, Y, Z, NX, NY, NZ, PHI, XP, YP, ZP)
-  intrinsic cos
-  intrinsic sin
-  intrinsic dot_product
-  !!
-  !! rotates the vector (X,Y,Z) into (XP,YP,ZP) around axis
-  !! (NX,NY,NZ) [unit vector of the direction] through angle PHI
-  !! Goldstein: Classical Mechanics 2nd ed., p. 165
-  !!
-  REAL(DP), intent(in) :: X, Y, Z
-  real(dp), intent(in) :: NX, NY, NZ 
-  real(dp), intent(in) :: PHI
-  real(dp), intent(out) :: XP, YP, ZP
-  REAL(DP) :: DOTP
-  DOTP = dot_product((/NX, NY, NZ/), (/X, Y, Z/))
-  CALL CROSSP(X, Y, Z, NX, NY, NZ, XP, YP, ZP)
-  XP = X * COS(PHI) + NX * DOTP * (1._dp - COS(PHI)) + XP * SIN(PHI)
-  YP = Y * COS(PHI) + NY * DOTP * (1._dp - COS(PHI)) + YP * SIN(PHI)
-  ZP = Z * COS(PHI) + NZ * DOTP * (1._dp - COS(PHI)) + ZP * SIN(PHI)
-END SUBROUTINE
-
-!> Returns  (cz, cy, cz) = (ax, ay, az) x (bx, by, bz)
-!!
-!! @param a first vector 
-!! @param b second vector
-!!
+!> Returns the cross-product c = a x b.
 pure function cross_product(a, b) result(c)
   real(dp), intent(in) :: a(3), b(3)
   real(dp) :: c(3)
@@ -222,10 +178,9 @@ pure function cross_product(a, b) result(c)
   c(3) = a(1) * b(2) - a(2) * b(1)
 end function
 
+!> Computes the cross-product (@p CX, @p CY, @p CZ) =
+!! (@p AX, @p AY, @p AZ) x (@p BX, @p BY, @p BZ) 
 pure SUBROUTINE CROSSP(AX,AY,AZ,BX,BY,BZ,CX,CY,CZ)
-  !!
-  !! calculates (AX,AY,AZ) x (BX,BY,BZ) = (CZ,CY,CZ)
-  !!
   REAL(DP), intent(in) :: AX, AY, AZ, BX, BY, BZ
   real(dp), intent(out) :: CX, CY, CZ
   CX = AY * BZ - AZ * BY
@@ -233,15 +188,10 @@ pure SUBROUTINE CROSSP(AX,AY,AZ,BX,BY,BZ,CX,CY,CZ)
   CZ = AX * BY - AY * BX
 END SUBROUTINE
 
-!> Returns the value of a polynomial of order n-1 in the point x. 
-!! Coefficients of the polynomial are given in table a, where 
-!! a(i) is the coefficient of the x^(n-i) term
-!! Calculation is done with the Horner method.
-!!
-!! @param a coefficients of the polynomial in decreasing order. 
-!!
-!! @return the value of the polynomial at x.
-!!
+!> Returns the value of a polynomial of order n-1 in the point @p x. 
+!! Coefficients of the polynomial are given in table @p a, where 
+!! @p a(i) is the coefficient of the x^(n-i) term. Calculation is done
+!! with the Horner method. Size of @p a is n.
 pure function horner(a, x) 
   real(dp), dimension(:), intent(in) :: a
   real(dp), intent(in) :: x 
@@ -254,9 +204,8 @@ pure function horner(a, x)
 end function horner
 
 
-!> Returns a formatting character for the default integer type. To be used when
-!! consistent formatting for integer output is needed.
-!! 
+!> Returns a formatting character for the default integer type. To be
+!! used when consistent formatting for integer output is needed.
 pure function fmt_char_int() result(format_char)
   character(len = 50) :: format_char
   integer :: r
@@ -267,9 +216,9 @@ pure function fmt_char_int() result(format_char)
   format_char = trim(adjustl(format_char))
 end function
 
-!> Returns a formatting character for a double precision real number. To be 
-!! used when consistent formatting of real numbers is needed. 
-!!
+
+!> Returns a formatting character for a double precision real number.
+!! To be used when consistent formatting of real numbers is needed. 
 pure function fmt_char_dp() result(format_char)
   integer :: e
   integer :: w
@@ -285,17 +234,20 @@ pure function fmt_char_dp() result(format_char)
   write(w_char, *) w
   write(e_char, *) e
   write(d_char, *) d
-  write(format_char, *) 'G' // trim(adjustl(w_char)) // '.' // trim(adjustl(d_char)) // 'E' // trim(adjustl(e_char)) 
+  write(format_char, *) 'G' // trim(adjustl(w_char)) // '.' // &
+       trim(adjustl(d_char)) // 'E' // trim(adjustl(e_char)) 
   format_char = trim(adjustl(format_char))
 end function
 
-!> Returns a formatting character for a double precision real number. To be 
-!! used when consistent formatting of real numbers is needed. 
-!!
+!> Returns a formatting character for an array of double precision real
+!! numbers. To be used when consistent formatting of real numbers is
+!! needed. 
 pure function fmt_char_dp_array(array_size) result(format_char)
   integer, intent(in) :: array_size
   character(len = 50) :: format_char
-  write(format_char, *) '(', array_size - 1, '(' // trim(adjustl(fmt_char_dp())) // ',1X),' // trim(adjustl(fmt_char_dp())) // ')'
+  write(format_char, *) '(', array_size - 1, '(' // &
+       trim(adjustl(fmt_char_dp())) // ',1X),' // &
+       trim(adjustl(fmt_char_dp())) // ')'
   format_char = trim(adjustl(format_char))
 end function
 
