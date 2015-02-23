@@ -129,7 +129,7 @@ contains
     call nvec(nx, ny, nz, genstate)
     call rng(genstate, r)
     theta = (2._dp * r - 1._dp) * max_rotation
-    call XVEC2(uxo, uyo, uzo, nx, ny, nz, theta, uxn, uyn, uzn)
+    call rotate_vector(uxo, uyo, uzo, nx, ny, nz, theta, uxn, uyn, uzn)
   end subroutine
 
   !> Sets the maximum translation @p distance and maximum rotation
