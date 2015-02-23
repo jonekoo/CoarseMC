@@ -59,7 +59,7 @@ end function get_cutoff
 subroutine energy_init(reader)
   type(parameterizer), intent(in) :: reader
   call getparameter(reader, 'is_wall_on', iswall)
-  if (iswall) call initptwall(reader)
+  if (iswall) call particlewall_init(reader)
   call getparameter(reader, 'r_cutoff', rcutoff)
   call pp_init(reader)
   is_initialized = .true.
