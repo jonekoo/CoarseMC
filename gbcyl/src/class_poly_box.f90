@@ -3,6 +3,7 @@
 module class_poly_box
 use nrtype
 use utils
+use iso_fortran_env
 implicit none
 
 public :: poly_box
@@ -36,7 +37,7 @@ type poly_box
 end type poly_box
 
 interface new_box
-  module procedure new_box1, new_box3
+  module procedure new_box_all, new_box1, new_box3
 end interface
 
 interface minimage
@@ -104,6 +105,37 @@ interface gettype
 end interface
 
 contains 
+
+!> Returns a poly_box with the given typeid @p boxtype. @p lx and, 
+!! optionally, @p ly and @p lz give the dimensions of the box. If
+!! @p boxtype == 'rectangular' all three dimensions are considered. If
+!! @p boxtype == 'cylinder', the diameter of the cylinder is set as the
+!! greater of @p lx and @p ly. @p lz is then the height of the cylinder.
+!! When @p ly or @p lz is not given, it is set equal to @p lx.
+function new_box_all(boxtype, lx, ly, lz) result(b)
+  character(len=*), intent(in) :: boxtype
+  real(dp), intent(in) :: lx
+  real(dp), intent(in), optional :: ly, lz
+  real(dp) :: ly_, lz_ 
+  type(poly_box) :: b
+  ly_ = lx
+  lz_ = lx
+  if (present(ly)) ly_ = ly
+  if (present(lz)) lz_ = lz
+  if (boxtype == 'rectangular') then
+     b = new_box3(lx, ly_, lz_)        
+  else if(boxtype == 'cylindrical') then
+     b = new_cylinder(max(lx, ly_), lz_)
+  else if (.not. pbox_istypeid(boxtype)) then
+     write(error_unit, *) 'Error: ', boxtype, 'is not a valid typeid for' // &
+          ' poly_box.'
+     write(error_unit, *) 'Valid options are', typeids(:)
+     stop
+  else
+     write(error_unit, *) 'Error: class_poly_box:new_box_all: internal ' // &
+          'consistency error. Please send a bug report to the developer!'
+  end if
+end function
 
 !> Returns a rectangular type poly_box with sides of equal length
 !! @p side and periodic boundaries in all directions.
@@ -225,6 +257,7 @@ pure subroutine pbox_setx(abox, x)
   type(poly_box), intent(inout) :: abox
   real(dp), intent(in) :: x
   abox%lx = x
+  if (abox%typeid == 'cylindrical') abox%ly = x
 end subroutine pbox_setx
   
 !> Sets the length of @p abox to @p y in the y-direction.
