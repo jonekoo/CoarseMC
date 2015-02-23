@@ -1,3 +1,8 @@
+!> Routine for computing the translational order parameter $\tau_1$ for
+!! detecting a smectic(-A) phase of @p particles. @ direction sets the
+!! reference direction which should be perpendicular to the layers.
+!! At return, @p tau1_max and @p layer_distance contain the order
+!! parameter and the average distance between the layers.
 subroutine max_tau1(particles, direction, tau1_max, layer_distance)
   use particle
   use nrtype
