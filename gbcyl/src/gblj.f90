@@ -119,6 +119,8 @@ end subroutine
 !! output unit defined by @p writer.
 subroutine gblj_writeparameters(writer)
   type(parameter_writer), intent(in) :: writer
+  call writecomment(writer, &
+       'Gay-Berne - Lennard-Jones potential parameters.')
   call writeparameter(writer, 'gblj_epsilon_0', epsilon_0)
   call writeparameter(writer, 'gblj_sigma_0', sigma_0)
   call writeparameter(writer, 'gblj_mu', mu)
@@ -156,28 +158,72 @@ pure subroutine gblj_potential(ui, rij, energy, overlap)
 end subroutine
 
 
-!> Returns the force acting on the LJ particle due to the presence of
-!! the GB particle.
-!! 
-!! @param ui the unit orientation vector of the GB particle.
-!! @param rij the vector from center of the GB particle to the center
-!!        of the LJ particle.
-!!
-pure function gblj_force(ui, rij) 
+!> Returns the force acting on the LJ particle (j) by the GB particle i.
+pure function gblj_force(ui, rij) result(f)
   real(dp), intent(in) :: ui(3), rij(3)
-  real(dp) :: gblj_force(3)
-  real(dp) :: urij(3), r
-  r = sqrt(dot_product(rij, rij))
-  urij = rij / r
-  gblj_force =  gblj_grad_epsilon(ui, urij, r) * &
-       (sigma_0 / gblj_r(ui, rij)) ** 6 * &
-       ((sigma_0 / gblj_r(ui, rij)) ** 6 - 1._dp)
-  gblj_force = gblj_force + gblj_epsilon(urij, ui) * (-6._dp) * &
-       sigma_0 ** 6 / gblj_r(ui, rij) ** 7 * &
-       (-2._dp * (sigma_0 / gblj_r(ui, rij)) ** 6 + 1._dp) * &
-       gblj_grad_r(ui, rij)
-  gblj_force = -4._dp * gblj_force
+  real(dp) :: f(3)
+  real(dp) :: urij(3)
+  urij = rij / sqrt(dot_product(rij, rij))
+  f = 4. * sigma_0**6 / gblj_r(ui, rij)**13 * &
+       ((gblj_r(ui, rij)**7 - gblj_r(ui, rij) * sigma_0) * &
+       gblj_grad_eps(ui, rij) - 6. * gblj_epsilon(urij, ui) * &
+       (gblj_r(ui, rij)**6 - 2. * sigma_0**6) * gblj_grad_r(ui, rij))
+end function gblj_force
+
+!> Returns the gradient of the well-depth gblj_epsilon. @p ui is the unit
+!! orientation vector of the GB particle. @p rij is the vector from the
+!! GB particle to the LJ particle.
+pure function gblj_grad_eps(ui, rij) result(g)
+  real(dp), intent(in) :: ui(3), rij(3)
+  real(dp) :: g(3)
+  g = -chiepsilon * (1 - gblj_aij(ui, rij) * chiepsilon)**(mu - 1) * mu * &
+       epsilon_0 * gblj_grad_aij(ui, rij)
+end function gblj_grad_eps
+
+!> Returns the dot_product(ui, urij). @p ui is the unit orientation
+!! vector of the GB particle. @p rij is the vector from the GB particle
+!! to the LJ particle. urij is the unit vector with the same
+!! orientation as @p rij
+pure function gblj_aij(ui, rij) result(aij)
+  real(dp), intent(in) :: ui(3), rij(3)
+  real(dp) :: aij
+  aij = dot_product(ui, rij) / sqrt(dot_product(rij, rij))
 end function
+
+!> Returns the gradient of the distance function gblj_r. @p ui is the
+!! unit vector of orientation of the GB particle. @p rij is the vector
+!! from the GB particle to the LJ particle.
+pure function gblj_grad_r(ui, rij) result(g)
+  real(dp), intent(in) :: ui(3), rij(3)
+  real(dp) :: g(3)
+  real(dp) :: urij(3)
+  urij = rij / sqrt(dot_product(rij, rij))
+  g = urij - gblj_grad_sigma(ui, rij)
+end function gblj_grad_r
+
+!> Returns the gradient of the range function gblj_sigma. @p ui is the
+!! unit orientation vector of the GB particle. @p rij is the vector
+!! from the GB particle to the LJ particle. 
+pure function gblj_grad_sigma(ui, rij) result(g)
+  real(dp), intent(in) :: ui(3), rij(3)
+  real(dp) :: g(3)
+  g = chisigma * sigma_0 / (2. * sqrt(1. - gblj_aij(ui, rij) * chisigma)**3) &
+       * gblj_grad_aij(ui, rij)
+end function gblj_grad_sigma
+
+!> Returns the gradient of dot_product(ui, urij), where @p ui is the
+!! unit orientation vector of the GB particle and urij is the unit
+!! vector along @p rij, the vector from the GB particle to the LJ
+!! particle. 
+pure function gblj_grad_aij(ui, rij) result(g)
+  real(dp), intent(in) :: ui(3), rij(3)
+  real(dp) :: g(3)
+  real(dp) :: urij(3)
+  urij = rij / sqrt(dot_product(rij, rij))
+  g = 2. * dot_product(ui, urij) * (-dot_product(ui, rij) / &
+       sqrt(dot_product(rij, rij))**3 * rij + &
+       ui / sqrt(dot_product(rij, rij))) 
+end function gblj_grad_aij
 
 
 !> Returns the anisotropic contact distance between a Gay-Berne and a
@@ -190,7 +236,7 @@ end function
 pure function gblj_sigma(urij, ui)
   real(dp), intent(in) :: urij(3), ui(3)
   real(dp) :: gblj_sigma
-  gblj_sigma = sigma_0 / sqrt((1._dp - chisigma * dot_product(urij, ui) ** 2))
+  gblj_sigma = sigma_0 / sqrt(1. - chisigma * dot_product(urij, ui)**2)
 end function
 
 !> Returns the anisotropic well-depth of the GB-LJ potential.
@@ -202,36 +248,8 @@ end function
 pure function gblj_epsilon(urij, ui)
   real(dp), intent(in) :: urij(3), ui(3)
   real(dp) :: gblj_epsilon
-  gblj_epsilon = epsilon_0 * (1._dp - chiepsilon * dot_product(urij, ui) ** 2) ** mu
+  gblj_epsilon = epsilon_0 * (1. - chiepsilon * dot_product(urij, ui)**2)**mu
 end function
-
-pure function gblj_grad_es(se_0, ui, urij, rij, mu, chi)
-  real(dp), intent(in) :: se_0, ui(3), urij(3), rij, mu, chi
-  real(dp) :: gblj_grad_es(3)
-  gblj_grad_es = -2._dp * se_0 * chi * mu * dot_product(ui, urij) * (urij * dot_product(ui, urij) + ui) / &
-    (rij * (1._dp - chi * dot_product(ui, urij) ** 2) ** (1._dp - mu))  
-end function
-
-pure function gblj_grad_epsilon(ui, urij, rij)
-  real(dp), intent(in) :: ui(3), urij(3), rij
-  real(dp) :: gblj_grad_epsilon(3)
-  gblj_grad_epsilon = gblj_grad_es(epsilon_0, ui, urij, rij, mu, chiepsilon)
-end function
-
-pure function gblj_grad_sigma(ui, urij, rij)
-  real(dp), intent(in) :: ui(3), urij(3), rij
-  real(dp) :: gblj_grad_sigma(3)
-  gblj_grad_sigma = gblj_grad_es(sigma_0, ui, urij, rij, -0.5_dp, chisigma)
-end function
-
-pure function gblj_grad_r(ui, rij)
-  real(dp), intent(in) :: ui(3), rij(3)
-  real(dp) :: gblj_grad_r(3)
-  real(dp) :: urij(3), r
-  r = sqrt(dot_product(rij, rij))
-  urij = rij / r
-  gblj_grad_r = urij - gblj_grad_sigma(ui, urij, r)
-end function 
 
 
 !> The anisotropic distance function in the GB-LJ potential.
