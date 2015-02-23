@@ -158,20 +158,22 @@ pure subroutine simplelist_populate(sl, simbox, particles)
   sl%indices = 0
   sl%counts = 0
   do iparticle = 1, size(particles)
-    !! calculate cell index assuming centered coordinates
-    ix = int(((particles(iparticle)%x / getx(simbox) + 0.5_dp) * &
-      real(sl%nx, dp)))
-    iy = int(((particles(iparticle)%y / gety(simbox) + 0.5_dp) * &
-      real(sl%ny, dp)))
-    iz = int(((particles(iparticle)%z / getz(simbox) + 0.5_dp) * & 
-      real(sl%nz, dp)))
-    !! add to the right position in simplelist
-    sl%counts(ix, iy, iz) = sl%counts(ix, iy, iz) + 1
-    sl%indices(sl%counts(ix, iy, iz), ix, iy, iz) = iparticle
-    sl%coords(iparticle, :) = (/ix, iy, iz/)
-    sl%xyzlist(iparticle, :) = position(particles(iparticle))
+     !! Calculate cell index assuming that the coordinates are centered
+     !! at the origin
+     !! We also assume that the coordinates have been transformed as
+     !! if (particle%x >= getx(simbox) / 2) then
+     !!     particle%x = particle%x - getx(simbox)
+     !! end if
+     ix = int((particles(iparticle)%x / getx(simbox) + 0.5) * sl%nx)
+     iy = int((particles(iparticle)%y / gety(simbox) + 0.5) * sl%ny)
+     iz = int((particles(iparticle)%z / getz(simbox) + 0.5) * sl%nz)
+     !! add to the right position in simplelist
+     sl%counts(ix, iy, iz) = sl%counts(ix, iy, iz) + 1
+     sl%indices(sl%counts(ix, iy, iz), ix, iy, iz) = iparticle
+     sl%coords(iparticle, :) = (/ix, iy, iz/)
+     sl%xyzlist(iparticle, :) = position(particles(iparticle))
   end do
-end subroutine
+end subroutine simplelist_populate
 
 !> Sets @p mask(j) true if @p particles(j) is a neighbour of
 !! @p particles(@p i) in the @p simbox.
@@ -183,9 +185,9 @@ pure subroutine simplelist_nbrmask(sl, simbox, particles, i, mask)
   logical, intent(out) :: mask(:)
   integer :: ix,iy,iz !! cell indices of particle i
   mask=.false.
-  ix=sl%coords(i,1)
-  iy=sl%coords(i,2)
-  iz=sl%coords(i,3)
+  ix = sl%coords(i,1)
+  iy = sl%coords(i,2)
+  iz = sl%coords(i,3)
   call simplelist_cell_nbrmask(sl, simbox, ix, iy, iz, mask)
   mask(i)=.false.
 end subroutine
