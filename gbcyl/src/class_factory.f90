@@ -42,7 +42,7 @@ subroutine factory_writestate(afactory, outunit, simbox, particles)
   write(outunit, '(/,' // fmt_char_int() //')') size(particles)
   !! Write particles
   do i = 1, size(particles) 
-    call write(outunit, particles(i))
+    call writeparticle(outunit, particles(i))
     write(outunit, '(A)') ''
   end do
   write(outunit, '(A)') endmark
@@ -104,7 +104,7 @@ subroutine factory_readstate(afactory, inunit, boxread, particles, ios)
   
   !! read particles
   do i = 1, nparticles
-    call read(inunit, particles(i), ios) 
+    call readparticle(inunit, particles(i), ios) 
     if (0 /= ios) return
   end do
   !! Read endmark
