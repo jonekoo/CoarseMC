@@ -1,0 +1,102 @@
+beta_exchange.f90, doc:2014-12-02
+bin_indices.f90, doc:2014-12-03, cvs:remove
+  brent.f90 \
+class_factory.f90, doc:2014-12-03, cvs:commit
+  class_factory_test.f90 \
+class_pair_potential.f90, doc:2014-12-03, cvs:commit
+class_parameter_writer.f90, doc:2014-12-03, cvs:commit
+class_parameterizer.f90, doc:2014-12-04, cvs:commit
+class_poly_box.f90, doc:2014-12-04, cvs:commit
+  class_poly_box_test.f90 \
+class_simplelist.f90, doc:2014-12-04, cvs:commit 
+  class_simplelist_pfunit.f90 \
+  configurationconverter.f90
+createbox.f90, cvs:remove 
+  cylhist.f90 \
+  cylhist2.f90 \
+  cylindrical_layerorientation.f90 \
+  cylindrical_layerorientationtensor.f90
+  cylindrical_orientation.f90 \
+  cylindrical_orientation_tensor.f90
+  density.f90
+  distribution.f90 \
+  doublezsize.f90
+energy.f90, doc:2015-01-08, cvs:commit
+gayberne.f90, doc:2015-01-08, cvs:commit
+  gayberne_pfunit.f90 \
+  gayberne_test.f90 \
+gbcyl.f90, doc:2015-01-08, cvs:commit
+gblj.f90, doc:2015-02-23, cvs:commit
+genvoltrial.f90, doc:2015-01-09, cvs:commit
+  gr3dweighted.f90 \
+  histogram.f90 \
+  jacobi.f90 \
+  jacobiwrapper.f90 \
+  layernormal.f90 \
+lj.f90, doc:2015-01-12, cvs:commit
+  lj_nmr.f90 \
+ljcylinder.f90, doc:2015-02-16, cvs:commit
+  m_constants.f90 \
+m_fileunit.f90, left as is since it is from flibs.
+  m_quadrupole_coupling.f90 \
+  m_rank2_tensor.f90 \
+  m_shielding.f90 \
+  max_tau1.f90
+  max_tau1.f90  
+mc_engine.f90, doc:2015-02-16, cvs:commit
+mc_sweep.f90, doc:2015-02-16, cvs:commit
+mpi.f90, no changes needed
+nr.f90, cvs:remove
+nrtype.f90, cvs:remove
+nrutil.f90, cvs remove
+  odd_n_integral.f90 \
+  onwallpressure.f90
+  orientation_parameter.f90 
+  orientational_ordering.f90 \
+  pair_distribution.f90 
+particle.f90, doc:2015-02-17, cvs:commit
+particle_mover.f90, doc:2015-02-17, cvs:commit
+  particle_test.f90 \
+particlewall.f90, doc:2015-02-17, cvs:commit 
+  pov.f90 \
+  povanimation.f90
+  pressurezz.f90
+  print_gbxe_qcoupling.f90
+  print_gbxe_shielding.f90
+  print_xewall_coupling.f90
+  print_xewall_shielding.f90
+printpotentials.f90, doc:2015-02-18, cvs:commit 
+  psi6.f90 
+  psi6_module.f90 \
+  rd_s.f90 
+  remove_every_2nd.f90
+  rf_s.f90 \
+rng.inc, doc:2015-02-18, cvs:commit
+mtfort90.f90, external, left as is 
+  simplemin.f90 \
+  smcpsi6.f90
+  smctau1.f90 \
+  tau1_module.f90 \
+  tau1_negative.f90 \
+  tau1_program.f90 \
+  test_gblj.f90 
+  test_simplelist_with_openmp.f90
+  testrunner.f90 
+utils.f90, doc:2015-02-18, cvs:commit
+  utils_test.f90 \
+verlet.f90
+  virial_tensor.f90
+  weighted_rdf.f90 
+  xe_nmr.f90
+  xe_nmr_profile.f90
+  xe_nmr_profile2.f90
+  xewall_qcoupling.f90 \
+  xewall_shielding.f90 \
+  xfunc_module.f90 \
+  eigens_src = eigens_dsyev.f90
+  eigens_src = eigens_dv.f90
+  energy_src += ljwall2.f90 ljcylinder_force.f90
+  energy_src += ljwall_cephes.f90
+  ldadd_mtstream = ${top_builddir}/mt_stream_f90-1.11/libmt_stream.la
+  nr_src = num_kind.f90
+  test_hyp2f1_SOURCES = utils.f90 test_hyp2f1.f90
