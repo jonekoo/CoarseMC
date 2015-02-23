@@ -76,12 +76,12 @@ pure subroutine pair_potential(particlei, particlej, rij, potE, overlap)
 end subroutine
 
 
-!> The force acting on @p particlei caused by @p particlej.
+!> The force acting on @p particlej caused by @p particlei.
 !!
-!! @param[in] particlei,particlej the pair of particles.
-!! @param[in] rij the minimum image distance of the two particles.
+!! @param[in] particlei, particlej the pair of particles.
+!! @param[in] rij = rj - ri, vector from particle i to particle j.
 !!
-!! @return the force acting on @p particlei
+!! @return the force acting on @p particlej
 !!
 pure function pair_force(particlei, particlej, rij)
   type(particledat), intent(in) :: particlei, particlej
