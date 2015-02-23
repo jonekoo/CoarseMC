@@ -96,7 +96,7 @@ subroutine initparameterizer(reader)
   call getparameter(reader, 'gb_epsilon_0', epsilon0)
   call getparameter(reader, 'gb_hardcore', gb_hardcore)
   if (abs(mu - 1) < tiny(mu) .and. abs(nu - 1) < tiny(nu)) then
-     write(*, *) 'gb_nu = 1 and gb_nu = 1. Using gb_epsilon_mu1nu1'
+     write(*, *) '# gb_nu = 1 and gb_nu = 1. Using gb_epsilon_mu1nu1'
      gb_epsilon => gb_epsilon_mu1nu1
   else
      gb_epsilon => gb_epsilon_full
