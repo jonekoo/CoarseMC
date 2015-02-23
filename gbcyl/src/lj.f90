@@ -44,6 +44,7 @@ end subroutine
 !! by @p writer.
 subroutine lj_writeparameters(writer)
   type(parameter_writer), intent(in) :: writer
+  call writecomment(writer, 'Lennard-Jones potential parameters.')
   call writeparameter(writer, 'lj_sigma_0', sigma_0_)
   call writeparameter(writer, 'lj_epsilon_0', epsilon_0_)
 end subroutine
