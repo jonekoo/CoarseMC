@@ -22,7 +22,7 @@ subroutine test_new_simplelist
     particles(i)%z = i*(-minlength*0.25_dp)
   end do
   !! Create new list 
-  sl=new_simplelist(simbox, particles, minlength)
+  call new_simplelist(sl, simbox, particles, minlength)
   !! Tests for lists contents
   call AssertEqual(n, sl%counts(0,0,0), "Number of particle indices in the&
   & cell 1,1,1 does not match the total particle number.")
@@ -30,7 +30,7 @@ subroutine test_new_simplelist
   & end up to the right cell.")
   call AssertEqual(n, sum(sl%counts), "Total count of particle indices in cell&
   & list does not match particle count.")
-  call simplelist_delete(sl)
+  call simplelist_deallocate(sl)
 
   !! Create new list with more cells. 
   do i=1,n
@@ -38,7 +38,7 @@ subroutine test_new_simplelist
     particles(i)%y = i*(minlength-1e-9)*0.25_dp
     particles(i)%z = i*(minlength-1e-9)*0.25_dp
   end do
-  sl=new_simplelist(simbox, particles, minlength)
+  call new_simplelist(sl, simbox, particles, minlength)
   call AssertEqual(2, sl%counts(2,2,2), "More or less than two particles ended up in&
   & the cell 2,2,2")
   call AssertEqual(1, sl%counts(3,3,3), "More or less than one particle ended up in&
@@ -49,25 +49,25 @@ subroutine test_new_simplelist
   & the first particle in cell 3,3,3")
   call AssertEqual(n, sum(sl%counts), "Total particle count does&
   & not match the total count of particle indices in the cell list.")
-  call simplelist_delete(sl)
+  call simplelist_deallocate(sl)
 
   !! Cases where the creation might break:
   !! 1. Only one cell in some dimension
-  sl=new_simplelist(simbox, particles, minlength)
+  call new_simplelist(sl, simbox, particles, minlength)
   call AssertEqual(n, sl%counts(0,0,0), "Number of particle indices in the&
   & cell 1,1,1 does not match the total particle number.")
   call AssertEqual((/1,2,3/), sl%indices(1:3,0,0,0), "Some particles did not&
   & end up to the right cell.")
   call AssertEqual(n, sum(sl%counts), "Total count of particle indices in cell&
   & list does not match particle count.")
-  call simplelist_delete(sl)
+  call simplelist_deallocate(sl)
   !! 2. iseven=.true. but only one cell can fit with the given minlength
   !! What should happen? Failure? Warning? Silence and only one cell created?
   !! Failure. But how is this tested? There could be a return code but the 
   !! user does not have to handle a return code, so this is not a safe solution. 
   !! Let's just make it stop.
   !!call simplelist_init(minlength=11._dp, iseven=.true.)
-  !!sl=new_simplelist(simbox, particles) !! Will cause a Fortran STOP
+  !!call new_simplelist(sl, simbox, particles) !! Will cause a Fortran STOP
 end subroutine
 
 subroutine test_updateall
@@ -86,7 +86,7 @@ subroutine test_updateall
   particles(2)%y=0.5_dp*minlength
   particles(2)%z=0.5_dp*minlength
   !! Make a list of eight cells
-  sl=new_simplelist(simbox, particles, minlength)
+  call new_simplelist(sl, simbox, particles, minlength)
   call AssertEqual(n,sum(sl%counts), "Count of particle indices in cell list&
   & does not match particle count.")
   call AssertEqual(1,sl%counts(0,0,0), "More or less than one particle in cell&
@@ -105,7 +105,7 @@ subroutine test_updateall
   & 0,1,0")
   call AssertEqual(1,sl%counts(2,2,1), "More or less than one particle in cell&
   & 2,2,1")
-  call simplelist_delete(sl)
+  call simplelist_deallocate(sl)
 end subroutine
 
 subroutine test_nbrmask
@@ -131,7 +131,7 @@ subroutine test_nbrmask
   particles(3)%x=-1.5_dp*minlength
   particles(3)%y=-0.5_dp*minlength
   particles(3)%z=0.5*minlength
-  sl=new_simplelist(simbox,particles, minlength)
+  call new_simplelist(sl, simbox,particles, minlength)
   call AssertEqual((/4,4,4/), shape(sl%counts), "The list has wrong dimensions.")
   call simplelist_nbrmask(sl,simbox,particles,1, mask)
   call AssertFalse(mask(1), "Periodicity test failed for particle 1")
@@ -146,7 +146,7 @@ subroutine test_nbrmask
   call AssertTrue(mask(2), "Periodicity test failed for particle 3")
   call AssertFalse(mask(3), "Periodicity test failed for particle 3")
   
-  call simplelist_delete(sl)
+  call simplelist_deallocate(sl)
 end subroutine
 
 end module
