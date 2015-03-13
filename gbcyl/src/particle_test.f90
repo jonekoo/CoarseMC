@@ -29,10 +29,10 @@ contains
     particlewritten%uz = 2._dp * grnd() - 1._dp
     !! Write to a scratch file.
     open(unit, status='SCRATCH')
-    call write(unit, particlewritten)
+    call writeparticle(unit, particlewritten)
     !! Read back from the scratch file.
     rewind unit
-    call read(unit, particleread, ios)
+    call readparticle(unit, particleread, ios)
     call assert_equal(0, ios, "There was an error reading the particle.")
     !! Compare components with the original
     call assert_comparable(particlewritten%x, particleread%x, &
