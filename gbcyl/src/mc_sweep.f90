@@ -29,7 +29,7 @@ module mc_sweep
   public :: settemperature
   public :: resetcounters
   public :: movevol
-  public :: ptratio
+  public :: pt_period
   public :: set_system, get_system
   public :: get_total_energy
   public :: test_configuration
@@ -59,7 +59,7 @@ module mc_sweep
   real(dp), save :: scalingratio
 
   !> The number of sweeps between parallel tempering updates.
-  integer, save :: ptratio = 1
+  integer, save :: pt_period = 1
 
   !> The total energy.
   real(dp), save :: etotal = 0._dp
@@ -123,7 +123,7 @@ subroutine mcsweep_init(reader, the_simbox, the_particles)
   call getparameter(reader, 'move_ratio', moveratio)
   call getparameter(reader, 'scaling_ratio', scalingratio)
   call getparameter(reader, 'max_scaling', maxscaling)
-  call getparameter(reader, 'pt_ratio', ptratio)
+  call getparameter(reader, 'pt_period', pt_period)
   call getparameter(reader, 'nmovetrials', nmovetrials)
   call getparameter(reader, 'nscalingtrials', nscalingtrials)
   call getparameter(reader, 'nacceptedscalings', nacceptedscalings)
@@ -185,8 +185,12 @@ subroutine mc_sweep_writeparameters(writer)
   call writeparameter(writer, 'move_ratio', moveratio)
   call writeparameter(writer, 'scaling_ratio', scalingratio)
   call writeparameter(writer, 'max_scaling', maxscaling)
-  call writeparameter(writer, 'pt_ratio', ptratio)
-  call join(scalingtypes, ',', joined)
+  call writeparameter(writer, 'pt_period', pt_period)
+  if (allocated(scalingtypes)) then
+     call join(scalingtypes, ',', joined)
+  else
+     joined = ''
+  end if
   call writeparameter(writer, 'scaling_type', trim(joined))
   call writeparameter(writer, 'nmovetrials', nmovetrials)
   call writeparameter(writer, 'nacceptedmoves', nacceptedmoves)
@@ -253,7 +257,7 @@ subroutine sweep(genstates, isweep)
   do ivolmove = 1, size(scalingtypes)
      call movevol(simbox, particles, scalingtypes(ivolmove), genstates(0))
   end do
-  if (mod(isweep, ptratio) == 0) then
+  if (mod(isweep, pt_period) == 0) then
      beta = 1._dp/temperature
      call try_beta_exchanges(beta, etotal, 3, genstates(0)) 
      temperature = 1._dp/beta
