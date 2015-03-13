@@ -10,7 +10,7 @@
 program pair_distribution
   use nrtype, only: dp
   use particle, only : particledat
-  use class_factory, only: readstate, factory
+  use class_factory, only: factory_readstate, factory
   use class_poly_box, only: poly_box
   use distribution
   use utils, only: fmt_char_dp
@@ -58,7 +58,7 @@ program pair_distribution
   end do
 
   do  
-    call readstate(afactory, stdin, simbox, particles, io_status)
+    call factory_readstate(afactory, stdin, simbox, particles, io_status)
     if (io_status < 0) then
       exit
     else

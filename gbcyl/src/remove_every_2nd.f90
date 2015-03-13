@@ -19,11 +19,11 @@ program remove_every_2nd
   type(poly_box) :: simbox
   integer :: i=0
   do  
-    call readstate(infactory, stdin, simbox, particles, io_status)
+    call factory_readstate(infactory, stdin, simbox, particles, io_status)
     if (io_status < 0) then
       exit
     else if(mod(i, 2)==0) then
-      call writestate(outfactory, stdout, simbox, particles)
+      call factory_writestate(outfactory, stdout, simbox, particles)
     end if
     i=i+1
   end do

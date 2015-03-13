@@ -48,7 +48,7 @@ integer, parameter :: stdin = 5
 !! program.
 !!cf = new_cylformatter()
 do  
-  call readstate(afactory, stdin, simbox, particles, io_status)
+  call factory_readstate(afactory, stdin, simbox, particles, io_status)
   if (io_status < 0) exit
   !if (allocated(localnormals) .and. size(localnormals)/3 /= nparticles) then
   !  deallocate(localnormals)

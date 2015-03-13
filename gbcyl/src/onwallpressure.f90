@@ -18,11 +18,11 @@ character(len=3) :: idchar = '0'
 read(*, *) idchar
 reader = new_parameterizer('inputparameters.'//trim(adjustl(idchar)))
 !! Initialize the modules needed
-call initptwall(reader)
+call particlewall_init(reader)
 coordinateunit = fileunit_getfreeunit()
 open(unit=coordinateunit, file='configurations.' //trim(adjustl(idchar)), action='READ', status='OLD')
 do
-  call readstate(coordinatereader, coordinateunit, simbox, particles, ios)
+  call factory_readstate(coordinatereader, coordinateunit, simbox, particles, ios)
   if (ios /= 0) then
     exit
   end if

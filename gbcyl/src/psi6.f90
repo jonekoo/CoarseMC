@@ -4,7 +4,7 @@
 !!
 !! Usage: program < configuration_file
 !!
-program psi6
+program total_psi6
   use nrtype, only: dp
   use particle, only : particledat
   use orientational_ordering
@@ -21,7 +21,7 @@ program psi6
   type(poly_box) :: simbox
   type(factory) :: afactory
   do  
-    call readstate(afactory, stdin, simbox, particles, io_status)  
+    call factory_readstate(afactory, stdin, simbox, particles, io_status)  
     if (io_status < 0) then
       exit
     else

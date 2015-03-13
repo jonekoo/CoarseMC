@@ -37,7 +37,7 @@ coordinateunit = fileunit_getfreeunit()
 open(unit=coordinateunit, file='configurations.' //trim(adjustl(idchar)), action='READ', status='OLD')
 write(*, '(6(A6,18X))') '#dV   ', 'P ', 'dV ', 'P', 'dV ', 'P '
 do 
-  call readstate(coordinatereader, coordinateunit, simbox, particles, ios)
+  call factory_readstate(coordinatereader, coordinateunit, simbox, particles, ios)
   if (ios /= 0) then
     exit
   end if

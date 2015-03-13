@@ -83,7 +83,7 @@ program xe_nmr
       "gbxe_" // indices, "xexe_" // indices
   end if
   do  
-    call readstate(afactory, coordinateunit, simbox, particles, io_status)  
+    call factory_readstate(afactory, coordinateunit, simbox, particles, io_status)  
     if (io_status < 0) exit
     call eigens(pack(particles, particles%rod), count(particles%rod), &
       values, vectors)

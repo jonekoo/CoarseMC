@@ -21,7 +21,7 @@ program analysis
   integer, parameter :: stdin = 5
   i = 0
   do 
-    call readstate(afactory, stdin, simbox, particles, io_status) 
+    call factory_readstate(afactory, stdin, simbox, particles, io_status) 
     if (io_status < 0) then
       exit
     else

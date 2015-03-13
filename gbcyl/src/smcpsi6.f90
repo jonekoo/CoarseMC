@@ -34,8 +34,7 @@ integer, parameter :: stdin = 5
 !cf = new_cylformatter()
 cutoff = 2._dp * sigma0
 do  
-  !call readstate(cf, simbox, particles, io_status)
-  call readstate(afactory, stdin, simbox, particles, io_status)
+  call factory_readstate(afactory, stdin, simbox, particles, io_status)
   if (io_status < 0) exit
   call globalnormal(simbox, pack(particles, particles%rod), cutoff, p2, direction)
   write(*,'(5('// fmt_char_dp() // ',1X))') psi6_bulk(simbox, pack(particles, particles%rod), direction), p2, direction

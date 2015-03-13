@@ -38,7 +38,7 @@ coordinateunit = fileunit_getfreeunit()
 open(unit=coordinateunit, file='configurations.' //trim(adjustl(idchar)), action='READ', status='OLD')
 do
   w(:,:) = 0._dp 
-  call readstate(coordinatereader, coordinateunit, simbox, particles, ios)
+  call factory_readstate(coordinatereader, coordinateunit, simbox, particles, ios)
   if (ios /= 0) then
     exit
   end if

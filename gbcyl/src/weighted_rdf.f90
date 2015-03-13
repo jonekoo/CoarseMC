@@ -29,7 +29,7 @@ program analysis
   integer :: i
   real(dp), parameter :: cutoff = 2._dp !! Change to non-hardcoded
   do  
-    call readstate(afactory, stdin, simbox, particles, io_status)
+    call factory_readstate(afactory, stdin, simbox, particles, io_status)
     if (io_status < 0) then
       exit
     else

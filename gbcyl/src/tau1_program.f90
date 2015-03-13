@@ -3,7 +3,7 @@
 !!
 !! Usage: program < configrationfile
 !!
-program tau1
+program tau1_program
   use nrtype
   use particle, only : particledat
   use tau1_module, only: tau1_routine
@@ -21,7 +21,7 @@ program tau1
   integer, parameter :: stdin = 5
   type(poly_box) :: simbox
   do  
-    call readstate(afactory, stdin, simbox, particles, io_status)
+    call factory_readstate(afactory, stdin, simbox, particles, io_status)
     if (io_status < 0) then
       exit
     else

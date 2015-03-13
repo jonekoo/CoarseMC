@@ -119,7 +119,7 @@ program xe_nmr_profile
       "gbxe_" // components, "xexe_" // components
   end if
   do  
-    call readstate(afactory, coordinateunit, simbox, particles, io_status)  
+    call factory_readstate(afactory, coordinateunit, simbox, particles, io_status)  
     if (io_status < 0) exit
     if (is_eigensystem) then
        call eigens(pack(particles, particles%rod), count(particles%rod), &
