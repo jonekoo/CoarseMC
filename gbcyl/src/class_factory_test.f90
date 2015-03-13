@@ -1,3 +1,4 @@
+!> Unit tests for the module class_factory.
 module class_factory_test
 use ftnunit
 use class_poly_box
@@ -37,7 +38,7 @@ particleswritten%z = numbers
 boxwritten = new_cylinder(diameter, height)
 
 open(unit, status='SCRATCH')
-call writestate(thefactory, unit, boxwritten, particleswritten)
+call factory_writestate(thefactory, unit, boxwritten, particleswritten)
 
 boxwritten2 = new_box(height, height, diameter)
 
@@ -48,11 +49,11 @@ call random_number(numbers)
 particleswritten2%y = numbers
 call random_number(numbers)
 particleswritten2%z = numbers
-call writestate(thefactory, unit, boxwritten2, particleswritten2)
+call factory_writestate(thefactory, unit, boxwritten2, particleswritten2)
 
 !! Read and check the first configuration
 rewind unit
-call readstate(thefactory, unit, boxread, particlesread, ios) 
+call factory_readstate(thefactory, unit, boxread, particlesread, ios) 
 !! Check for errors in reading.
 call assert_equal(0, ios, "Box could not be read")
 !! Check box type
@@ -73,7 +74,7 @@ call assert_comparable(particleswritten%z, particlesread%z, margin, "Particles' 
 z-coordinates not comparable.")
 
 !! Read and check the second configuration
-call readstate(thefactory, unit, boxread, particlesread, ios)
+call factory_readstate(thefactory, unit, boxread, particlesread, ios)
 call assert_equal(0, ios, "Box could not be read")
 !! Check box dimensions.
 call assert_comparable(height, getx(boxread), margin, "Dimensions in x direction &

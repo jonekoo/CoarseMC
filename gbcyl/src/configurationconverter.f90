@@ -27,7 +27,7 @@ do
   if (ios /= 0) exit
   !! Print configuration out with factory
   !writer = new_factory()
-  call writestate(writer, 6, simbox, particles)
+  call factory_writestate(writer, 6, simbox, particles)
 end do
 
 contains
