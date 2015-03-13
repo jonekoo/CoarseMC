@@ -21,7 +21,7 @@
 function xewall_qcoupling(k, radiusA, densityA, epsilonratio, &
   sigmaratio) result(local_tensor)
   use nrtype, only: dp
-  use odd_n_integral, only : ljwall_tensor
+  use cylinder_integrals, only : ljwall_tensor
   real(dp), intent(in) :: k, radiusA, densityA, epsilonratio, sigmaratio
   real(dp) :: local_tensor(3, 3) 
   !! coefficients of r^(-n) for the "parallel" component of the Xe-Xe 
