@@ -8,6 +8,7 @@ implicit none
 real(dp), save :: slice_area
 real(dp), save :: direction(3) !! also slice normal
 real(dp), save :: cutoff = 2._dp
+real(dp), parameter :: pi = 4 * atan(1._dp)
 
 contains
 
@@ -134,7 +135,7 @@ end function
 function spherical_shell_volume(r_inner, thickness) result(volume)
   real(dp), intent(in) :: r_inner, thickness
   real(dp) :: volume
-  volume=4._dp*pi/3._dp*((thickness + r_inner)**3-r_inner**3)
+  volume = 4._dp * pi / 3 * ((thickness + r_inner)**3 - r_inner**3)
 end function
 
 !> Returns the volume of a slice with @p thickness the slice_area needs to be 
@@ -163,7 +164,7 @@ function cylinder_shell_volume(r_inner, thickness, height) result(volume)
   real(dp), intent(in) :: r_inner, thickness
   real(dp), intent(in) :: height
   real(dp) :: volume
-  volume=pi*((thickness + r_inner)**2-r_inner**2)*height
+  volume= pi * ((thickness + r_inner)**2 - r_inner**2) * height
 end function
 
 end module
