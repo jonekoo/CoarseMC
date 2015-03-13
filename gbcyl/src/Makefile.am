@@ -32,7 +32,8 @@ bin_PROGRAMS = \
   print_xewall_coupling \
   print_xewall_shielding \
   print_xeslab_shielding \
-  create_crystal
+  create_crystal \
+  default_parameters
 
 
 
@@ -77,19 +78,6 @@ energy_src = \
 
 ptgbcyl_LDADD = ${ldadd_mtstream}
 
-if NR
-nr_src = \
-  nrtype.f90 \
-  nrutil.f90 \
-  nr.f90 \
-  brent.f90 \
-  jacobi.f90 \
-  jacobiwrapper.f90 \
-  rf_s.f90 \
-  rd_s.f90 
-eigens_src = eigens_dv.f90
-energy_src += ljwall2.f90 ljcylinder_force.f90
-else
 nr_src = num_kind.f90
 ## Use dsyev from LAPACK
 LDADD = ${top_builddir}/lapack/lapack_routine/libdsyev.la
@@ -119,7 +107,6 @@ print_gbxe_shielding_LDADD = ${LDADD} ${ldadd_hyp2f1}
 print_xewall_coupling_LDADD = ${LDADD} ${ldadd_hyp2f1}
 print_xewall_shielding_LDADD = ${LDADD} ${ldadd_hyp2f1}
 print_xeslab_shielding_LDADD = ${LDADD} ${ldadd_hyp2f1}
-endif
 
 common_src = \
   ${nr_src} \
@@ -145,6 +132,14 @@ ptgbcyl_SOURCES = \
   ${energy_src} \
   ${parallel_src} \
   gbcyl.f90 
+
+default_parameters_LDADD = $(ptgbcyl_LDADD)
+
+default_parameters_SOURCES = \
+  ${common_src} \
+  ${energy_src} \
+  ${parallel_src} \
+  default_parameters.f90
 
 create_crystal_SOURCES = \
   utils.f90 \
@@ -560,7 +555,7 @@ test_simplelist_with_openmp_SOURCES = \
   test_simplelist_with_openmp.f90
 
 testrunner_SOURCES = \
-  nrtype.f90 \
+  num_kind.f90 \
   m_fileunit.f90 \
   utils.f90 \
   utils_test.f90 \
@@ -578,7 +573,7 @@ testrunner_SOURCES = \
   testrunner.f90 
 
 driver_SOURCES = \
-  nrtype.f90 \
+  num_kind.f90 \
   m_fileunit.f90 \
   class_parameterizer.f90 \
   rng.inc mtfort90.f90 \
