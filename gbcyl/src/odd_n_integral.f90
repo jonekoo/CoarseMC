@@ -4,42 +4,6 @@ implicit none
 
 contains
 
-function ljwall_tensor(k, radiusA, densityA, epsilonratio, &
-  sigmaratio, powers, isotropic_coeffs, anisotropy_coeffs) result(local_tensor)
-  real(dp), intent(in) :: k, radiusA, densityA, epsilonratio, sigmaratio
-  integer, intent(in) :: powers(:)
-  real(dp), intent(in), optional :: isotropic_coeffs(:)
-  real(dp), intent(in), optional :: anisotropy_coeffs(:)
-  real(dp) :: local_tensor(3, 3) 
-  real(dp) :: R
-  real(dp) :: isotropic, anisotropy
-  integer :: i, n
-  R = radiusA / sigmaratio
-  local_tensor = 0._dp
-  isotropic = 0._dp
-  anisotropy = 0._dp
-  if (.not. present(isotropic_coeffs) .and. .not. present(anisotropy_coeffs)) &
-       return
-  do i = 1, size(powers)
-    n = powers(i)
-    if (present(isotropic_coeffs)) isotropic = isotropic_coeffs(i)
-    if (present(anisotropy_coeffs)) anisotropy = anisotropy_coeffs(i)
-    
-    local_tensor(1, 1) = local_tensor(1, 1) + prefactor(n, R, k) * &
-         ((isotropic - anisotropy / 3._dp) * angle_integral(n - 3, 0, k) &
-         + real(n - 1, dp) / real(n, dp) * anisotropy * &
-         angle_integral(n - 3, 2, k))
-    local_tensor(2, 2) = local_tensor(2, 2) + prefactor(n, R, k) * &
-         ((isotropic - anisotropy * (1._dp / 3._dp - &
-         real(n - 1, dp) / n)) * angle_integral(n - 3, 0, k) - &
-         real(n - 1, dp) / n * anisotropy * angle_integral(n - 3, 2, k))  
-    local_tensor(3, 3) = local_tensor(3, 3) + prefactor(n, R, k) * &
-         ((isotropic - (1._dp / 3._dp - 1._dp / n) * anisotropy) * &
-         angle_integral(n - 3, 0, k))
-  end do
-  local_tensor = epsilonratio * densityA * local_tensor
-end function
-
 pure function prefactor(n, R, k) result(res)
   integer, intent(in) :: n
   real(dp), intent(in) :: R, k
