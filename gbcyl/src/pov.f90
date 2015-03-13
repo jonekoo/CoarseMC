@@ -2,6 +2,7 @@ module pov
 use nrtype
 use particle
 use class_poly_box
+use utils
 implicit none
 
 contains
@@ -26,6 +27,8 @@ contains
       write(povunit, *) '#version 3.1'
       write(povunit, *) '#include "colors.inc"'
       write(povunit, *) '#include "transforms.inc"'
+      write(povunit, *) '#declare GB = sphere {<0, 0, 0>, 0.5 scale <4.4,1,1> texture{pigment{color Grey}}}'
+      write(povunit, *) '#declare Xe = sphere {<0, 0, 0>, 0.5 scale 0.869 texture{pigment{color Red}}}'
       write(povunit, *) 'background {color White}'
       write(povunit, *) 'camera {' 
       write(povunit, *) 'location <',camdist,',',camdist,',',-0,'>'
@@ -45,23 +48,19 @@ contains
         ux = particlearray(i)%ux
         uy = particlearray(i)%uy
         uz = particlearray(i)%uz
-        write(povunit, *) 'sphere {'
-        write(povunit, *) '<0,0,0>,0.5'
         if(particlearray(i)%rod) then
-          write(povunit, *) 'texture {pigment{color Grey}}'
-          write(povunit, *) 'scale <4.4,1,1>'
-          write(povunit, *) 'Reorient_Trans(<1,0,0>,<',ux,',',uy,',',-uz,'>)'
+           write(povunit, fmt='(A)', advance='no') 'object{GB '
+           write(povunit, fmt='(A24, 2(' // fmt_char_dp() // ',A1,1X),' // &
+                fmt_char_dp() //',A2)', advance='no') &
+                'Reorient_Trans(<1,0,0>,<',ux,',',uy,',',-uz,'>)'
         else
-          write(povunit, *) 'scale 0.869'
-          write(povunit, *) 'texture {pigment{color Red}}'
+           write(povunit, '(A)', advance='no') 'object{Xe '
         end if
-        write(povunit, *) 'translate <',x,',',y,',',-z,'>}'
+        write(povunit, '(A11, 2(' // fmt_char_dp() // ',A1,1X),' // &
+             fmt_char_dp() //',A2)') &
+             'translate <',x,',',y,',',-z,'>}'
       end do  
       close(povunit)
   end subroutine povout
-
-
-
-
 
 end module
