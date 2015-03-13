@@ -22,6 +22,7 @@ public :: d_potential
 public :: gb_R
 public :: g_potential
 public :: gb_force
+public :: gb_epsilon
  
 !> Ratio of contact distances for end-to-end and side-by-side
 !! configurations of two particles.
@@ -95,6 +96,10 @@ subroutine initparameterizer(reader)
   call getparameter(reader, 'gb_sigma_0', sigma0)
   call getparameter(reader, 'gb_epsilon_0', epsilon0)
   call getparameter(reader, 'gb_hardcore', gb_hardcore)
+  call init_common()
+end subroutine initparameterizer
+
+subroutine init_common()
   if (abs(mu - 1) < tiny(mu) .and. abs(nu - 1) < tiny(nu)) then
      write(*, *) '# gb_nu = 1 and gb_nu = 1. Using gb_epsilon_mu1nu1'
      gb_epsilon => gb_epsilon_mu1nu1
@@ -107,7 +112,7 @@ subroutine initparameterizer(reader)
   chisigma = (kappasigma * kappasigma - 1._dp) / &
        (kappasigma * kappasigma + 1._dp)
   chisigmasquared = chisigma**2
-end subroutine initparameterizer
+end subroutine init_common
 
 
 !> Initializes the module for potential calculation. 
@@ -145,13 +150,8 @@ subroutine initold(kappasigmain, kappaepsilonin, muin, nuin, sigma0in, &
   nu = nuin
   sigma0 = sigma0in
   epsilon0 = epsilon0in
-  chiepsilon = &
-       (kappaepsilon**(1._dp / mu) - 1._dp) / &
-       (kappaepsilon**(1._dp / mu)+ 1._dp)
-  chisigma = (kappasigma * kappasigma - 1._dp) / &
-       (kappasigma * kappasigma + 1._dp)
-  chisigmasquared = chisigma**2
   if (present(hardcore)) gb_hardcore = hardcore
+  call init_common()
 end subroutine initold
 
 
