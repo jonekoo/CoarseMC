@@ -30,7 +30,7 @@ module cylindrical_layerorientation
     end do
     call orientational_ordering_eigens(temp_particles, n_particles, &
       & values, vectors)
-    deallocate(temp_particles)
+    if (allocated(temp_particles)) deallocate(temp_particles)
   end subroutine
 
 

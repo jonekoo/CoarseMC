@@ -5,11 +5,7 @@ module cylindrical_orientation
   use orientational_ordering, only: orientational_ordering_eigens => eigens
   implicit none  
 
-  
   contains
-
-
-
   subroutine eigens(particles, n_particles, values, vectors)
     implicit none
     type(particledat), dimension(:), intent(in) :: particles
@@ -27,9 +23,6 @@ module cylindrical_orientation
     end do
     call orientational_ordering_eigens(temp_particles, n_particles, &
       & values, vectors)
-    deallocate(temp_particles)
+    if (allocated(temp_particles)) deallocate(temp_particles)
   end subroutine
-
-
-
 end module 
