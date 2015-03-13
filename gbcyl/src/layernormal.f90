@@ -1,6 +1,5 @@
 module layernormal
 use nrtype
-use nr
 use utils
 use particle
 use class_poly_box
@@ -14,11 +13,11 @@ subroutine globalnormal(simbox, particles, cutoff, p2, direction)
   real(dp), intent(in) :: cutoff
   real(dp), intent(out) :: p2
   real(dp), dimension(3), intent(out) :: direction
-  real(sp), dimension(3, 3) :: vectors
-  real(sp), dimension(3) :: values
+  real(dp), dimension(3, 3) :: vectors
+  real(dp), dimension(3) :: values
   integer :: nrot
   real(dp), dimension(size(particles), 3) :: localnormals
-  real(sp), dimension(3, 3) :: orientationtensor
+  !real(dp), dimension(3, 3) :: orientationtensor
   integer, dimension(1) :: ml
   integer :: i
 
@@ -30,12 +29,10 @@ subroutine globalnormal(simbox, particles, cutoff, p2, direction)
   !! 2.2. Diagonalize tensor
   !! 2.3. Global layer normal is the eigenvector corredponding to the largest
   !! eigenvalue.
-  orientationtensor = real(globaltensor(localnormals), sp)
-  call jacobi(orientationtensor, values, vectors, nrot)
-  !write(*, *) size(orientationtensor, 1), size(orientationtensor, 2), size(e), size(values)
- 
-  !call tred2(orientationtensor, values, e, .false.)
-  !call tqli(values, e, vectors)
+  !orientationtensor = real(globaltensor(localnormals), sp)
+  vectors = globaltensor(localnormals)
+  !call jacobi(orientationtensor, values, vectors, nrot)
+  call eigensystem(vectors, values)
   ml = maxloc(values)
   direction = real(vectors(:, ml(1)), dp)
   p2 = real(maxval(values), dp)
@@ -63,12 +60,12 @@ function localnormal(simbox, particles, i, cutoff) result(normal)
   integer, intent(in) :: i
   real(dp), intent(in) :: cutoff
   real(dp), dimension(3) :: normal
-  real(sp), dimension(3, 3) :: localtensor 
+  real(dp), dimension(3, 3) :: localtensor 
   real(dp), dimension(3) :: rij, rik
   real(dp), dimension(3) :: urij, urik
   integer :: nparticles
-  real(sp), dimension(3, 3) :: vectors
-  real(sp), dimension(3) :: values
+  real(dp), dimension(3, 3) :: vectors
+  real(dp), dimension(3) :: values
   integer :: a, b
   integer :: j, k
   integer :: nrot
@@ -118,7 +115,7 @@ function localnormal(simbox, particles, i, cutoff) result(normal)
       rik = position(neighbours(k))
       if (k == j) cycle
       urik = rik / sqrt(dot_product(rik, rik))
-      cp = crossproduct(urij, urik)
+      cp = cross_product(urij, urik)
       !!write(*, *) 'cp = ', cp
       forall(a = 1:3, b = 1:3) 
         localtensor(a, b) = localtensor(a, b) + real(3._dp * cp(a) * cp(b), sp)
@@ -128,11 +125,8 @@ function localnormal(simbox, particles, i, cutoff) result(normal)
   end do
   localtensor = localtensor / real(2 * nneighbours * (nneighbours - 1), sp)
   !! 1.2. Diagonalize tensor
-  call jacobi(localtensor, values, vectors, nrot)    
-  !! 1.3. Local layer normal is the vector corresponding to the largest 
-  !! eigenvalue
-  !call tred2(localtensor, values, e, .false.)
-  !call tqli(values, e, vectors)
+  vectors = localtensor
+  call eigensystem(vectors, values)
   ml = maxloc(values)
   normal = real(vectors(:, ml(1)), dp)
 end function
