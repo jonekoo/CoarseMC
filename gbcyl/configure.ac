@@ -2,15 +2,17 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(gbcyl, 6.10.1, jouni.karjalainen@oulu.fi)
-AM_INIT_AUTOMAKE([-Wall -Werror foreign tar-pax])
+AC_INIT(gbcyl, 7.1.0, jouni.karjalainen@oulu.fi)
+AM_INIT_AUTOMAKE([-Wall -Werror subdir-objects foreign tar-pax])
 AC_PROG_FC
 AC_PROG_CC
+AC_PROG_F77
 # Checks for programs.
-AC_PROG_RANLIB
+AC_CONFIG_MACRO_DIR([m4])
+m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
+##AC_LIBTOOL_DLOPEN
 AC_PROG_LIBTOOL
 
-m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 
 # Checks for libraries.
 
@@ -24,15 +26,19 @@ AC_SUBST(MODEXT, [$ax_f90_modext])
 
 # Doxygen support:
 DX_HTML_FEATURE(ON)
-DX_PDF_FEATURE(ON)
+DX_PDF_FEATURE(OFF)
 DX_PS_FEATURE(OFF)
-DX_INIT_DOXYGEN([$PACKAGE_NAME], [doxygen.cfg], [doxygen-doc])
+DX_INIT_DOXYGEN([$PACKAGE_NAME], doxygen.cfg, doxygen-doc)
 
 
 AC_CONFIG_FILES([
 Makefile
 mt_stream_f90-1.11/Makefile
+cephes/Makefile
 ftnunit/Makefile
+BLAS/Makefile
+lapack/lapack_routine/Makefile
+lapack/Makefile
 src/Makefile
 data/Makefile
 ])
