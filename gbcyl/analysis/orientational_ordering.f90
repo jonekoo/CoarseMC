@@ -1,7 +1,7 @@
 module orientational_ordering
   use nrtype
   use particle, only: particledat, orientation
-  use jacobiwrapper, only: jacobi
+  use utils, only: eigensystem
   implicit none
 
   public :: eigens
@@ -11,10 +11,6 @@ module orientational_ordering
   public :: cycle_largest_to_3rd
 
   PRIVATE
-
-  interface eigens
-    module procedure eigens_dv
-  end interface eigens
 
   interface orientation_parameter
     module procedure orientation_parameter_s
@@ -37,17 +33,17 @@ pure function orientation_parameter_v(particles, vector) result(res)
 end function orientation_parameter_v
 
 
-!! Returns the largest eigenvalue of the orientational ordering tensor and
-!! the eigenvector corresponding to that value. 
+!! Returns the largest eigenvalue of the orientational ordering tensor
+!! and the eigenvector corresponding to that value.
 !!
 !! pre-conditions: 
 !! 1. @p particles has @p n_particles > 0 particles.
 !! 
-!! @p particles the particles for which the orientational ordering tensor 
-!! is calculated.
-!! @p n_particles the number of particles.
-!! @p value to be assigned as the orientation parameter.
-!! @p director the eigenvector corresponding to @p value. 
+!! @param particles the particles for which the orientational ordering
+!! tensor is calculated.
+!! @param n_particles the number of particles.
+!! @param value to be assigned as the orientation parameter.
+!! @param director the eigenvector corresponding to @p value. 
 !!
 subroutine orientation_parameter_s(particles, n_particles, value, director)
   implicit none
@@ -61,29 +57,26 @@ subroutine orientation_parameter_s(particles, n_particles, value, director)
   integer, parameter :: n_dimensions = 3
   real(dp), dimension(3) :: values
   real(dp), dimension(3, 3) :: vectors
-  call eigens_dv(particles, n_particles, values, vectors)
+  call eigens(particles, n_particles, values, vectors)
   value = maxval(values)
   max_value_position = maxloc(values)
   director(1:n_dimensions) = vectors(1:n_dimensions, max_value_position(1))
 end subroutine orientation_parameter_s
 
 
-
-subroutine eigens_dv(particles, n_particles, values, vectors)
-  implicit none
-  type(particledat), dimension(:) :: particles
+subroutine eigens(particles, n_particles, values, vectors)
+  type(particledat), intent(in) :: particles(:)
   integer, intent(in) :: n_particles
-  integer :: nrot
-  real(dp),dimension(3,3), intent(out) :: vectors
-  real(dp),dimension(3), intent(out) :: values
-  real(dp),dimension(3,3) :: tensor
-  call orientation_tensor(particles, n_particles, tensor)
-  call jacobi(tensor, values, vectors, nrot)    
-end subroutine eigens_dv
+  real(dp), intent(out) :: values(3), vectors(3, 3)
+  call orientation_tensor(particles, n_particles, vectors)
+  call eigensystem(vectors, values)
+end subroutine
 
 
-!! Makes a cyclic permutation to values and vectors so that the largest of
-!! values is values(3) and the corresponding vector is vectors(:, 3)
+
+!> Makes a cyclic permutation to @p values and @p vectors so that the
+!! largest of values is values(3) and the corresponding vector is
+!! vectors(:, 3).
 !! 
 subroutine cycle_largest_to_3rd(values, vectors)
   real(dp), intent(inout) :: values(3)
@@ -109,10 +102,13 @@ subroutine cycle_largest_to_3rd(values, vectors)
 end subroutine cycle_largest_to_3rd
 
 
-!! Sorts the matrix columns by corresponding value in increasing order.
-!! Implements an insertion sort as presented in introduction to algorithms by
-!! T. H. Cormen et al. 
+!> Sorts the matrix columns by corresponding value in increasing order.
+!! Implements a simple insertion sort as presented in introduction to
+!! algorithms by T. H. Cormen et al. 
 !! 
+!! @param values the keys for the sort.
+!! @param vectors the matrix to be sorted.
+!!
 subroutine sort_by_value(values, vectors)
   real(dp), intent(inout) :: values(3)
   real(dp), intent(inout) :: vectors(3, 3)
