@@ -1,13 +1,12 @@
 module m_shielding
 use nrtype
-use utils, only: rotate_tensor, cross_product
+use utils, only: rotate_tensor, cross_product, horner
 use gblj, only: gblj_r, gblj_get_sigma_0, gblj_init
 use m_constants
 use class_parameterizer !! for initialization
 use lj
 use particlewall
 implicit none
-external horner
 !!
 !! This module implements the calculation of Xe NMR shielding for a 
 !! configuration or "snapshot" of a mixture of Xe and GB particles as defined
@@ -58,8 +57,8 @@ anisotropy_xexe(4) = [ 6274.20005258_dp, -1.20014259_dp,      0.93600894_dp,    
 !! shielding.
 !!
 !! The quantum chemical calculations of Hanni were made in the region
-!! 3...13.5 Å. When the center-to-center distance of two Xe atoms exceeds 13.5 Å 
-!! the shielding is set to zero.
+!! 3...13.5 Å. When the center-to-center distance of two Xe atoms exceeds 
+!! 13.5 Å the shielding is set to zero.
 real(dp), parameter :: xexe_cutoff_A = 13.5_dp
 
 interface xewall_shielding
@@ -73,10 +72,16 @@ end interface
 
 contains
 
+
+!> Initializes the module and the modules this module depends on.
+!! 
+!! @param reader the object responsible for getting the parameters from e.g.
+!! an input file.
+!!
 subroutine init_shielding(reader)
   type(parameterizer), intent(inout) :: reader
   !! The modules below are needed for the ljwall_shielding calculation
-  call initptwall(reader)
+  call particlewall_init(reader)
   call lj_init(reader)   
   call gblj_init(reader)
 end subroutine
@@ -88,8 +93,9 @@ end subroutine
 !! of the GB particle defines the z-axis and the perpendicular component of the
 !! interparticle distance vector defines the x-axis.
 !! 
-!! @p x the x coordinate of the Xe atom in the local axis system
-!! @p z the z coordinate of the Xe atom in the local axis system
+!! @param x,z the x and z coordinates of the Xe atom in the local axis system.
+!!
+!! @return the contribution of one GB particle to the 129Xe shielding tensor.
 !!
 pure function gbxe_shielding_local(x, z) result(local_tensor)
   real(dp), intent(in) :: x, z
@@ -116,7 +122,7 @@ end function
 
 !> Calculates the NMR shielding tensor for two 129/131Xe atoms. 
 !!
-!! @p r is the center-to-center distance of the atoms.
+!! @param rij is the center-to-center distance of the atoms.
 !!
 pure function xexe_shielding_local(rij) result(local_tensor)
   real(dp), intent(in) :: rij
@@ -137,10 +143,10 @@ end function
 
 !> Implements the function (17) from the paper by Lintuvuori et al. 
 !! 
-!! @p r the distance
-!! @p a the parameter A and polynomial coefficients in an array 
+!! @param r the distance
+!! @param a the parameter A and polynomial coefficients in an array 
 !!    [A, p_A0, p_A1,...]
-!! @p b the parameter B and polynomial coefficients in an array 
+!! @param b the parameter B and polynomial coefficients in an array 
 !!    [B, p_B0, p_B1,...] 
 !!
 pure function sigma(r, a, b) result(res)
@@ -148,21 +154,12 @@ pure function sigma(r, a, b) result(res)
   real(dp), intent(in) :: a(:)
   real(dp), intent(in), optional :: b(:)
   real(dp) :: res
-  interface
-  pure function horner(a, n, x)
-    use nrtype
-    real(dp), dimension(:), intent(in) :: a
-    integer, intent(in) :: n 
-    real(dp), intent(in) :: x
-    real(dp) :: horner
-  end function horner
-  end interface
-  res = a(1) / (r**horner(a(size(a):2:-1), size(a) - 1, r))
-  if (present(b)) res = res + b(1) / r**horner(b(size(b):2:-1), size(b) - 1, R)
+  res = a(1) / (r**horner(a(size(a):2:-1), r))
+  if (present(b)) res = res + b(1) / r**horner(b(size(b):2:-1), R)
 end function
 
 
-!! Returns the contribution of a smooth, cylindrical Lennard-Jones wall to the
+!> Returns the contribution of a smooth, cylindrical Lennard-Jones wall to the
 !! nuclear shielding of a Xe atom. Transforms the units to aengstroms (Å) 
 !! before passing the actual computation to the function xewall_shielding. 
 !!
@@ -172,8 +169,8 @@ end function
 !!
 !! @see module particlewall
 !!
-!! @p r the distance of the Xe atom from the cylinder axis.
-!! @p radius the inner radius of the cylindrical wall.
+!! @param r the distance of the Xe atom from the cylinder axis.
+!! @param radius the inner radius of the cylindrical wall.
 !!
 !! @return the Xe-wall shielding tensor.
 !!
