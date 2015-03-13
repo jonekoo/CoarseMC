@@ -1,4 +1,4 @@
-!! Usage: program < configuration_file
+!> Usage: program < configuration_file
 !!
 !! Program reads the given file configuration by configuration. a For each 
 !! configuration it calls the routines calculate and print which redirects
@@ -24,7 +24,7 @@ program analysis
   real(dp), dimension(3) :: values
   real(dp), dimension(3, 3) :: vectors
   do  
-    call readstate(afactory, stdin, simbox, particles, io_status)
+    call factory_readstate(afactory, stdin, simbox, particles, io_status)
     if (io_status < 0) then
       exit
     else
