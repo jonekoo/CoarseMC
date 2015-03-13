@@ -10,7 +10,8 @@ program analysis
   use io, only: ReadParams
   use particlewall, only: initptwall
   use gayberne, only: gayberne_init => init
-  use particle, only: particledat, initParticle
+  use particle, only: particledat
+  use particle_mover, only: initParticle
   use cylinder, only: initcylinder
   use verlet, only: initvlist, freevlist
   use energy, only: total_energy
