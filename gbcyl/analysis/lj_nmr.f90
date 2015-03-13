@@ -44,7 +44,7 @@ contains
 
 subroutine lj_nmr_init(reader)
   type(parameterizer), intent(in) :: reader
-  call initptwall(reader)
+  call particlewall_init(reader)
   call gblj_init(reader)
   call lj_init(reader)
 end subroutine
