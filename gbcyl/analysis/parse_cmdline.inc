@@ -7,7 +7,8 @@ subroutine parse_cmdline(cmd_line)
   !! Remove program name from cmd_line
   call splitstr(cmd_line, " ", args)
   call join(args(2:), "", temp)
-  if (trim(adjustl(temp)) == '--help' .or. args(2) == '-h' .or. args(2) == 'help' .or. args(2) == 'h') then
+  if (temp == '--help' .or. temp == '-h' .or. &
+  temp == 'help' .or. temp == 'h') then
      call print_help
      stop
   else
@@ -15,7 +16,7 @@ subroutine parse_cmdline(cmd_line)
      read(temp, NML = cmd, iostat = ios, iomsg = message)
      if (ios /= 0) then
         write(*, *) "ERROR: ", ios
-        write(*, *) message
+        write(*, *) trim(adjustl(message))
      end if
   end if
 end subroutine
