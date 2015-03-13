@@ -19,7 +19,6 @@
 !! ./cylhist --help 
 !! 
 program cylhist
-  use state_reader
   use nrtype
   use particle
   use orientational_ordering
@@ -58,7 +57,6 @@ program cylhist
   character(len=200) :: tau1_file = ''
   character(len=200) :: density_file = ''
   character(len=200) :: n_file = ''
-  character(len=200) :: xe_shielding_file = ''
 
   integer :: configuration_unit
   integer :: psi6_unit 
@@ -69,7 +67,6 @@ program cylhist
   integer :: tau1_unit
   integer :: density_unit
   integer :: n_unit
-  integer :: xe_shielding_unit
   character(80) :: particletype = 'gb'
 
   namelist /cmd/ bin_width, cutoff, psi6_file, smcpsi6_file, &
@@ -89,7 +86,6 @@ program cylhist
   real(sp) :: smctau1_value
   real(sp) :: layer_distance
   real(sp) :: smclayer_distance
-  real(dp) :: xe_shielding_tensor
   real(sp), dimension(3), parameter :: z_axis=(/0._sp, 0._sp, 1._sp/)
 
   !! Parameters to control which observables are calculated and written.
@@ -101,7 +97,6 @@ program cylhist
   logical :: write_density = .false.
   logical :: write_tau1 = .false.
   logical :: write_particle_count = .false.
-  logical :: write_xe_shielding = .false.
 
   type(poly_box) :: simbox
   type(factory) :: afactory
@@ -177,7 +172,7 @@ program cylhist
 
   i_conf = 0
   do  
-    call readstate(afactory, configuration_unit, simbox, temp, io_status)
+    call factory_readstate(afactory, configuration_unit, simbox, temp, io_status)
     if (io_status /= 0) then
       exit
     end if
@@ -279,7 +274,7 @@ program cylhist
 
     !! Solve bin indices for all the particles
     if (binning_direction == -1) then
-      call bin_indices(particles, n_particles, xfunc, bin_width, indices,&
+      call bin_indices(particles, n_particles, xfunc, bin_width, indices, &
       getx(simbox)/2._dp, binning_direction)
     else 
       call bin_indices(particles, n_particles, xfunc, bin_width, indices)
