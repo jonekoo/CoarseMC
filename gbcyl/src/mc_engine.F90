@@ -99,7 +99,8 @@ subroutine mce_init(id, n_tasks)
   parameterinputfile='inputparameters.'//trim(adjustl(idchar))
   parameterreader = new_parameterizer(parameterinputfile, iostat=ios)
   if (ios/=0) then
-    write(*,*) 'Could not open ', parameterinputfile, '. Stopping.'
+    write(*,*) 'Could not open ' // trim(adjustl(parameterinputfile)) // &
+         '. Stopping.'
     stop
   end if
   !$ n_threads = omp_get_max_threads()
@@ -144,9 +145,11 @@ subroutine mce_init(id, n_tasks)
   !! Read geometry
   coordinateunit = fileunit_getfreeunit()
   statefile = 'inputconfiguration.'//trim(adjustl(idchar))
-  open(file=statefile, unit=coordinateunit, action='READ', status='OLD', iostat=ios)
-  call factory_readstate(coordinatereader, coordinateunit, simbox, particles, ios)
-  if (0/=ios) then 
+  open(file=statefile, unit=coordinateunit, action='READ', status='OLD',&
+       iostat=ios)
+  call factory_readstate(coordinatereader, coordinateunit, simbox, particles,&
+       ios)
+  if (0 /= ios) then 
     write(*, *) 'Error ', ios,' reading ', statefile, ' Stopping.' 
     stop
   end if
