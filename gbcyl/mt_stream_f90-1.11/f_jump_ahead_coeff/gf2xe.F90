@@ -180,9 +180,9 @@ subroutine gf2x_print_bit(this)
     ib = mod(i,32)
     iw = i/32
     if (BTEST(this%c(iw),ib)) then
-      write(*,'("1",$)')
+      write(*,'("1")', advance='no')
     else
-      write(*,'("0",$)')
+      write(*,'("0")', advance='no')
     endif
   enddo
   write(*,'("")')
@@ -200,9 +200,9 @@ subroutine gf2x_print_hex(this)
   isize = get_size(this%deg)
   i = isize-1
   write(str,'(Z8)')this%c(i)
-  write(*,'(A,$)')TRIM(ADJUSTL(str))
+  write(*,'(A)', advance='no')TRIM(ADJUSTL(str))
   do i=isize-2,0,-1
-    write(*,'(Z8.8,$)')this%c(i)
+    write(*,'(Z8.8)', advance='no')this%c(i)
   enddo
   write(*,'("")')
   return
@@ -1047,7 +1047,7 @@ pure subroutine square_i32(a,ch,cl)
   integer(INT64) :: da,dc
   da = a
   if (da < 0) da = da + 2_8**32 ! convert to unsigned
-  dc = Z'0'
+  dc = int(Z'0', INT64)
   ia = deg_i32(a)
   do i = 0,ia
     if (BTEST(a,i)) then
@@ -1064,9 +1064,9 @@ pure subroutine mult_i32(a,b,ch,cl)
   integer(INT32), intent(in) :: a,b
   integer(INT32), intent(out) :: ch,cl  ! (ch,cl) = a*b
   integer(INT32) :: tmp,u(0:3)
-  integer(INT32), parameter :: ZE = Z'eeeeeeee'
-  integer(INT32), parameter :: ZC = Z'cccccccc'
-  integer(INT32), parameter :: Z8 = Z'88888888'
+  integer(INT32), parameter :: ZE = int(Z'eeeeeeee', INT32)
+  integer(INT32), parameter :: ZC = int(Z'cccccccc', INT32)
+  integer(INT32), parameter :: Z8 = int(Z'88888888', INT32)
 
   if (a==0 .or. b ==0) then
     ch = 0
@@ -1122,7 +1122,7 @@ pure subroutine mult_i32_old(a,b,ch,cl)
   if (db < 0) db = db + 2_8**32 ! convert to unsigned
   ia = deg_i32(a)
   ib = deg_i32(b)
-  dc = Z'0'
+  dc = int(Z'0', INT64)
   do i = 0,ia
     if (BTEST(a,i)) then
       dc = IEOR(dc,db)
