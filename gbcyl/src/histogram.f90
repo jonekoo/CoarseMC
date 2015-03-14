@@ -1,20 +1,65 @@
 module histogram
+use nrtype
+use particle
+use xfunc_module, only: rho
+implicit none
+private
+
+real(dp), save :: bin_width_
+integer, save :: n_bins_
+logical, save :: uniform_volume_
+real(dp), allocatable, save :: boundaries_(:)
+real(dp), allocatable, save :: weighted_midpoints_(:)
+
+public :: bin_indices, bin_indices_w_init, bin_indices_uniform_width, init_histogram
+public :: bin_base_area
+
+interface bin_indices
+   module procedure bin_indices_w_init, bin_indices_uniform_width
+end interface
 
 contains
 
+subroutine init_histogram(bin_width, n_bins, uniform_volume)
+  real(dp), intent(in) :: bin_width
+  integer, intent(in) :: n_bins
+  logical, intent(in) :: uniform_volume
+  bin_width_ = bin_width
+  n_bins_ = n_bins
+  uniform_volume_ = uniform_volume
 
+  if (uniform_volume) then
+     allocate(boundaries_(n_bins + 1), weighted_midpoints_(n_bins))
+     call boundaries_uniform_volume(bin_width_, boundaries_, &
+          weighted_midpoints_)
+  end if
+end subroutine
+  
 
-!! Collects the particles having the index @p i_bin in @p bin_indices 
+pure function bin_base_area(i_bin)
+  integer, intent(in) :: i_bin
+  real(dp) :: bin_base_area
+  if (uniform_volume_) then
+     bin_base_area =  4 * atan(1._dp) * &
+          (boundaries_(i_bin + 1)**2 - boundaries_(i_bin)**2)
+  else
+     bin_base_area = 4 * atan(1._dp) * &
+          ((i_bin * bin_width_)**2 - ((i_bin - 1) * bin_width_)**2)
+  end if
+end function
+
+!> Collects the particles having the index @p i_bin in @p bin_indices
 !!
-!! @p particles the array of particles to collect from
-!! @p n_particles the number of particles in the array
-!! @p bin_indices contains the bin indices corresponding to the particles
-!! @p i_bin the index of the bin to be collected
-!! @p bin_particles the collected particles
-!! @p n_bin_particles number of particles in the bin
+!! @param particles the array of particles to collect from
+!! @param n_particles the number of particles in the array
+!! @param bin_indices contains the bin indices corresponding to the
+!! particles
+!! @param i_bin the index of the bin to be collected
+!! @param bin_particles the collected particles
+!! @param n_bin_particles number of particles in the bin
 !!
-subroutine make_bin(particles, n_particles, bin_indices, i_bin, bin_particles,&
-n_bin_particles)
+subroutine make_bin(particles, n_particles, bin_indices, i_bin, &
+     bin_particles, n_bin_particles)
 use particle
 implicit none
 type(particledat), dimension(:), intent(in) :: particles
@@ -35,7 +80,8 @@ end subroutine make_bin
 
 
 
-subroutine bin_indices(particles, n_particles, xfunc, bin_width, indices, offset, direction)
+subroutine bin_indices_uniform_width(particles, n_particles, xfunc, &
+     bin_width, indices, offset, direction)
 use nrtype
 use particle
 implicit none
@@ -58,7 +104,8 @@ integer, dimension(:), intent(out) :: indices
   integer :: i_bin
   if (present(offset) .and. present(direction)) then
     do i=1, n_particles
-      i_bin=int((offset + real(direction, dp) * xfunc(particles(i))) / bin_width) + 1
+      i_bin=int((offset + real(direction, dp) * xfunc(particles(i))) / &
+           bin_width) + 1
       indices(i)=i_bin
     end do
   else 
@@ -67,6 +114,88 @@ integer, dimension(:), intent(out) :: indices
       indices(i)=i_bin
     end do
   end if
-end subroutine bin_indices
+end subroutine
+
+
+!! Assumes binning_direction_ = 1!
+elemental function bin_index(particle)
+  type(particledat), intent(in) :: particle
+  integer :: bin_index, j
+  bin_index = -1
+  do j = 1, size(boundaries_)
+     !! Yes this is probably slow O(size(boundaries)) and e.g. a binary 
+     !! search or sorting the particles could do better.
+     if (boundaries_(j + 1) > sqrt(particle%x**2 + particle%y**2)) &
+          then
+        bin_index = j
+        exit
+     end if
+  end do
+end function
+
+
+subroutine bin_indices_w_init(particles, indices)
+  type(particledat), intent(in) :: particles(:)
+  integer, intent(out) :: indices(size(particles))
+  if (uniform_volume_) then
+     if (allocated(boundaries_)) then 
+        call bin_indices_uniform_volume(particles, boundaries_, indices)
+     else
+        stop 'histogram: bin_indices: Error: Module not initialized. Call ' // &
+          'init first!'
+     end if
+  else
+     call bin_indices(particles, size(particles), rho, bin_width_, indices) 
+  end if
+end subroutine
+
+
+!! Assumes that boundaries are given in ascending order.
+subroutine bin_indices_uniform_volume(particles, boundaries, indices)
+  type(particledat), intent(in) :: particles(:)
+  real(dp), intent(in) :: boundaries(:)
+  integer :: indices(size(particles))
+  integer :: i, j
+  do i = 1, size(particles)
+     do j = 1, size(boundaries)
+        !! Yes this is probably slow O(size(boundaries)) and e.g. a binary 
+        !! search or sorting the particles could do better.
+        if (boundaries(j + 1) > sqrt(particles(i)%x**2 + particles(i)%y**2)) &
+             then
+           indices(i) = j
+           exit
+        end if
+     end do
+  end do
+end subroutine
+
+
+subroutine boundaries_uniform_volume(first_radius, boundaries, &
+     weighted_midpoints)
+  real(dp), intent(in) :: first_radius
+  real(dp), intent(out) :: boundaries(:)
+  real(dp), intent(out), optional :: weighted_midpoints(:)
+  integer :: i
+  i = 1
+  boundaries(i) = 0._dp
+  do i = 1, size(boundaries) - 1
+     boundaries(i + 1) = sqrt(boundaries(i)**2 + first_radius**2)
+  end do
+
+  if (present(weighted_midpoints)) then
+     call volume_weighted_midpoints(boundaries, weighted_midpoints)
+  end if
+end subroutine
+
+
+subroutine volume_weighted_midpoints(boundaries, midpoints)
+  real(dp), intent(in) :: boundaries(:)
+  real(dp), intent(out) :: midpoints(:)
+  integer :: i
+  do i = 1, size(boundaries) - 1
+     midpoints(i) = 2._dp/3._dp * (boundaries(i + 1)**3 - boundaries(i)**3) / &
+          (boundaries(i + 1)**2 - boundaries(i)**2)
+  end do
+end subroutine
 
 end module histogram
