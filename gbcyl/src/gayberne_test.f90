@@ -55,7 +55,7 @@ subroutine test_zero_at_cross_contact
   logical :: overlap
   rij = (/0.0_dp, 0.0_dp, sigma_0/)
   call gayberne_init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
-  call potential(ui, uj, rij, e_gb, overlap)
+  call gb_potential(ui, uj, rij, e_gb, overlap)
   call assert_comparable(0._dp, real(e_gb, dp), margin, &
   'Zero at cross contact')
   call assert_false(overlap, 'Overlap is false')
@@ -119,7 +119,7 @@ subroutine test_reduces_to_lennard_jones
   lj_6 = (sigma_0 / r_absolute)**6
   lj_potential = 4._dp * epsilon_0 * lj_6 * (lj_6 - 1._dp)
   call gayberne_init(1._dp, 1._dp, 6.234_dp, 2.84687_dp, sigma_0, epsilon_0)
-  call potential(ui, uj, rij, e_gb, overlap)
+  call gb_potential(ui, uj, rij, e_gb, overlap)
   call assert_comparable(lj_potential, e_gb, margin, &
   "Reduces to Lennard-Jones.")
   call assert_false(overlap, "Overlap is false.")
@@ -134,7 +134,7 @@ subroutine test_ssderivative
   logical :: overlap
   call gayberne_init(kappasigma, kappaepsilon, mu, nu, sigma0, epsilon0)
   deriv = d_potential(ez, ez, ex*sigma0, 1)
-  call potential(ez, ez, ex*sigma0, energy, overlap)
+  call gb_potential(ez, ez, ex*sigma0, energy, overlap)
   call assert_comparable(deriv/energy, -6._dp*sigma0, margin, "Side-by-side derivative ok.")
 end subroutine
 
@@ -161,7 +161,7 @@ subroutine test_small_separation
   call gayberne_init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
   uj = ui
   rij = (/0.0_dp, r_absolute, 0.0_dp/)
-  call potential(ui, uj, rij, e_gb, overlap)
+  call gb_potential(ui, uj, rij, e_gb, overlap)
   call assert_true(overlap, "Overlap at small separation.")
 end subroutine
 
@@ -181,7 +181,7 @@ subroutine test_normalop
   logical :: overlap
   real(dp) :: khi
   call gayberne_init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
-  call potential(ui, ui, rij, e_gb, overlap)
+  call gb_potential(ui, ui, rij, e_gb, overlap)
   expected = 4._dp * (dot_product(rij, rij)**(-6) - &
   dot_product(rij, rij)**(-3))
   khi = (kappa_sigma**2 - 1._dp)/(kappa_sigma**2 + 1._dp)
@@ -235,8 +235,8 @@ subroutine test_forcevsfinitedifference
   real(dp) :: force, energy1, energy0
   real(dp),dimension(3) :: gradient
   call gayberne_init(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
-  call potential(ez, uj, r0, energy0, overlap)
-  call potential(ez, uj, r1, energy1, overlap)
+  call gb_potential(ez, uj, r0, energy0, overlap)
+  call gb_potential(ez, uj, r1, energy1, overlap)
   force= d_potential(ez, uj, r0+0.5_dp*dr*ex, 1)
   call assert_comparable(force, (energy1-energy0)/dr, margin, "Force comparable "//&
   "to finite difference approximation.")
