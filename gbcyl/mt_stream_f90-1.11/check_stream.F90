@@ -39,7 +39,9 @@ program testdc
   do i=1,1000
     rr = genrand_double1(mts(0))
     sum = sum + rr
-    write(*,'("@ ",Z16,F19.16)')rr,rr
+!! the transfer was not always there and it is not sure whether the original
+!! author really meant this but it seems to work. 
+    write(*,'("@ ",Z16,F19.16)') transfer(rr,jj),rr
   enddo
   write(*,'("@ total sum of double1 ",ES22.16)')sum
 
@@ -48,7 +50,9 @@ program testdc
   do i=1,1000
     rr = genrand_double2(mts(0))
     sum = sum + rr
-    write(*,'("@ ",Z16,F19.16)')rr,rr
+!! the transfer was not always there and it is not sure whether the original
+!! author really meant this but it seems to work. 
+    write(*,'("@ ",Z16,F19.16)') transfer(rr, jj),rr
   enddo
   write(*,'("@ total sum of double2 ",ES22.16)')sum
 
@@ -57,7 +61,9 @@ program testdc
   do i=1,1000
     rr = genrand_double3(mts(0))
     sum = sum + rr
-    write(*,'("@ ",Z16,F19.16)')rr,rr
+!! the transfer was not always there and it is not sure whether the original
+!! author really meant this but it seems to work. 
+    write(*,'("@ ",Z16,F19.16)')transfer(rr, jj),rr
   enddo
   write(*,'("@ total sum of double3 ",ES22.16)')sum
 
@@ -66,7 +72,9 @@ program testdc
   do i=1,1000
     rr = genrand_double4(mts(0))
     sum = sum + rr
-    write(*,'("@ ",Z16,F19.16)')rr,rr
+!! the transfer was not always there and it is not sure whether the original
+!! author really meant this but it seems to work.
+    write(*,'("@ ",Z16,F19.16)')transfer(rr, jj),rr
   enddo
   write(*,'("@ total sum of double4 ",ES22.16)')sum
 
