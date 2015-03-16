@@ -554,23 +554,25 @@ test_simplelist_with_openmp_SOURCES = \
   ${energy_src} \
   test_simplelist_with_openmp.f90
 
-testrunner_SOURCES = \
-  num_kind.f90 \
-  m_fileunit.f90 \
-  utils.f90 \
-  utils_test.f90 \
-  class_parameterizer.f90 \
-  rng.inc mtfort90.f90  \
-  class_parameter_writer.f90 \
-  gayberne.f90 \
-  gayberne_test.f90 \
-  particle.f90 \
-  particle_test.f90 \
-  class_poly_box.f90 \
-  class_poly_box_test.f90 \
-  class_factory.f90 \
-  class_factory_test.f90 \
-  testrunner.f90 
+#testrunner_SOURCES = \
+#  num_kind.f90 \
+#  m_fileunit.f90 \
+#  utils.f90 \
+#  utils_test.f90 \
+#  class_parameterizer.f90 \
+#  rng.inc mtfort90.f90  \
+#  class_parameter_writer.f90 \
+#  gayberne.f90 \
+#  gayberne_test.f90 \
+#  particle.f90 \
+#  particle_test.f90 \
+#  class_poly_box.f90 \
+#  class_poly_box_test.f90 \
+#  class_factory.f90 \
+#  class_factory_test.f90 \
+#  testrunner.f90 
+
+if PFUNIT
 
 driver_SOURCES = \
   num_kind.f90 \
@@ -590,20 +592,17 @@ driver_SOURCES = \
   class_simplelist_pfunit.f90 \
   driver.F90  
 
-PFUNIT_DIR=${top_builddir}/pFUnit
 
-driver_FCFLAGS = ${FCFLAGS} -I${PFUNIT_DIR}/mod \
-	-I${top_builddir}/mt_stream_f90-1.11
+AM_FCFLAGS+=-I${PFUNIT_DIR}/mod
+
 driver_LDADD = ${PFUNIT_DIR}/lib/libpfunit.a ${ldadd_mtstream}
 
-testrunner_FCFLAGS = ${FCFLAGS} -I${top_builddir}/ftnunit \
-	-I${top_builddir}/mt_stream_f90-1.11
-
-testrunner_LDADD = ${top_builddir}/ftnunit/libftnunit.a ${ldadd_mtstream}
+#testrunner_LDADD = ${top_builddir}/ftnunit/libftnunit.a ${ldadd_mtstream}
 
 TESTS = driver
-dist_check_SCRIPTS = ${top_builddir}/ftnunit/runtests.sh
-check_PROGRAMS = testrunner driver 
+#dist_check_SCRIPTS = ${top_builddir}/ftnunit/runtests.sh
+check_PROGRAMS = driver #testrunner
+endif
 
 MODEXT = @MODEXT@
 

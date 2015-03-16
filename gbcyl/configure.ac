@@ -31,6 +31,24 @@ DX_PS_FEATURE(OFF)
 DX_INIT_DOXYGEN([$PACKAGE_NAME], doxygen.cfg, doxygen-doc)
 
 
+AC_ARG_ENABLE([pfunit],
+[  --enable-pfunit Turn on tests with pFUnit],
+[case "${enableval}" in
+  yes) pfunit=true ;;
+  no)  pfunit=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-pfunit]) ;;
+esac], [pfunit=false])
+AM_CONDITIONAL([PFUNIT], [test x$pfunit = xtrue])
+
+AC_ARG_ENABLE([mttests],
+[  --enable-mttests Turn on mt_stream_f90 tests.],
+[case "${enableval}" in
+  yes) mttests=true ;;
+  no)  mttests=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-mttests]) ;;
+esac], [mttests=false])
+AM_CONDITIONAL([MT_TESTS], [test x$mttests = xtrue])
+
 AC_CONFIG_FILES([
 Makefile
 mt_stream_f90-1.11/Makefile
