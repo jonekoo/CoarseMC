@@ -39,7 +39,7 @@
 	    "type":"LJ",
 	    "parameters":{
 		"epsilon_0":1.0,
-		"sigma_0":0.869,
+		"sigma_0":0.869
 	    }
 	},
 	{
@@ -91,7 +91,7 @@
 	    "group_coordinates":{
 	        "x":[0.0],
 		"y":[0.3],
-		"z":[-0.1],
+		"z":[-0.1]
 	    }
 	}		 
     ]
