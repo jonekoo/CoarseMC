@@ -593,7 +593,7 @@ driver_SOURCES = \
   driver.F90  
 
 
-AM_FCFLAGS+=-I${PFUNIT_DIR}/mod
+driver_FCFLAGS = -I${PFUNIT_DIR}/mod
 
 driver_LDADD = ${PFUNIT_DIR}/lib/libpfunit.a ${ldadd_mtstream}
 
