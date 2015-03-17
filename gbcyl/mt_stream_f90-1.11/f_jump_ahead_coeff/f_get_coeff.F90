@@ -1,4 +1,9 @@
+
+#ifdef _DEBUG_
+subroutine f_get_coeff(nn,mm,rr,ww,avec,nj,id,pp,np)
+#else
 pure subroutine f_get_coeff(nn,mm,rr,ww,avec,nj,id,pp,np)
+#endif
 !===============================================================================
 ! Compute MT jump ahead polynomial coefficients
 ! uses GF(2)[x] computation
@@ -41,8 +46,10 @@ pure subroutine f_get_coeff(nn,mm,rr,ww,avec,nj,id,pp,np)
   enddo
 
 #ifdef _DEBUG_
-  write(*,'("@",$)')
-  call print_hex(ff)
+!  !! Formatting changed by JK to conform to standard.
+!  !! Commented out by JK since these don't seem to be included in sample_1.out
+!  write(*,'("@")', advance='no')
+!  call print_hex(ff)
 #endif
 
   call delete(af)
@@ -65,8 +72,10 @@ pure subroutine f_get_coeff(nn,mm,rr,ww,avec,nj,id,pp,np)
   call gf2x_pow_pow_2(f1,nj,fp)   ! f1 = x**(2**nj) mod fp
 
 #ifdef _DEBUG_
-  write(*,'("@",$)')
-  call print_hex(f1)
+!  !! Formatting changed by JK to conform to standard.
+!  !! Commented out by JK since these don't seem to be included in sample_1.out
+!  write(*,'("@")', advance='no')
+!  call print_hex(f1)
 #endif
 
 !===============
@@ -75,8 +84,10 @@ pure subroutine f_get_coeff(nn,mm,rr,ww,avec,nj,id,pp,np)
   call pow(ff,f1,id,fp) ! ff = f1**id mod fp
 
 #ifdef _DEBUG_
-  write(*,'("@",$)')
-  call print_hex(ff)
+!  !! Formatting changed by JK to conform to standard.
+!  !! Commented out by JK since these don't seem to be included in sample_1.out
+!  write(*,'("@")', advance='no')
+!  call print_hex(ff)
 #endif
 
   pp(:) = 0
