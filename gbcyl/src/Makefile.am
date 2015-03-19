@@ -165,7 +165,6 @@ xe_nmr_SOURCES = \
   orientational_ordering.f90 \
   ${eigens_src} \
   m_rank2_tensor.f90 \
-  cylinder_integrals.f90 \
   xewall_shielding.f90 \
   class_parameterizer.f90 \
   class_parameter_writer.f90 \
@@ -187,7 +186,6 @@ xe_nmr_profile_SOURCES = \
   orientational_ordering.f90 \
   ${eigens_src} \
   m_rank2_tensor.f90 \
-  cylinder_integrals.f90 \
   xewall_shielding.f90 \
   m_constants.f90 \
   m_shielding.f90 \
@@ -211,7 +209,6 @@ xe_nmr_profile2_SOURCES = \
   orientational_ordering.f90 \
   ${eigens_src} \
   m_rank2_tensor.f90 \
-  cylinder_integrals.f90 \
   xewall_shielding.f90 \
   class_parameterizer.f90 \
   class_parameter_writer.f90 \
@@ -235,7 +232,6 @@ print_xewall_coupling_SOURCES = \
   orientational_ordering.f90 \
   ${eigens_src} \
   m_rank2_tensor.f90 \
-  cylinder_integrals.f90 \
   xewall_shielding.f90 \
   class_parameterizer.f90 \
   class_parameter_writer.f90 \
@@ -255,7 +251,6 @@ print_xewall_shielding_SOURCES = \
   orientational_ordering.f90 \
   ${eigens_src} \
   m_rank2_tensor.f90 \
-  cylinder_integrals.f90 \
   xewall_shielding.f90 \
   class_parameterizer.f90 \
   class_parameter_writer.f90 \
@@ -273,7 +268,6 @@ print_xeslab_shielding_SOURCES = \
   orientational_ordering.f90 \
   ${eigens_src} \
   m_rank2_tensor.f90 \
-  cylinder_integrals.f90 \
   xewall_shielding.f90 \
   class_parameterizer.f90 \
   class_parameter_writer.f90 \
@@ -291,7 +285,6 @@ print_gbxe_qcoupling_SOURCES = \
   orientational_ordering.f90 \
   ${eigens_src} \
   m_rank2_tensor.f90 \
-  cylinder_integrals.f90 \
   xewall_shielding.f90 \
   class_parameterizer.f90 \
   class_parameter_writer.f90 \
@@ -311,7 +304,6 @@ print_gbxe_shielding_SOURCES = \
   orientational_ordering.f90 \
   ${eigens_src} \
   m_rank2_tensor.f90 \
-  cylinder_integrals.f90 \
   xewall_shielding.f90 \
   class_parameterizer.f90 \
   class_parameter_writer.f90 \
