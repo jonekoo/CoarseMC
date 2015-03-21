@@ -619,4 +619,7 @@ subroutine test_configuration()
   end if
 end subroutine test_configuration
 
+
+!include 'map_and_reduce.f90'
+
 end module mc_sweep
