@@ -68,3 +68,69 @@ end subroutine map
 
 
 
+!> Computes the total @p energy of the system. Interactions are computed
+!! cell-by-cell for the @p particles in the cell list @p sl. @p simbox
+!! is the simulation cell. If any two particles are too close to each
+!! other, @p overlap is true. 
+subroutine pair_reduce(sl, particles, accumulate, energy, overlap)
+  type(simplelist), intent(in) :: sl
+  !type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:), intent(in) :: particles
+  real(dp), intent(out) :: energy
+  interface
+     subroutine accumulate(p, others, energy, overlap)
+       use particle
+       implicit none
+       type(particledat), intent(in) :: p, others(:)
+       real(dp), intent(out) :: energy
+       logical, intent(out) :: overlap
+     end subroutine accumulate
+  end interface
+       
+  logical, intent(out) :: overlap 
+  integer :: i, j, ix, iy, iz
+  logical :: mask(size(particles))
+  real(dp) :: energy_j
+  logical :: overlap_j
+  integer :: helper(size(particles))
+  integer, allocatable :: temp_helper(:)
+  integer :: n_mask
+  integer :: temp_j
+  type(particledat), allocatable :: temp_particles(:)
+
+  helper = (/(i, i=1, size(particles))/) !! ifort vectorizes
+  energy = 0._dp
+  overlap = .false.
+  
+  !$OMP PARALLEL default(shared) reduction(+:energy) reduction(.or.:overlap)& 
+  !$OMP& private(energy_j, overlap_j, i, j, mask, temp_particles, temp_j, temp_helper, n_mask)
+  allocate(temp_particles(size(particles)), temp_helper(size(particles))) 
+  !$OMP DO collapse(3) schedule(dynamic)
+  do ix=0, sl%nx-1 
+  do iy=0, sl%ny-1
+  do iz=0, sl%nz-1
+    call simplelist_nbrmask(sl, simbox, ix, iy, iz, mask)
+    n_mask = count(mask) 
+    temp_particles(1:n_mask) = pack(particles, mask)
+    temp_helper(1:n_mask) = pack(helper, mask)
+    do i = 1, sl%counts(ix, iy, iz)
+      j = sl%indices(i, ix, iy, iz)
+      ! Find position of particles(j) in temp_particles:
+      do temp_j = 1, n_mask 
+         if(temp_helper(temp_j) == j) exit
+      end do
+      call accumulate(temp_particles(temp_j), &
+           temp_particles(temp_j + 1:n_mask), energy_j, overlap_j)
+      overlap = overlap .or. overlap_j 
+      energy = energy + energy_j
+    end do 
+  end do
+  end do
+  end do
+  !$OMP END DO 
+  if (allocated(temp_particles)) deallocate(temp_particles)
+  if (allocated(temp_helper)) deallocate(temp_helper)
+  !$OMP END PARALLEL  
+end subroutine pair_reduce
+
+
