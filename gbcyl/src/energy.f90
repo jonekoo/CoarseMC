@@ -237,7 +237,8 @@ end subroutine simple_singleparticleenergy
 !! @param n_pairs optionally gives the number of pairs to which the
 !!        interactions were computed.
 !! 
-pure subroutine pairinteractions(simbox, particles, i, energy, overlap, n_pairs)
+pure subroutine pairinteractions(simbox, particles, i, energy, overlap,
+  n_pairs)
   type(particledat), dimension(:), intent(in) :: particles
   type(poly_box), intent(in) :: simbox
   integer, intent(in) :: i
@@ -259,8 +260,9 @@ pure subroutine pairinteractions(simbox, particles, i, energy, overlap, n_pairs)
   !! Select the calculated interactions by cutoff already here
   do j = 1, nparticles
      !! :NOTE: The chosen way is better than
-     !! :NOTE: rij = minimage(simbox, position(particlei), position(particlej))
-     !! It is significantly faster to use direct references to particle coordinates.
+     !! :NOTE: rij = minimage(simbox, position(particlei), 
+     !! position(particlej)) It is significantly faster to use direct
+     !! references to particle coordinates.
      rijs(:, j) = minimage(simbox, (/particles(j)%x-particles(i)%x,& 
           particles(j)%y-particles(i)%y, particles(j)%z-particles(i)%z/))
   end do !! ifort does not vectorize
@@ -298,7 +300,8 @@ end subroutine pairinteractions
 !! @param n_pairs optionally gives the number of pair interactions
 !!        computed.
 !!
-pure subroutine allpairinteractions(simbox, particles, energy, overlap, n_pairs)
+pure subroutine allpairinteractions(simbox, particles, energy, overlap, &
+     n_pairs)
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
   real(dp), intent(out) :: energy
@@ -328,5 +331,33 @@ pure subroutine allpairinteractions(simbox, particles, energy, overlap, n_pairs)
   end do
 end subroutine allpairinteractions
 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! Prototypes below here.                                            !!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine total_by_reduce(sl, simbox, particles, energy, overlap)
+  type(simplelist), intent(in) :: sl
+  type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:), intent(in) :: particles
+  real(dp), intent(out) :: energy
+  logical, intent(out) :: overlap 
+  interface
+     pure subroutine singleenergy(simbox, particles, i, energy, overlap)
+       use class_poly_box
+       use particle
+       use nrtype, only: dp
+       implicit none
+       type(poly_box), intent(in) :: simbox
+       type(particledat), intent(in) :: particles(:)
+       integer, intent(in) :: i
+       real(dp), intent(out) :: energy
+       logical, intent(out) :: overlap
+     end subroutine singleenergy
+  end interface
+  procedure(singleenergy), pointer :: single
+  single => simple_singleparticleenergy
+  call pair_reduce(sl, simbox, particles, single, energy, overlap)
+end subroutine
 
 end module
