@@ -445,10 +445,12 @@ subroutine movevol(simbox, particles, scalingtype, genstate)
   
   !! It seems that total energy may drift if it is not updated here:
   call totalenergy(sl, simbox, particles, etotal, overlap)
-  if (overlap) stop 'movevol: overlap in old configuration! Should never happen!'
+  if (overlap) stop 'movevol: overlap in old configuration! '//&
+       'Should never happen!'
   
   !! Scale coordinates and the simulations box
-  scaling = genvoltrial_scale(simbox, maxscaling, genstate, trim(adjustl(scalingtype)))
+  scaling = genvoltrial_scale(simbox, maxscaling, genstate, &
+       trim(adjustl(scalingtype)))
   call scalepositions(oldbox, simbox, particles, nparticles) 
   Vn = volume(simbox)
   
