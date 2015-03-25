@@ -9,9 +9,8 @@ class(rodgroup), allocatable, target :: solvent
 class(spheregroup), allocatable, target :: solute
 
 !! connect the groups with interactions
-solvent%add_interaction(gblj_rods(solute))
+call solvent%add_interaction(gblj_rods(solute))
+call solute%add_interaction(gblj_spheres(solvent))
 !! run simulation
-
-
 
 end program
