@@ -237,8 +237,8 @@ end subroutine simple_singleparticleenergy
 !! @param n_pairs optionally gives the number of pairs to which the
 !!        interactions were computed.
 !! 
-pure subroutine pairinteractions(simbox, particles, i, energy, overlap,
-  n_pairs)
+pure subroutine pairinteractions(simbox, particles, i, energy, overlap, &
+     n_pairs)
   type(particledat), dimension(:), intent(in) :: particles
   type(poly_box), intent(in) :: simbox
   integer, intent(in) :: i
