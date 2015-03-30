@@ -1,0 +1,11 @@
+{"groups":
+[{"name":"solvent",
+  "type":"rodgroup",
+  "size": 2,
+  "positions": [[0.0, 0.0, 0.1], [0.0, 0.0, 0.2]],
+  "orientations": [[0, 0, 1],[0, 1, 0]]},
+ {"name":"solute",
+  "type":"particlegroup",
+  "size": 1,
+  "positions": [[0.3, 0.3, 0.3]]}]
+}
