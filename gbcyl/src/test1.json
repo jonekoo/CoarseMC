@@ -1,0 +1,99 @@
+{
+    "interactions":[
+        {
+            "participants":[
+                "solvent"
+            ],
+            "type":"Gay-Berne",
+            "parameters":{
+                "epsilon_0":1,
+                "sigma_0":1,
+                "kappa_sigma":4.4,
+                "kappa_epsilon":20.0,
+                "mu":1,
+                "nu":1,
+                "hardcore":0.6,
+		"cutoff": 5.5
+            }
+        },
+        {
+            "participants":[
+                "solvent",
+                "solute"
+            ],
+            "type":"GB-Xe",
+            "parameters":{
+                "epsilon_0":1.55,
+                "sigma_0":0.8,
+                "ee_to_es":0.16,
+                "se_to_ss":3.32,
+                "mu":0.35,
+                "hardcore":0.3,
+		"cutoff": 5.5
+            }
+        },
+	{
+	    "participants":[
+		"solute"
+	    ],
+	    "type":"LJ",
+	    "parameters":{
+		"epsilon_0":1.0,
+		"sigma_0":0.869
+	    }
+	},
+	{
+	    "participants":[
+		"solute",
+		"wall"
+	    ],
+	    "type":"LJ-CylWall",
+	    "parameters":{
+		"epsilon_0":1.0,
+		"sigma_0":0.8,
+		"density":1.0,
+		"attraction":1.0
+	    }
+	},
+	{
+	    "participants":[
+		"solvent",
+		"wall"
+	    ],
+	    "type":"GB-CylWall",
+	    "parameters":{
+		"epsilon_0":1.0,
+		"sigma_0":1.0,
+		"density":1.0,
+		"LJdistance":1.7,
+		"attraction":1.0
+	    }
+	}
+    ],
+    "particle_groups":[
+        {
+            "group_id":"solvent",
+            "particle_type":"rod",
+            "group_size":4,
+            "group_coordinates":{
+                "x":[1.4, -1.2, 4.3, 4.5],
+                "y":[1.4, -1.2, 4.3, 4.5],
+                "z":[1.4, -1.2, 4.3, 4.5],
+                "ux":[0.0, 0.0, 0.0, 0.0],
+                "uy":[0.0, 0.0, 0.0, 0.0],
+                "uz":[1.0, 1.0, 1.0, 1.0]
+            }
+        },
+	{
+	    "group_id":"solute",
+	    "particle_type":"point",
+	    "group_size":1,
+	    "group_coordinates":{
+	        "x":[0.0],
+		"y":[0.3],
+		"z":[-0.1]
+	    }
+	}		 
+    ]
+}
+
