@@ -1,20 +1,33 @@
 module m_particle
   use nrtype
-  use gen_lists
   use json_module
   use iso_fortran_env
   
   type particle
-     type(list) :: interactions
      real(dp) :: position(3) = [0., 0., 0.]
-   contains
-     procedure :: add_interaction => add_gen_ia
-     !   final :: particle_finalize
+     contains
+       procedure :: energy => particle_energy
   end type particle
+
+  type, abstract :: particle_interaction
+   contains
+     procedure(interact), deferred :: value
+  end type particle_interaction
 
   interface particle
      module procedure from_json
   end interface particle
+
+  interface 
+     pure subroutine interact(this, position, res, err)
+       import particle_interaction
+       import REAL64
+       class(particle_interaction), intent(in) :: this
+       real(REAL64), intent(in) :: position(3)
+       real(REAL64), intent(out) :: res
+       integer, intent(out) :: err
+     end subroutine interact
+  end interface
   
 contains
 
@@ -27,17 +40,17 @@ contains
     from_json%position(1:3) = temp(1:3)
   end function from_json
   
-  subroutine add_gen_ia(this, ia)
-    class(particle), intent(inout) :: this
+  elemental subroutine particle_energy(this, ia, res, err)
+    class(particle), intent(in) :: this
     class(*), intent(in) :: ia
-    call this%interactions%add(ia)
-  end subroutine add_gen_ia
-  
-  subroutine particle_finalize(this)
-    type(particle), intent(inout) :: this
-    call this%interactions%finalize()
-  end subroutine particle_finalize
-  
+    real(REAL64), intent(out) :: res
+    integer, intent(out) :: err
+    select type (ia)
+    class is (particle_interaction)
+      call ia%value(this%position, res, err)
+    end select
+  end subroutine particle_energy
+
 end module m_particle
 
 
@@ -45,32 +58,29 @@ end module m_particle
 module m_rod
   use m_particle
   use iso_fortran_env
-  
+
   type, extends(particle) :: rod
      real(dp) :: orientation(3) = [0., 0., 1.]
-   contains
-     procedure :: add_interaction => add_rod_ia
   end type rod
 
   interface rod
      module procedure rod_from_json
   end interface rod
-  
-  
+    
   type, abstract :: rod_interaction
    contains
-     procedure(interact), deferred :: value
+     procedure(interact_with_rod), deferred :: value
   end type rod_interaction
   
   interface
-     subroutine interact(this, position, orientation, res, err)
+     pure subroutine interact_with_rod(this, position, orientation, res, err)
        import dp
        import rod_interaction
        class(rod_interaction), intent(in) :: this
        real(dp), intent(in) :: position(3), orientation(3)
        real(dp), intent(out) :: res
        integer, intent(out) :: err
-     end subroutine interact
+     end subroutine interact_with_rod
   end interface
 
 contains
@@ -84,55 +94,52 @@ contains
     call json_get(json_val, 'orientation', temp, found)
     rod_from_json%orientation(1:3) = temp(1:3)
   end function
-  
-  subroutine add_rod_ia(this, ia)
-    class(rod), intent(inout) :: this
-    class(*), intent(in) :: ia
-    select type(ia)
-    class is (rod_interaction)
-       call this%particle%add_interaction(ia)
-    class default
-       write(error_unit, *) 'Error: Tried to add a non-compatible ' // &
-            'interaction to a rod. Stopping.'
-       stop
-    end select
-  end subroutine add_rod_ia
-  
-  subroutine energy(this, res, err)
-    class(rod), intent(inout) :: this
-    real(dp), intent(out) :: res
+
+  elemental subroutine rod_energy(this, ia, res, err)
+    class(rod), intent(in) :: this
+    class(rod_interaction), intent(in) :: ia
+    real(REAL64), intent(out) :: res
     integer, intent(out) :: err
-    class(*), pointer :: ia
-    real(dp) :: cur
-    res = 0.
-    call this%interactions%iter_restart()
-    do while(.true.)
-       call this%interactions%iter_next(ia)
-       if (.not. associated(ia)) exit
-       select type(ia)
-       class is (rod_interaction)
-          call ia%value(this%position, this%orientation, cur, err)
-          if (err /= 0) exit
-          res = res + cur
-       end select
-    end do
-  end subroutine energy
-  
+    call ia%value(this%position, this%orientation, res, err)
+  end subroutine
+
 end module m_rod
+
+
+
+module m_particle_interaction_lists
+  use m_particle, only: particle_interaction
+  type particle_interaction_ptr
+     class(particle_interaction), pointer :: ptr
+  end type particle_interaction_ptr
+  
+#define TYPEPARAM type(particle_interaction_ptr)
+#include "list-inc-def.f90"
+contains
+#include "list-inc-proc.f90"
+#undef TYPEPARAM
+end module m_particle_interaction_lists
 
 
 
 module m_particlegroup
   use nrtype
-  use gen_lists
   use m_particle
   use json_module
-  
-  type, extends(particle) :: particlegroup
+  use m_particle_interaction_lists, only: &
+       particle_ia_list => list, &
+       particle_interaction_ptr
+  implicit none
+
+  type particlegroup
      character(kind=CK, len=:), allocatable :: name
      real(dp), allocatable :: positions(:, :)
+     type(particle_ia_list) :: particle_interactions
    contains
+     procedure :: add_interaction => add_gen_ia
+     !   final :: particle_finalize
      procedure :: to_json => particlegroup_to_json
+     procedure :: type_str => particlegroup_type_str
   end type particlegroup
   
   interface particlegroup
@@ -184,77 +191,214 @@ contains
   subroutine particlegroup_to_json(this, json_val)
     class(particlegroup), intent(in) :: this
     type(json_value), pointer :: json_val
-    character(kind=CK, len=:), allocatable :: temp_name
+    character(kind=CK, len=:), allocatable :: temp_name, str
     logical :: found
     call json_create_object(json_val, '')
     call json_add(json_val, 'name', this%name)
+    call this%type_str(str)
+    call json_add(json_val, 'type', str)
     call add_3d_points_json(json_val, 'positions', this%positions)
   end subroutine particlegroup_to_json
 
+  subroutine particlegroup_type_str(this, str)
+    class(particlegroup), intent(in) :: this
+    character(kind=CK, len=:), allocatable :: str
+    str = 'particlegroup'
+  end subroutine particlegroup_type_str
+  
   subroutine add_3d_points_json(json_val, name, points)
     type(json_value), pointer, intent(in) :: json_val
     character(kind=CK, len=*), intent(in) :: name
     real(REAL64), intent(in) :: points(:, :)
     type(json_value), pointer :: temp_array => null()
+    integer :: i
     call json_create_array(temp_array, name)
     do i = 1, size(points(1, :)) 
        call json_add(temp_array, '', points(:, i))
     end do
     call json_add(json_val, temp_array)
   end subroutine add_3d_points_json
+
+  subroutine add_gen_ia(this, ia)
+    class(particlegroup), intent(inout) :: this
+    class(particle_interaction), intent(in) :: ia
+    call this%particle_interactions%add(particle_interaction_ptr(ia))
+  end subroutine add_gen_ia
+  
+  subroutine energy(this, aparticle, res, err)
+    class(particlegroup), intent(inout) :: this
+    class(particle), intent(in) :: aparticle
+    real(dp), intent(out) :: res
+    integer, intent(out) :: err
+    type(particle_interaction_ptr), pointer :: ia
+    real(dp) :: cur
+    res = 0.
+    call this%particle_interactions%iter_restart()
+    do while(.true.)
+       ia => this%particle_interactions%iter_next()
+       if (.not. associated(ia)) exit
+       call aparticle%energy(ia%ptr, cur, err)
+       if (err /= 0) exit
+       res = res + cur
+    end do
+  end subroutine energy
+    
+  subroutine particle_finalize(this)
+    type(particlegroup), intent(inout) :: this
+    call this%particle_interactions%finalize()
+  end subroutine particle_finalize
   
 end module m_particlegroup
 
 
+!!example of parametric list usage
+!#define STRING32 32
+module m_rod_interaction_lists
+  use m_rod
+  type rod_interaction_ptr
+     class(rod_interaction), pointer :: ptr
+  end type rod_interaction_ptr
+  
+#define TYPEPARAM type(rod_interaction_ptr)
+#include "list-inc-def.f90"
+contains
+#include "list-inc-proc.f90"
+#undef TYPEPARAM
+end module
+
 
 module m_rodgroup
+  
   use m_rod
   use m_particlegroup
-  
+  use m_rod_interaction_lists, only: rod_ia_list => list
+  implicit none
+
   type, extends(particlegroup) :: rodgroup
+     type(rod_ia_list) :: interactions
      real(dp), allocatable :: orientations(:, :)
+   contains
+!     procedure :: add_interaction => add_rod_ia
+     procedure :: to_json => rodgroup_to_json
+     procedure :: type_str => rodgroup_type_str
   end type rodgroup
 
   interface rodgroup
-     module procedure rodgroup_json
+     module procedure rodgroup_from_json
   end interface rodgroup
 
 contains
 
-  function rodgroup_json(json_val)
-    type(rodgroup) :: rodgroup_json
+  function rodgroup_from_json(json_val) result(rg)
+    type(rodgroup) :: rg
     type(json_value), pointer, intent(in) :: json_val
     type(json_value), pointer :: child
     logical :: found
-    rodgroup_json%particlegroup = particlegroup(json_val)
+    rg%particlegroup = particlegroup(json_val)
     call json_get(json_val, 'orientations', child, found)
-    call get_3d_points_json(child, rodgroup_json%orientations)
-  end function rodgroup_json
+    call get_3d_points_json(child, rg%orientations)
+  end function rodgroup_from_json
 
+  subroutine rodgroup_to_json(this, json_val)
+    class(rodgroup), intent(in) :: this
+    type(json_value), pointer :: json_val
+    character(kind=CK, len=:), allocatable :: str
+    logical :: found
+    call this%particlegroup%to_json(json_val)
+    call add_3d_points_json(json_val, 'orientations', this%orientations)
+    call this%type_str(str)
+    call json_update(json_val, 'type', str, found)
+  end subroutine rodgroup_to_json
+
+  subroutine rodgroup_type_str(this, str)
+    class(rodgroup), intent(in) :: this
+    character(kind=CK, len=:), allocatable :: str
+    str = 'rodgroup'
+  end subroutine rodgroup_type_str
+  
+  subroutine add_rod_ia(this, ia)
+    class(rodgroup), intent(inout) :: this
+    class(rod_interaction), intent(in) :: ia
+    !select type(ia)
+    !class is (rod_interaction)
+    !   call this%particlegroup%add_interaction(ia)
+    !class default
+    !   write(error_unit, *) 'Error: Tried to add a non-compatible ' // &
+    !        'interaction to a rod. Stopping.'
+    !   stop
+    !end select
+  end subroutine add_rod_ia
   
 end module m_rodgroup
 
 
-module m_builder
-  
+
+!!example of parametric list usage
+!#define STRING32 32
+module m_particlegroup_list
   use m_particlegroup
-  use iso_fortran_env
-  use json_module
-  use m_rod
-  use gen_lists
+#define TYPEPARAM type(particlegroup)
+#include "list-inc-def.f90"
+contains
+#include "list-inc-proc.f90"
+#undef TYPEPARAM
+end module m_particlegroup_list
+
+
+
+!!example of parametric list usage
+!#define STRING32 32
+module m_rodgroup_list
   use m_rodgroup
+#define TYPEPARAM type(rodgroup)
+#include "list-inc-def.f90"
+contains
+#include "list-inc-proc.f90"
+#undef TYPEPARAM
+end module m_rodgroup_list
+
+
+
+
+module m_particleserver
+
+  use m_particlegroup
+  use m_rodgroup
+  use m_rodgroup_list, only: &
+       rodgroup_list => list, &
+       add_rodgroup => list_add, &
+       rodgroup_list_restart => list__iter_restart, &
+       next_rodgroup => list_iter_next
+  use m_particlegroup_list, only: &
+       particlegroup_list => list, &
+       add_particlegroup => list_add
   implicit none
   
-contains 
+  type particleserver_json
+     type(rodgroup_list) :: rodgroups
+     type(particlegroup_list) :: particlegroups
+   contains
+     !  procedure :: get_rodgroup
+     procedure :: build
+  end type particleserver_json
+
+  interface particleserver_json
+     module procedure particleserver_from_json
+  end interface particleserver_json
   
+contains
+
+  function particleserver_from_json(filename) result(ps)
+    character(kind=CK, len=*), intent(in) :: filename
+    type(particleserver_json) :: ps
+    call ps%build(filename)
+  end function particleserver_from_json
   
-  subroutine build(filename, groups)
+  subroutine build(this, filename)
+    class(particleserver_json), intent(inout) :: this
     character(len=*), intent(in) :: filename
-    !class(particle), allocatable, intent(out) :: groups(:)
-    type(list) :: groups
     type(json_file) :: json
     logical :: found
-    !integer :: i,j,k
     type(json_value), pointer :: p, child, pos, temp
     integer(INT32) :: i,j
     character(kind=CK, len=1) :: ic
@@ -272,20 +416,10 @@ contains
     call json%get('groups', p, found)
     !allocate(groups(json_count(p)))
     do i = 1, json_count(p)
-       write(output_unit, *) 'Get particle from json:'
+       !write(output_unit, *) 'Get particle from json:'
        call json_get_child(p, i, child)
-       write(output_unit, *) 'Read particle from json:'
-       call particle_factory(child, temp_particle)
-       write(output_unit, *) 'Add particle to groups:'
-       select type (temp_particle)
-       class is (particlegroup)
-          write(*, *) 'name, positions:', temp_particle%name, &
-               temp_particle%positions
-       class is (rodgroup)
-          write(*, *) 'positions, orientations:', &
-               temp_particle%positions, temp_particle%orientations
-       end select
-       call groups%add(temp_particle)
+       !write(output_unit, *) 'Read particle from json:'
+       call particle_factory(this, child, temp_particle)
     end do
     
     ! clean up
@@ -295,8 +429,8 @@ contains
     ! build particlegrops
   end subroutine build
 
-
-  subroutine particle_factory(json_val, p)
+  subroutine particle_factory(this, json_val, p)
+    class(particleserver_json), intent(inout) :: this
     type(json_value), pointer, intent(in) :: json_val
     class(particle), allocatable, intent(out) :: p
     character(kind=CK, len=:), allocatable :: type_str
@@ -307,59 +441,90 @@ contains
        stop 1
     end if
     type_str = adjustl(type_str)
-    if (trim(type_str) == "particle") then
-       allocate(p, source=particle(json_val))
-    else if (trim(type_str) == "rod") then
-       allocate(p, source=rod(json_val))
-    else if (trim(type_str) == "particlegroup") then
-       allocate(p, source=particlegroup(json_val))
+    !if (trim(type_str) == "particle") then
+    !   allocate(p, source=particle(json_val))
+    !else if (trim(type_str) == "rod") then
+    !   allocate(p, source=rod(json_val))
+    if (trim(type_str) == "particlegroup") then
+       !allocate(p, source=particlegroup(json_val))
+       call this%particlegroups%add(particlegroup(json_val))
     else if (trim(type_str) == "rodgroup") then
-       allocate(p, source=rodgroup(json_val))
+       !allocate(p, source=rodgroup(json_val))
+       call this%rodgroups%add(rodgroup(json_val))
     end if
   end subroutine particle_factory
 
-  subroutine serialize(groups, filename)
-    type(list), intent(inout) :: groups
+  
+  subroutine serialize(this, filename)
+    class(particleserver_json), intent(inout) :: this
     character(len=*), intent(in) :: filename
-    class(*), pointer :: res
+    class(particlegroup), pointer :: res
     integer :: n = 0
-    type(json_value), pointer :: json_val
+    type(json_value), pointer :: json_val, group_json
     character(kind=CK, len=:), allocatable :: str
-    call groups%iter_restart()
+    call json_create_array(json_val, 'groups')
+
+    call this%rodgroups%iter_restart()
     do while(.true.)
-       call groups%iter_next(res)
+       res => this%rodgroups%iter_next()
        if (.not. associated(res)) then
-          write(*, *) 'end of list reached after', n, 'items'
           exit
        end if
        n = n + 1
-       select type (res)
-       class is (particlegroup)
-          write(*, *) 'iterated ', res%name
-          call res%to_json(json_val)
-          !call json_print(json_val, filename)
-          call json_print_to_string(json_val, str)
-          write(*, *) str
-       end select
+       !select type (res)
+       !class is (particlegroup)
+       call res%to_json(group_json)
+       call json_add(json_val, group_json)
+       !end select
     end do
+
+    call this%particlegroups%iter_restart()
+    do while(.true.)
+       res => this%particlegroups%iter_next()
+       if (.not. associated(res)) then
+          exit
+       end if
+       n = n + 1
+       !select type (res)
+       !class is (particlegroup)
+       call res%to_json(group_json)
+       call json_add(json_val, group_json)
+       !end select
+    end do
+    call json_print_to_string(json_val, str)
+    write(*, *) str
   end subroutine serialize
   
-end module m_builder
+  !function get_rodgroup(this, rg, name, found)
+  !  
+  !end function get_rodgroup
+  
+end module m_particleserver
+
 
 
 
 program test_composition
-  use m_builder
-  use gen_lists
+  !use m_builder
+  !use gen_lists
   use json_module
-  ! read interactions from file
-  ! attach interactions to particlegroups
+  use m_particleserver
+  implicit none
   !class(particle), allocatable :: groups(:)
-  type(list) :: groups
-  type(json_value), pointer :: group_json
-  call build('groups.json', groups)
-  call serialize(groups, 'output.json')
+  !type(list) :: groups
+  !type(json_value), pointer :: group_json
+  type(particleserver_json) :: particleserver
+  ! Read particlegroups from file
+  !call build('groups.json', groups)
+  particleserver = particleserver_json('groups.json')
+  
+  ! read interactions from file
+
+  ! attach interactions to particlegroups
   
   ! simulate
+
+  ! write results to file
+  call serialize(particleserver, 'output.json')
 end program test_composition
 
