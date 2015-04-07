@@ -33,7 +33,8 @@ bin_PROGRAMS = \
   print_xewall_shielding \
   print_xeslab_shielding \
   create_crystal \
-  default_parameters
+  default_parameters \
+  test_composite 
 
 
 
@@ -127,6 +128,12 @@ parallel_src = \
 
 ## Below: Listings of source files needed by programs
 
+test_composite_SOURCES = \
+  list-inc-def.inc \
+  list-inc-proc.inc \
+  json_module.F90 \
+  m_composite.F90
+
 ptgbcyl_SOURCES = \
   ${common_src} \
   ${energy_src} \
@@ -176,7 +183,6 @@ xe_nmr_SOURCES = \
   lj_nmr.f90 \
   xe_nmr.f90 \
   ljcylinder_tensor.f90 
-
 
 xe_nmr_profile_SOURCES = \
   ${nr_src} \
