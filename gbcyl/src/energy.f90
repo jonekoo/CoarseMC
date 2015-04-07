@@ -332,32 +332,4 @@ pure subroutine allpairinteractions(simbox, particles, energy, overlap, &
 end subroutine allpairinteractions
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! Prototypes below here.                                            !!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-subroutine total_by_reduce(sl, simbox, particles, energy, overlap)
-  type(simplelist), intent(in) :: sl
-  type(poly_box), intent(in) :: simbox
-  type(particledat), dimension(:), intent(in) :: particles
-  real(dp), intent(out) :: energy
-  logical, intent(out) :: overlap 
-  interface
-     pure subroutine singleenergy(simbox, particles, i, energy, overlap)
-       use class_poly_box
-       use particle
-       use nrtype, only: dp
-       implicit none
-       type(poly_box), intent(in) :: simbox
-       type(particledat), intent(in) :: particles(:)
-       integer, intent(in) :: i
-       real(dp), intent(out) :: energy
-       logical, intent(out) :: overlap
-     end subroutine singleenergy
-  end interface
-  procedure(singleenergy), pointer :: single
-  single => simple_singleparticleenergy
-  call pair_reduce(sl, simbox, particles, single, energy, overlap)
-end subroutine
-
 end module
