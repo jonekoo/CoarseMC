@@ -110,7 +110,7 @@ end module m_rod
 module m_particle_interaction_lists
   use m_particle, only: particle_interaction
   type particle_interaction_ptr
-     class(particle_interaction), pointer :: ptr
+     class(particle_interaction), pointer :: ptr => null()
   end type particle_interaction_ptr
   
 #define TYPEPARAM type(particle_interaction_ptr)
@@ -269,7 +269,6 @@ end module m_particlegroup
 
 
 !!example of parametric list usage
-!#define STRING32 32
 module m_rod_interaction_lists
   use m_rod
   type rod_interaction_ptr
