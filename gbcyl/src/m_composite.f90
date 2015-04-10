@@ -292,7 +292,9 @@ module m_rodgroup
 
   !type, extends(particlegroup) :: rodgroup
   type rodgroup
+     character(len=:), allocatable :: name
      type(rod_ia_list) :: interactions
+     real(dp), allocatable :: positions(:, :)
      real(dp), allocatable :: orientations(:, :)
    contains
 !     procedure :: add_interaction => add_rod_ia
@@ -323,6 +325,11 @@ contains
     character(kind=CK, len=:), allocatable :: str
     logical :: found
     !call this%particlegroup%to_json(json_val)
+    call json_create_object(json_val, '')
+    call json_add(json_val, 'name', this%name)
+    call this%type_str(str)
+    call json_add(json_val, 'type', str)
+    call add_3d_points_json(json_val, 'positions', this%positions)
     call add_3d_points_json(json_val, 'orientations', this%orientations)
     call this%type_str(str)
     call json_update(json_val, 'type', str, found)
@@ -415,23 +422,17 @@ contains
     type(json_value), pointer :: p, child
     integer(INT32) :: i
     call json_initialize()
-
     ! read particlegroups from file        
-    call json%load_file(filename = filename)!'groups.json')
+    call json%load_file(filename = filename)
     call json%get('groups', p, found)
-    !allocate(groups(json_count(p)))
     do i = 1, json_count(p)
-       !write(output_unit, *) 'Get particle from json:'
        call json_get_child(p, i, child)
-       !write(output_unit, *) 'Read particle from json:'
        ! build particlegrops
        call particle_factory(this, child)
     end do
-    
     ! clean up
     call json%destroy()
-    if (json_failed()) stop 1
-    
+    if (json_failed()) stop 1    
   end subroutine build
 
   subroutine particle_factory(this, json_val)
@@ -456,39 +457,34 @@ contains
   subroutine serialize(this, filename)
     class(particleserver_json), intent(inout) :: this
     character(len=*), intent(in) :: filename
-    class(particlegroup), pointer :: res
+    class(particlegroup), pointer :: pg
+    class(rodgroup), pointer :: rg
     integer :: n = 0
     type(json_value), pointer :: json_val, group_json
     character(kind=CK, len=:), allocatable :: str
-    nullify(res, json_val, group_json)
+    nullify(pg, rg, json_val, group_json)
     call json_create_array(json_val, 'groups')
 
     call this%rodgroups%iter_restart()
     do while(.true.)
-       res => this%rodgroups%iter_next()
-       if (.not. associated(res)) then
+       rg => this%rodgroups%iter_next()
+       if (.not. associated(rg)) then
           exit
        end if
        n = n + 1
-       !select type (res)
-       !class is (particlegroup)
-       call res%to_json(group_json)
-       call json_add(json_val, group_json)
-       !end select
+       call rg%to_json(group_json)
+       !call json_add(json_val, group_json)
     end do
 
     call this%particlegroups%iter_restart()
     do while(.true.)
-       res => this%particlegroups%iter_next()
-       if (.not. associated(res)) then
+       pg => this%particlegroups%iter_next()
+       if (.not. associated(pg)) then
           exit
        end if
        n = n + 1
-       !select type (res)
-       !class is (particlegroup)
-       call res%to_json(group_json)
+       call pg%to_json(group_json)
        call json_add(json_val, group_json)
-       !end select
     end do
     call json_print_to_string(json_val, str)
     write(*, *) str
@@ -507,7 +503,7 @@ contains
           found = .false.
           exit
        end if
-       if (rg%name == 'name') return
+       if (rg%name == name) return
     end do
   end function get_rodgroup
   
