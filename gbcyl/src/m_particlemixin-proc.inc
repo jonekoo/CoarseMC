@@ -17,3 +17,8 @@
     end if
   end subroutine MIXINPARAM_energy
 
+  subroutine particlemixin_setname(name)
+    type(particlemixin) :: particlemixin_name
+    character(len=*), intent(in) :: name
+    particlemixin_name%name = name
+  end subroutine

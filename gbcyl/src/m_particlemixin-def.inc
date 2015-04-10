@@ -6,6 +6,7 @@
 
   type, extends(MIXINPARAM) :: particlemixin
      class(MIXINPARAM_interaction), pointer :: interactions(:) => null()
+     character(len=:), allocatable :: name
    contains
      procedure :: energy => MIXINPARAM_energy
   end type particlemixin

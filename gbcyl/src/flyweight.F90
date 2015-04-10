@@ -23,7 +23,6 @@ module m_sphere
   use m_particle
   
   type, abstract, extends(particle) :: sphere
-     character(len=6) :: name = 'sphere'
      real(REAL64) :: position(3)
   end type sphere
   
@@ -43,7 +42,6 @@ module m_rod
   implicit none
 
   type, abstract, extends(particle) :: rod
-     character(len=3) :: name = 'rod'
      real(REAL64) :: orientation(3) = [0, 0, 1]
   end type rod
 
@@ -123,6 +121,9 @@ program test_mixin
   type(spheremixin) :: sm
   real(REAL64) :: res
   integer :: err
+  rm%name = 'rod'
   call rm%energy(res, err)
+  sm%name = 'sphere'
   call sm%energy(res, err)
+  
 end program test_mixin
