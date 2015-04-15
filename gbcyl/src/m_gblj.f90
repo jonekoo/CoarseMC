@@ -55,7 +55,6 @@ real(dp) :: hardcore = 0.3
 contains
 
 procedure :: init_internal => gblj_init_internal
-!> @todo value is a Fortran keyword so maybe change the name of the function
 procedure :: potential => gblj_value
 procedure :: sigma => gblj_sigma
 procedure :: epsilon => gblj_epsilon
@@ -204,8 +203,8 @@ pure function gblj_grad_eps(this, ui, rij) result(g)
   class(gblj_potential), intent(in) :: this
   real(dp), intent(in) :: ui(3), rij(3)
   real(dp) :: g(3)
-  g = -this%chiepsilon * (1 - gblj_aij(ui, rij) * this%chiepsilon)**(this%mu - 1) * this%mu * &
-       this%epsilon_0 * gblj_grad_aij(ui, rij)
+  g = -this%chiepsilon * (1 - gblj_aij(ui, rij) * this%chiepsilon)**(&
+       this%mu - 1) * this%mu * this%epsilon_0 * gblj_grad_aij(ui, rij)
 end function gblj_grad_eps
 
 !> Returns the dot_product(ui, urij). @p ui is the unit orientation
@@ -237,8 +236,8 @@ pure function gblj_grad_sigma(this, ui, rij) result(g)
   class(gblj_potential), intent(in) :: this
   real(dp), intent(in) :: ui(3), rij(3)
   real(dp) :: g(3)
-  g = this%chisigma * this%sigma_0 / (2. * sqrt(1. - gblj_aij(ui, rij) * this%chisigma)**3) &
-       * gblj_grad_aij(ui, rij)
+  g = this%chisigma * this%sigma_0 / (2. * sqrt(1. - gblj_aij(ui, rij) * &
+       this%chisigma)**3) * gblj_grad_aij(ui, rij)
 end function gblj_grad_sigma
 
 !> Returns the gradient of dot_product(ui, urij), where @p ui is the
@@ -267,7 +266,8 @@ pure function gblj_sigma(this, urij, ui)
   class(gblj_potential), intent(in) :: this
   real(dp), intent(in) :: urij(3), ui(3)
   real(dp) :: gblj_sigma
-  gblj_sigma = this%sigma_0 / sqrt(1. - this%chisigma * dot_product(urij, ui)**2)
+  gblj_sigma = this%sigma_0 / sqrt(1. - this%chisigma * &
+       dot_product(urij, ui)**2)
 end function
 
 !> Returns the anisotropic well-depth of the GB-LJ potential.
@@ -280,7 +280,8 @@ pure function gblj_epsilon(this, urij, ui)
   class(gblj_potential), intent(in) :: this
   real(dp), intent(in) :: urij(3), ui(3)
   real(dp) :: gblj_epsilon
-  gblj_epsilon = this%epsilon_0 * (1. - this%chiepsilon * dot_product(urij, ui)**2)**this%mu
+  gblj_epsilon = this%epsilon_0 * (1. - this%chiepsilon * &
+       dot_product(urij, ui)**2)**this%mu
 end function
 
 
@@ -325,7 +326,8 @@ subroutine test_defaults(this)
     if (ios /= 0) exit
     call this%potential(ui, rij, energy, overlap)
     if (.not. overlap .and. abs(u-energy) > 1.e-6_dp) then
-      write(*, *) "gblj:test_defaults: ui=", ui, "rij=", rij, "abs(u-energy)=", abs(u-energy)
+       write(*, *) "gblj:test_defaults: ui=", ui, "rij=", rij, &
+            "abs(u-energy)=", abs(u-energy)
       stop
     end if
   end do
