@@ -5,7 +5,7 @@ module lj_nmr
 !!
 use nrtype
 use m_constants
-use gblj, only: gblj_r, gblj_init
+use m_gblj
 use m_rank2_tensor
 use class_poly_box
 use particle
@@ -41,14 +41,6 @@ interface
 end interface
 
 contains
-
-subroutine lj_nmr_init(reader)
-  type(parameterizer), intent(in) :: reader
-  call particlewall_init(reader)
-  call gblj_init(reader)
-  call lj_init(reader)
-end subroutine
-
 
 !! Computes the Xe-GB tensor in the local coordinate system in which the z-axis
 !! is parallel to the long axis of the GB particle.
