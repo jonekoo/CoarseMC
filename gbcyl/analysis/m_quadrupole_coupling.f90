@@ -1,11 +1,11 @@
 module m_quadrupole_coupling
 use nrtype
 use m_constants
-use gblj, only: gblj_r, gblj_init
+use m_gblj
 use m_shielding, only: sigma
 use utils
 use class_parameterizer
-use lj
+use m_lj
 use particlewall
 implicit none
 
@@ -48,6 +48,8 @@ b_xexe_parall(4) = [ 13488314876.57440000,  16.12455833, -1.45189255,  0.0842901
 !! 13.5 Å, the coupling is set to zero.
 real(dp), parameter :: xexe_cutoff_A = 13.5_dp
 
+type(gblj_potential) :: gblj
+type(lj_potential) :: lj
 
 interface 
   pure function xewall_qcoupling(k, radiusA, densityA, epsilonratio, &
@@ -63,8 +65,9 @@ contains
 subroutine qcoup_init(reader)
   type(parameterizer), intent(in) :: reader
   call particlewall_init(reader)
-  call gblj_init(reader)
-  call lj_init(reader)
+  !call gblj_init(reader)
+  gblj = gblj_potential(reader)
+  lj = lj_potential(reader)
 end subroutine
 
 
@@ -96,7 +99,7 @@ pure function gbxe_coupling_local(x, z) result(coupling)
   co = z / sqrt(z**2 + x**2)
   si = sqrt(1._dp - co**2) 
 
-  r = gblj_r([0._dp, 0._dp, 1._dp], [x, 0._dp, z])
+  r = gblj%r([0._dp, 0._dp, 1._dp], [x, 0._dp, z])
 
   !! chi tensor coupling:
   xx = sigma(r, xx_s) * si**2 &
@@ -149,14 +152,13 @@ end function
 pure function xewall_coupling_local(r, cyl_radius) result(t)
   use particlewall, only: ljwall_epsilon_0 => epswall_lj, &
     ljwall_sigma_0 => sigwall_lj, wall_density
-  use lj, only: lj_sigma_0 => sigma_0_, lj_epsilon_0 => epsilon_0_
   real(dp), intent(in) :: r, cyl_radius
   real(dp) :: t(3, 3)
   t = 0._dp
 
   t = xewall_qcoupling(r / cyl_radius, cyl_radius * sigma0_aengstroms, &
-    wall_density / sigma0_aengstroms**3, ljwall_epsilon_0 / lj_epsilon_0, &
-    ljwall_sigma_0 / lj_sigma_0)
+    wall_density / sigma0_aengstroms**3, ljwall_epsilon_0 / lj%epsilon_0, &
+    ljwall_sigma_0 / lj%sigma_0)
   t = 0.001_dp * t !! Conversion to MHz
 
 end function

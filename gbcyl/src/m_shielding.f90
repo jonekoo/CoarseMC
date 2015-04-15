@@ -1,10 +1,10 @@
 module m_shielding
 use nrtype
 use utils, only: rotate_tensor, cross_product, horner
-use gblj, only: gblj_r, gblj_get_sigma_0, gblj_init
+use m_gblj
 use m_constants
 use class_parameterizer !! for initialization
-use lj
+use m_lj
 use particlewall
 implicit none
 !!
@@ -61,6 +61,9 @@ anisotropy_xexe(4) = [ 6274.20005258_dp, -1.20014259_dp,      0.93600894_dp,    
 !! 13.5 Å the shielding is set to zero.
 real(dp), parameter :: xexe_cutoff_A = 13.5_dp
 
+type(gblj_potential) :: gblj
+type(lj_potential) :: lj
+
 interface xewall_shielding
   pure function xewall_shielding(k, radiusA, densityA, epsilonratio, &
     sigmaratio) result(local_tensor)
@@ -82,8 +85,8 @@ subroutine init_shielding(reader)
   type(parameterizer), intent(inout) :: reader
   !! The modules below are needed for the ljwall_shielding calculation
   call particlewall_init(reader)
-  call lj_init(reader)   
-  call gblj_init(reader)
+  lj = lj_potential(reader)   
+  gblj = gblj_potential(reader)
 end subroutine
 
 
@@ -108,7 +111,7 @@ pure function gbxe_shielding_local(x, z) result(local_tensor)
      !! and the interparticle vector rij:
      co = z / sqrt(z**2 + x**2)
      si = sqrt(1._dp - co**2)
-     r = gblj_r([0._dp, 0._dp, 1._dp], [x, 0._dp, z])
+     r = gblj%r([0._dp, 0._dp, 1._dp], [x, 0._dp, z])
      local_tensor = 0._dp
      local_tensor(1, 1) = sigma(r, s_xx) * si**2 + &
           sigma(r, e_perpendicular) * co**2 !! sigma_xx
@@ -177,15 +180,14 @@ end function
 pure function xewall_shielding_local(r, radius) result(local_tensor)
   use particlewall, only: ljwall_sigma_0 => sigwall_lj, ljwall_epsilon_0 => &
   epswall_lj, wall_density
-  use lj, lj_sigma_0 => sigma_0_, lj_epsilon_0 => epsilon_0_
   real(dp), intent(in) :: radius
   real(dp), intent(in) :: r
   real(dp) :: local_tensor(3, 3) 
   local_tensor = 0._dp
   local_tensor = xewall_shielding(r / radius, &
     radius * sigma0_aengstroms, &
-    wall_density / sigma0_aengstroms**3, ljwall_epsilon_0 / lj_epsilon_0, &
-    ljwall_sigma_0 / lj_sigma_0)
+    wall_density / sigma0_aengstroms**3, ljwall_epsilon_0 / lj%epsilon_0, &
+    ljwall_sigma_0 / lj%sigma_0)
 end function
 
 end module

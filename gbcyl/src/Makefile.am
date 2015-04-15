@@ -67,9 +67,9 @@ model_src = \
   class_factory.f90
 
 energy_src = \
-  lj.f90 \
-  gayberne.f90 \
-  gblj.f90 \
+  m_lj.f90 \
+  m_gayberne.f90 \
+  m_gblj.f90 \
   ljcylinder.f90 \
   particlewall.f90 \
   class_pair_potential.f90 \
@@ -579,12 +579,12 @@ driver_SOURCES = \
   rng.inc mtfort90.f90 \
   utils.f90 \
   class_parameter_writer.f90 \
-  gblj.f90 \
-  gayberne.f90 \
+  m_gblj.f90 \
+  m_gayberne.f90 \
   gayberne_pfunit.f90 \
   particle.f90 \
   class_poly_box.f90 \
-  lj.f90 \
+  m_lj.f90 \
   class_pair_potential.f90 \
   class_simplelist.f90 \
   class_simplelist_pfunit.f90 \
