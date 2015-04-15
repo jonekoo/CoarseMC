@@ -25,7 +25,7 @@ program main
         test_reduces_to_lennard_jones))
    call add(gayberne_suite, TestCase1Step(&
         'Test derivative zeros at different configurations',&
-        test_derivative_zeros))
+        test_force_zeros))
    call add(gayberne_suite, TestCase1Step('Test small separation',&
         test_small_separation))
    call add(gayberne_suite, TestCase1Step('Test normal operation',&
