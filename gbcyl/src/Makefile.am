@@ -67,6 +67,9 @@ model_src = \
   class_factory.f90
 
 energy_src = \
+  m_rod_interaction.f90 \
+  m_sphere_interaction.f90 \
+  m_rodsphere_potential.f90 \
   m_lj.f90 \
   m_gayberne.f90 \
   m_gblj.f90 \

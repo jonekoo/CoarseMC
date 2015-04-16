@@ -3,6 +3,7 @@ module m_lj
   use nrtype
   use class_parameterizer
   use class_parameter_writer
+  use m_sphere_interaction
   implicit none
   
   !> Initializes the module.
@@ -10,7 +11,7 @@ module m_lj
      module procedure lj_init_parameters, lj_init_wt_reader
   end interface lj_init
   
-  type lj_potential
+  type, extends(sphere_interaction) :: lj_potential
      !> The range parameter which gives the zero-crossing distance of the
      !! potential.
      real(dp) :: sigma_0 = 1.
@@ -51,7 +52,7 @@ contains
   !! by @p writer.
   subroutine lj_writeparameters(this, writer)
     class(lj_potential), intent(in) :: this
-    type(parameter_writer), intent(in) :: writer
+    type(parameter_writer), intent(inout) :: writer
     call writecomment(writer, 'Lennard-Jones potential parameters.')
     call writeparameter(writer, 'lj_sigma_0', this%sigma_0)
     call writeparameter(writer, 'lj_epsilon_0', this%epsilon_0)
@@ -59,12 +60,14 @@ contains
   
   !> Returns the LJ 12-6 potential with the parameterization set with
   !! lj_init and a given internuclear vector @p rij.
-  pure function lj1(this, rij)
+  pure subroutine lj1(this, r, energy, overlap)
     class(lj_potential), intent(in) :: this
-    real(dp), intent(in) :: rij
-    real(dp) :: lj1
-    lj1 = lj3(rij, this%epsilon_0, this%sigma_0)
-  end function lj1
+    real(dp), intent(in) :: r
+    real(dp), intent(out) :: energy
+    logical, intent(out), optional :: overlap
+    energy = lj3(r, this%epsilon_0, this%sigma_0)
+    if (present(overlap)) overlap = .false.
+  end subroutine lj1
   
   !> Returns the LJ 12-6 potential value with given well-depth @p epsilon, 
   !! range parameter @p sigma and the internuclear vector @p rij from

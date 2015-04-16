@@ -12,6 +12,7 @@ module m_gblj
 use nrtype
 use class_parameterizer
 use class_parameter_writer
+use m_rodsphere_potential
 implicit none
 
 public :: gblj_init
@@ -25,8 +26,7 @@ public :: test_defaults
 private
 
 
-!type, extends(rodsphere_potential) :: gblj_potential
-type gblj_potential
+type, extends(rodsphere_potential) :: gblj_potential
 
 !> Well-depth when the LJ particle is on the side of the GB particle.
 real(dp) :: epsilon_0 = 1.55
@@ -142,7 +142,7 @@ end subroutine
 !! output unit defined by @p writer.
 subroutine gblj_writeparameters(this, writer)
   class(gblj_potential), intent(in) :: this
-  class(parameter_writer), intent(in) :: writer
+  class(parameter_writer), intent(inout) :: writer
   call writecomment(writer, &
        'Gay-Berne - Lennard-Jones potential parameters.')
   call writeparameter(writer, 'gblj_epsilon_0', this%epsilon_0)

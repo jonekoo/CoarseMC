@@ -9,9 +9,10 @@ module m_gayberne
   use nrtype, only: sp, dp
   use class_parameterizer
   use class_parameter_writer
+  use m_rod_interaction
   implicit none
 
-  type gayberne 
+  type, extends(rod_interaction) :: gayberne 
      !> Ratio of contact distances for end-to-end and side-by-side
      !! configurations of two particles.
      !! @see Luckhurst & et.al J.Chem.Phys, Vol. 110, No. 14
@@ -168,7 +169,7 @@ contains
   !! defined by @p writer.
   subroutine gb_writeparameters(this, writer)
     class(gayberne), intent(in) :: this
-    type(parameter_writer), intent(in) :: writer
+    type(parameter_writer), intent(inout) :: writer
     call writecomment(writer, 'Gay-Berne potential parameters')
     call writeparameter(writer, 'gb_kappa_sigma', this%kappasigma)
     call writeparameter(writer, 'gb_kappa_epsilon', this%kappaepsilon)
