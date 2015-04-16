@@ -179,7 +179,7 @@ end subroutine parsescalingtype
 !> Writes the parameters and observables of this module and its
 !! dependencies. The @p writer defines the format and output unit..
 subroutine mc_sweep_writeparameters(writer)
-  type(parameter_writer), intent(in) :: writer
+  type(parameter_writer), intent(inout) :: writer
   character(len=200) :: joined
   call writecomment(writer, 'MC sweep parameters')
   call writeparameter(writer, 'move_ratio', moveratio)
@@ -194,12 +194,20 @@ subroutine mc_sweep_writeparameters(writer)
   call writeparameter(writer, 'scaling_type', trim(joined))
   call writeparameter(writer, 'nmovetrials', nmovetrials)
   call writeparameter(writer, 'nacceptedmoves', nacceptedmoves)
-  call writeparameter(writer, 'current_move_ratio', &
-       real(nacceptedmoves, dp)/real(nmovetrials, dp))
+  if (nmovetrials > 0) then
+     call writeparameter(writer, 'current_move_ratio', &
+          real(nacceptedmoves, dp)/real(nmovetrials, dp))
+  else
+     call writeparameter(writer, 'current_move_ratio', 'nan')
+  end if
   call writeparameter(writer, 'nscalingtrials', nscalingtrials)
   call writeparameter(writer, 'nacceptedscalings', nacceptedscalings)
-  call writeparameter(writer, 'current_scaling_ratio', &
-       real(nacceptedscalings, dp)/real(nscalingtrials, dp))
+  if (nscalingtrials > 0) then
+     call writeparameter(writer, 'current_scaling_ratio', &
+          real(nacceptedscalings, dp)/real(nscalingtrials, dp))
+  else
+     call writeparameter(writer, 'current_scaling_ratio', 'nan')
+  end if
   call writeparameter(writer, 'pressure', pressure)
   call writeparameter(writer, 'temperature', temperature)
   call writeparameter(writer, 'volume', currentvolume)
@@ -281,8 +289,8 @@ subroutine make_particle_moves(simbox, particles, genstates, sl)
   type(particledat), intent(inout) :: particles(:)
   type(rngstate), intent(inout) :: genstates(0:)
   type(simplelist), intent(in) :: sl
-  !$ integer :: n_threads = 1
-  integer :: thread_id = 0
+  !$ integer :: n_threads
+  integer :: thread_id
   real(dp) :: dE 
   logical :: isaccepted
   !! You may be tempted to make the allocatable arrays automatic, but there's
@@ -295,6 +303,8 @@ subroutine make_particle_moves(simbox, particles, genstates, sl)
   real(dp) :: dE_ij
   integer :: nacc, ntrials
   integer :: j, ix, iy, iz, jx, jy, jz
+  thread_id = 0
+  !$ n_threads = 1
   dE = 0._dp
   dE_ij = 0._dp
   nacc = 0
@@ -593,7 +603,7 @@ end subroutine resetcounters
 !> Scales the positions of @p particles with the same factors that were
 !! used to scale the simulation box dimensions from @p oldbox to
 !! @p newbox.
-subroutine scalepositions(oldbox, newbox, particles, nparticles)
+pure subroutine scalepositions(oldbox, newbox, particles, nparticles)
   type(poly_box), intent(in) :: oldbox
   type(poly_box), intent(in) :: newbox
   type(particledat), dimension(:), intent(inout) :: particles
