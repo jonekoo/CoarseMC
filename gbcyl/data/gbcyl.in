@@ -1,0 +1,67 @@
+Input tiedosto gbcyl ohjelmalle.
+Rivej� jotka eiv�t ala tunnisteella $ ei huomioida parametreja luettaessa.
+
+Tunniste     	| Arvo
+
+$initstate	"r9-n1290-cr.gb"	Tiedosto, josta luetaan alkutila.
+
+$Nrelax		25              	Stabilisointi iteraatioiden lkm.
+$Nprod		25        		Tuotantoajon iteraatioiden lkm.
+$Nratio		5         		Perioidisten tapahtumien teko väli
+
+Parallel tempering parameters
+$PT_low 	0.8			Lower end of temperature
+$PT_high	1.9			Upper end of temperature
+$PT_movefreq	10			Frequency of temperature moves
+
+$moveratio	0.33                    The desired ratio with which particle 
+    					moves are accepted.
+$scalingratio   0.25			The desired ratio with which volume 
+					moves are accepted.
+$maxtranslation	0.156			Initial maximum translation for a
+					particle (reduced units).
+$maxrotation	0.170			Initial maximum rotation angle for a 
+					particle (radians). 
+$T		2.0			Simulointi lämpötila, redusoiduissa 
+					yksiköissä
+$pres           2.0         		Paine, redusoiduissa yksiköissä
+
+$anchor		1			Ankkuroinnin tyyppi
+					1 = random planar
+					2 = uniform alignment
+					3 = weak homeotropic
+
+$voltyp         2               	Tilavuuden muutoksen tyyppi
+                               		1=s�teen suunnassa
+                              		2=sylinterin akselin suunnassa
+
+$seed		432512 			Satunnaislukugeneraattorin siemenluku
+
+$epses		0.16			Pallon ja GB-partikkelin välisen 
+					energian suhde end to end ja side by 
+					side tilanteessa
+$eps0    	0.67		Pallon ja GB-partikkelin välisen energian
+				epsilon 0 redusoiduissa yksiköissä
+$spmyy		0.35		Pallo-GB potentiaalin eksponentti
+
+$sigma0		0.8		Pallo-GB potentiaalin sigma_0
+				redusoiduissa yksiköissä
+
+$siges		3.32 		Pallo-GB potentiaalin kosketusetäisyyksien
+				sigma_e/sigma_s suhde
+
+$rsphere	0.48		Pallon säde
+
+$epsphere	0.155		Pallon LJ-epsilon
+
+$allign		0		allign = 1, GB-partikkelin energiaan 
+				lisätään termi u dot z
+$debug		0		debug = 1, kirjoitetaan ruudulle dataa 
+				simuloinnin edetessö
+
+$Kw		2.2		Vuorovaikutuskeskus-sein� -vuorovaikutuksen 
+				voimakkuus. Arvo Kw=8 ~ GB-GB -vuorovaikutuksen
+				maksimi (minimi�)
+
+
+
