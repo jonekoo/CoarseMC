@@ -68,7 +68,7 @@ end subroutine
 !> Outputs the parameters of the module and its dependencies using the
 !! format and unit defined by @p writer. 
 subroutine energy_writeparameters(writer)
-  type(parameter_writer), intent(in) :: writer
+  type(parameter_writer), intent(inout) :: writer
   call writeparameter(writer, 'is_wall_on', iswall)
   if (iswall) call particlewall_writeparameters(writer)
   call writeparameter(writer, 'r_cutoff', rcutoff)
@@ -80,7 +80,7 @@ end subroutine
 !! cell-by-cell for the @p particles in the cell list @p sl. @p simbox
 !! is the simulation cell. If any two particles are too close to each
 !! other, @p overlap is true. 
-subroutine total_by_cell(sl, simbox, particles, energy, overlap)
+pure subroutine total_by_cell(sl, simbox, particles, energy, overlap)
   type(simplelist), intent(in) :: sl
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
@@ -144,7 +144,7 @@ end subroutine total_by_cell
 !! @param n_pairs optionally returns the number of pair interactions
 !!        computed.
 !! 
-subroutine simple_totalenergy(simbox, particles, energy, overlap, n_pairs)
+pure subroutine simple_totalenergy(simbox, particles, energy, overlap, n_pairs)
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
   real(dp), intent(out) :: energy
@@ -174,7 +174,7 @@ end subroutine simple_totalenergy
 !! @param energy the total particle-wall interaction at return.
 !! @param overlap is true at if a particle is too close to the wall.
 !! 
-subroutine totalparticlewallenergy(simbox, particles, energy, overlap)
+pure subroutine totalparticlewallenergy(simbox, particles, energy, overlap)
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
   real(dp), intent(out) :: energy
