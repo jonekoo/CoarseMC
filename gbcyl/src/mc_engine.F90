@@ -1,13 +1,9 @@
 !> Implements the streering of the simulation and controlling it's
 !! input and output.
 module mc_engine
-use nrtype
-use utils
+use mc_sweep
 use class_factory
 use mt_stream
-use particle, only: particledat
-use class_poly_box
-use mc_sweep
 use m_fileunit
 use class_parameterizer
 use class_parameter_writer
@@ -198,7 +194,7 @@ end subroutine
 !! @param writer is the object responsible for writing the parameters.
 !!
 subroutine mce_writeparameters(writer)
-  type(parameter_writer), intent(in) :: writer
+  type(parameter_writer), intent(inout) :: writer
   call writecomment(writer, 'mc engine parameters')
   call writeparameter(writer, 'n_equilibration_sweeps', &
   nequilibrationsweeps)
