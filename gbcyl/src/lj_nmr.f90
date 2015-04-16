@@ -5,13 +5,11 @@ module lj_nmr
 !!
 use nrtype
 use m_constants
-use m_gblj
 use m_rank2_tensor
 use class_poly_box
 use particle
 use utils
 use class_parameterizer
-use lj
 use particlewall
 implicit none
 
