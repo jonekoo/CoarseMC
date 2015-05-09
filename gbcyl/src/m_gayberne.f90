@@ -6,13 +6,10 @@
 !!      110(14):7087, 1999.
 !!
 module m_gayberne
-  use nrtype, only: sp, dp
-  use class_parameterizer
-  use class_parameter_writer
-  use m_rod_interaction
+  use nrtype, only: dp
   implicit none
 
-  type, extends(rod_interaction) :: gayberne 
+  type :: gayberne_potential
      !> Ratio of contact distances for end-to-end and side-by-side
      !! configurations of two particles.
      !! @see Luckhurst & et.al J.Chem.Phys, Vol. 110, No. 14
@@ -38,18 +35,19 @@ module m_gayberne
      
      !> The well-depth at the cross-configuration of two particles.
      real(dp) :: epsilon0     = 1._dp
-     
-     
+          
      !> Defines the GB distance when the particles overlap in
      !! gb_potential.
      real(dp) :: hardcore = 0.6_dp
      
      !> Parameters below are derived from parameters above. These are
      !! saved to increase performance.
-     real(dp) :: chiepsilon
-     real(dp) :: chisigma
-     real(dp) :: chisigmasquared
-   
+     real(dp) :: chiepsilon = 0.
+     real(dp) :: chisigma = 0.
+     real(dp) :: chisigmasquared = 0.
+
+     real(dp) :: cutoff = 5.5
+     
      !> Defines the procedure to be used for computing the well-depth
      !! function epsilon. This allows common special cases of the
      !! parameterization to be treated more efficiently than a single
@@ -63,20 +61,21 @@ module m_gayberne
      procedure :: gb_R
      procedure :: potentialf
      procedure :: sigma
-     procedure :: writeparameters => gb_writeparameters
-  end type gayberne
+     !procedure :: writeparameters => gb_writeparameters
+     procedure :: get_cutoff => gb_get_cutoff
+  end type gayberne_potential
 
   !> Initializes the type
-  interface gayberne
-     module procedure initparameterizer, initold
-  end interface gayberne
+  interface gayberne_potential
+     module procedure initold
+  end interface gayberne_potential
   
   !> The interface for the well-depth function in the GB potential.
   interface
      pure function gb_eps(this, ui, uj, urij)
-       import gayberne, dp
+       import gayberne_potential, dp
        implicit none
-       class(gayberne), intent(in) :: this 
+       class(gayberne_potential), intent(in) :: this 
        real(dp), intent(in) :: ui(3), uj(3), urij(3)
        real(dp) :: gb_eps
      end function gb_eps
@@ -90,21 +89,21 @@ contains
   !! for getting the parameters for this module from some source, e.g.
   !! file. 
   !!
-  function initparameterizer(reader) result(this)
-    type(gayberne) :: this 
-    type(parameterizer), intent(in) :: reader
-    call getparameter(reader, 'gb_kappa_sigma', this%kappasigma)
-    call getparameter(reader, 'gb_kappa_epsilon', this%kappaepsilon)
-    call getparameter(reader, 'gb_mu', this%mu)
-    call getparameter(reader, 'gb_nu', this%nu)
-    call getparameter(reader, 'gb_sigma_0', this%sigma0)
-    call getparameter(reader, 'gb_epsilon_0', this%epsilon0)
-    call getparameter(reader, 'gb_hardcore', this%hardcore)
-    call init_common(this)
-  end function initparameterizer
+  !function initparameterizer(reader) result(this)
+  !  type(gayberne_potential) :: this 
+  !  type(parameterizer), intent(in) :: reader
+  !  call getparameter(reader, 'gb_kappa_sigma', this%kappasigma)
+  !  call getparameter(reader, 'gb_kappa_epsilon', this%kappaepsilon)
+  !  call getparameter(reader, 'gb_mu', this%mu)
+  !  call getparameter(reader, 'gb_nu', this%nu)
+  !  call getparameter(reader, 'gb_sigma_0', this%sigma0)
+  !  call getparameter(reader, 'gb_epsilon_0', this%epsilon0)
+  !  call getparameter(reader, 'gb_hardcore', this%hardcore)
+  !  call init_common(this)
+  !end function initparameterizer
 
   subroutine init_common(this)
-    type(gayberne), intent(inout) :: this
+    type(gayberne_potential), intent(inout) :: this
     if (abs(this%mu - 1) < tiny(this%mu) .and. abs(this%nu - 1) < &
          tiny(this%nu)) then
        !write(*, *) '# gb_nu = 1 and gb_nu = 1. Using gb_epsilon_mu1nu1'
@@ -145,41 +144,52 @@ contains
   !!        overlap.
   !! 
   function initold(kappasigmain, kappaepsilonin, muin, nuin, sigma0in, &
-       epsilon0in, hardcore) result(this)
-    type(gayberne) :: this
+       epsilon0in) result(this)
+    type(gayberne_potential) :: this
     real(dp), intent(in) :: kappasigmain
     real(dp), intent(in) :: kappaepsilonin
     real(dp), intent(in) :: muin
     real(dp), intent(in) :: nuin
     real(dp), intent(in) :: sigma0in
     real(dp), intent(in) :: epsilon0in
-    real(dp), intent(in), optional :: hardcore
     this%kappasigma = kappasigmain
     this%kappaepsilon = kappaepsilonin
     this%mu = muin
     this%nu = nuin
     this%sigma0 = sigma0in
     this%epsilon0 = epsilon0in
-    if (present(hardcore)) this%hardcore = hardcore
     call init_common(this)
   end function initold
 
 
   !> Write the parameters of this module to the output unit and format
   !! defined by @p writer.
-  subroutine gb_writeparameters(this, writer)
-    class(gayberne), intent(in) :: this
-    type(parameter_writer), intent(inout) :: writer
-    call writecomment(writer, 'Gay-Berne potential parameters')
-    call writeparameter(writer, 'gb_kappa_sigma', this%kappasigma)
-    call writeparameter(writer, 'gb_kappa_epsilon', this%kappaepsilon)
-    call writeparameter(writer, 'gb_mu', this%mu)
-    call writeparameter(writer, 'gb_nu', this%nu)
-    call writeparameter(writer, 'gb_sigma_0', this%sigma0)
-    call writeparameter(writer, 'gb_epsilon_0', this%epsilon0)    
-    call writeparameter(writer, 'gb_hardcore', this%hardcore)
-  end subroutine gb_writeparameters
+  !subroutine gb_writeparameters(this, writer)
+  !  class(gayberne_potential), intent(in) :: this
+  !  type(parameter_writer), intent(inout) :: writer
+  !  call writecomment(writer, 'Gay-Berne potential parameters')
+  !  call writeparameter(writer, 'gb_kappa_sigma', this%kappasigma)
+  !  call writeparameter(writer, 'gb_kappa_epsilon', this%kappaepsilon)
+  !  call writeparameter(writer, 'gb_mu', this%mu)
+  !  call writeparameter(writer, 'gb_nu', this%nu)
+  !  call writeparameter(writer, 'gb_sigma_0', this%sigma0)
+  !  call writeparameter(writer, 'gb_epsilon_0', this%epsilon0)    
+  !  call writeparameter(writer, 'gb_hardcore', this%hardcore)
+  !end subroutine gb_writeparameters
 
+
+  !subroutine gayberne_potential_potential(this, particle_i, particle_j, &
+  !     res, err)
+  !  class(gayberne_potential), intent(in) :: this
+  !  type(rod), intent(in) :: particle_i, particle_j
+  !  real(dp), intent(out) :: res
+  !  integer, intent(out) :: err
+  !  logical :: overlap
+  !  err = 0 
+  !  call gb_potential(this, particle_i%orientation(), particle_j%orientation(),&
+  !       particle_j%position() - particle_i%position(), res, overlap)
+  !  if (overlap) err = -1
+  !end subroutine gayberne_potential_potential
 
   !> Calculates the Gay-Berne potential for two particles. If @p overlap
   !! is true, the potential is zero.
@@ -191,7 +201,7 @@ contains
   !!        are too close to each other. 
   !!
   pure subroutine gb_potential(this, ui, uj, rij, energy, overlap)
-    class(gayberne), intent(in) :: this
+    class(gayberne_potential), intent(in) :: this
     real(dp), dimension(3), intent(in) :: rij, ui, uj
     real(dp), intent(out) :: energy
     logical, intent(out) :: overlap
@@ -210,7 +220,12 @@ contains
     end if
   end subroutine gb_potential
   
-
+  function gb_get_cutoff(this)
+    class(gayberne_potential), intent(in) :: this
+    real(dp) :: gb_get_cutoff
+    gb_get_cutoff = this%cutoff
+  end function gb_get_cutoff
+  
   !> Returns the Gay-Berne potential for two particles. Overlap of
   !! particles is not considered. 
   !!
@@ -219,7 +234,7 @@ contains
   !!        particle j.
   !! 
   real(dp) pure function potentialf(this, ui, uj, rij) result(energy)
-    class(gayberne), intent(in) :: this
+    class(gayberne_potential), intent(in) :: this
     real(dp), dimension(3), intent(in) :: rij, ui, uj
     real(dp) :: rgb, gb6
     real(dp), dimension(3) :: urij
@@ -234,7 +249,7 @@ contains
   !> Calculates the derivative of the potential with respect to the
   !! @p alpha coordinate of the vector @p rij.
   real(dp) pure function d_potential(this, ui, uj, rij, alpha)
-    class(gayberne), intent(in) :: this
+    class(gayberne_potential), intent(in) :: this
     real(dp), dimension(3), intent(in) :: rij, ui, uj
     integer, intent(in) :: alpha
     real(dp) :: rijabs
@@ -279,7 +294,7 @@ contains
   !!        of particle j.
   !!
   real(dp) pure function gb_R(this, ui, uj, rij)
-    class(gayberne), intent(in) :: this
+    class(gayberne_potential), intent(in) :: this
     real(dp), dimension(3), intent(in) :: ui
     real(dp), dimension(3), intent(in) :: uj
     real(dp), dimension(3), intent(in) :: rij
@@ -360,7 +375,7 @@ contains
   !!        the center of particle j.
   !! 
   real(dp) pure function sigma(this, ui, uj, urij)
-    class(gayberne), intent(in) :: this
+    class(gayberne_potential), intent(in) :: this
     real(dp), dimension(3), intent(in) :: ui
     real(dp), dimension(3), intent(in) :: uj
     real(dp), dimension(3), intent(in) :: urij
@@ -368,7 +383,7 @@ contains
   end function sigma
 
   real(dp) pure function sigmahelp(this, ids, jds, idj)
-    class(gayberne), intent(in) :: this
+    class(gayberne_potential), intent(in) :: this
     real(dp), intent(in) :: ids, jds, idj
     real(dp) :: idssq, jdssq, idjsq
     idssq = ids * ids
@@ -381,7 +396,7 @@ contains
   end function sigmahelp
 
   real(dp) pure function gb_epsilon_full(this, ui, uj, urij)
-    class(gayberne), intent(in) :: this
+    class(gayberne_potential), intent(in) :: this
     real(dp), dimension(3), intent(in) :: ui
     real(dp), dimension(3), intent(in) :: uj
     real(dp), dimension(3), intent(in) :: urij
@@ -393,7 +408,7 @@ contains
 
 
   real(dp) pure function gb_epsilon_mu1nu1(this, ui, uj, urij)
-    class(gayberne), intent(in) :: this
+    class(gayberne_potential), intent(in) :: this
     real(dp), dimension(3), intent(in) :: ui
     real(dp), dimension(3), intent(in) :: uj
     real(dp), dimension(3), intent(in) :: urij
@@ -405,13 +420,13 @@ contains
 
 
   real(dp) pure function ep(this, idj)
-    class(gayberne), intent(in) :: this
+    class(gayberne_potential), intent(in) :: this
     real(dp), intent(in) :: idj
     ep = 1._dp / sqrt(1._dp - this%chisigmasquared * idj**2)
   end function ep
 
   real(dp) pure function epp(this, ids, jds, idj)
-    class(gayberne), intent(in) :: this
+    class(gayberne_potential), intent(in) :: this
     real(dp), intent(in) :: ids, jds, idj
     epp = 1 - this%chiepsilon * (ids**2 + jds**2 - &
          2 * this%chiepsilon * ids * jds * idj)&
@@ -420,14 +435,14 @@ contains
   
   !> Returns the contact distance for two GB particles in a cross-configuration.
   real(dp) function getsigma0(this)
-    class(gayberne), intent(in) :: this
+    class(gayberne_potential), intent(in) :: this
     getsigma0 = this%sigma0
   end function getsigma0
   
   !> Returns the ratio of contact distances in the end-to-end and
   !! side-by-side configurations. 
   real(dp) function getkappasigma(this)
-    class(gayberne), intent(in) :: this
+    class(gayberne_potential), intent(in) :: this
     getkappasigma = this%kappasigma
   end function getkappasigma
   
@@ -441,7 +456,7 @@ contains
   end function d_anisotropic_ids
 
   real(dp) pure function d_sigma_anisotropic(this, aniso)
-    class(gayberne), intent(in) :: this
+    class(gayberne_potential), intent(in) :: this
     real(dp), intent(in) :: aniso
     d_sigma_anisotropic = -0.5_dp * this%sigma0 * sqrt(aniso)**(-3)
   end function d_sigma_anisotropic
@@ -478,7 +493,7 @@ contains
   !! @param rij the vector from the center of particle i to the center of
   !!        particle j.
   pure function g_potential(this, ui, uj, rij)
-    class(gayberne), intent(in) :: this
+    class(gayberne_potential), intent(in) :: this
     real(dp), dimension(3), intent(in) :: ui, uj, rij
     real(dp) :: rijabs
     real(dp), dimension(3) :: g_potential
@@ -534,7 +549,7 @@ contains
   !> Returns the Gay-Berne force between two particles with unit
   !! orientation vectors @p ui,uj and center-to-center vector @p rij.
   pure function gb_force(this, ui, uj, rij)
-    class(gayberne), intent(in) :: this
+    class(gayberne_potential), intent(in) :: this
     real(dp), intent(in) :: ui(3), uj(3), rij(3)
     real(dp) :: gb_force(3)
     real(dp) :: urij(3)
