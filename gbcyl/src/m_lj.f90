@@ -3,7 +3,8 @@ module m_lj
   use nrtype
   use class_parameterizer
   use class_parameter_writer
-  use m_sphere_interaction
+  use m_point_interaction, only: pointpoint_potential
+  use m_point, only: point
   implicit none
   
   !> Initializes the module.
@@ -11,7 +12,7 @@ module m_lj
      module procedure lj_init_parameters, lj_init_wt_reader
   end interface lj_init
   
-  type, extends(sphere_interaction) :: lj_potential
+  type, extends(pointpoint_potential) :: lj_potential
      !> The range parameter which gives the zero-crossing distance of the
      !! potential.
      real(dp) :: sigma_0 = 1.
@@ -19,7 +20,8 @@ module m_lj
      !> The well-depth of the potential.
      real(dp) :: epsilon_0 = 1.
    contains
-     procedure :: potential => lj1
+     procedure :: lj1
+     procedure :: potential => lj_potential_potential
      procedure :: force => lj_force
      procedure :: writeparameters => lj_writeparameters
   end type lj_potential
@@ -30,6 +32,18 @@ module m_lj
   
   
 contains
+
+  subroutine lj_potential_potential(this, particle_i, particle_j, res, err)
+    class(lj_potential), intent(in) :: this
+    type(point), intent(in) :: particle_i, particle_j
+    real(dp), intent(out) :: res
+    integer, intent(out) :: err
+    logical :: overlap
+    err = 0
+    call this%lj1(norm2(particle_j%position() - particle_i%position()), &
+         res, overlap)
+    if (overlap) err = -1
+  end subroutine lj_potential_potential
   
   !> Initializes the LJ 12-6 potential with the well-depth @p epsilon_0
   !! and contact distance @p sigma_0.
