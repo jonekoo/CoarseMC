@@ -30,7 +30,6 @@ module mc_sweep
   public :: resetcounters
   public :: movevol
   public :: pt_period
-  public :: set_system, get_system
   public :: get_total_energy
   public :: test_configuration
   public :: mcsweep_finalize
@@ -82,12 +81,6 @@ module mc_sweep
   !> True if the module is correctly initialized.
   logical :: is_initialized = .false.
 
-  !> The simulation box in which the particles reside.
-  type(poly_box), save :: simbox
-
-  !> The particles. 
-  type(particledat), allocatable, save :: particles(:)
-
   contains
 
 !> Initializes the module by getting the module parameters from the
@@ -99,10 +92,10 @@ module mc_sweep
 !!        conditions and volume.
 !! @param the_particles the particles to be updated with the MC moves.
 !!
-subroutine mcsweep_init(reader, the_simbox, the_particles)
+subroutine mcsweep_init(reader, simbox, particles)
   type(parameterizer), intent(in) :: reader
-  type(poly_box), intent(in) :: the_simbox
-  type(particledat), dimension(:), intent(in) :: the_particles
+  type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:), intent(in) :: particles
   real(dp) :: min_cell_length
   character(len = 200), save :: scalingtype = "z"
   call particlemover_init(reader)
@@ -134,21 +127,20 @@ subroutine mcsweep_init(reader, the_simbox, the_particles)
   min_cell_length = get_cutoff() + 2._dp * get_max_translation()
   !call simplelist_init(reader)
   !$ if (.true.) then
-  !$ call new_simplelist(sl, the_simbox, the_particles, min_cell_length, &
+  !$ call new_simplelist(sl, simbox, particles, min_cell_length, &
   !$& is_x_even = isxperiodic(simbox), is_y_even = isyperiodic(simbox), &
   !$& is_z_even = iszperiodic(simbox), cutoff=get_cutoff())
   !$ else 
-  call new_simplelist(sl, the_simbox, the_particles, min_cell_length, &
+  call new_simplelist(sl, simbox, particles, min_cell_length, &
        cutoff=get_cutoff())
   !$ end if
-  call set_system(the_simbox, the_particles)
+  currentvolume = volume(simbox)
   is_initialized = .true.
 end subroutine mcsweep_init
 
 !> Finalizes the module state.
 subroutine mcsweep_finalize
   call be_finalize
-  if (allocated(particles)) deallocate(particles)
   call simplelist_deallocate(sl)
   if (allocated(scalingtypes)) deallocate(scalingtypes)
   is_initialized = .false.
@@ -217,34 +209,6 @@ subroutine mc_sweep_writeparameters(writer)
   call energy_writeparameters(writer)
 end subroutine mc_sweep_writeparameters
 
-!> Setter for @p the_particles and the simulation box @p the_simbox.
-subroutine set_system(the_simbox, the_particles)
-  type(poly_box), intent(in) :: the_simbox
-  type(particledat), intent(in) :: the_particles(:)
-  logical :: overlap
-  logical :: should_allocate
-  !real(dp) :: debug_etotal
-  !logical :: debug_overlap 
-  should_allocate = .false.
-  simbox = the_simbox
-  if(allocated(particles)) deallocate(particles)
-  allocate(particles(size(the_particles)))
-  particles = the_particles
-  call update(sl, simbox, particles)
-  call totalenergy(sl, simbox, particles, etotal, overlap)
-  if (overlap) stop 'mc_sweep:set_system: Trying to set a geometry with overlap!' 
-  currentvolume = volume(simbox)
-end subroutine set_system
-
-!> Getter for @p the_particles and the simulation box @p the_simbox.
-subroutine get_system(the_simbox, the_particles)
-  type(poly_box), intent(out) :: the_simbox
-  type(particledat), allocatable, intent(out) :: the_particles(:)
-  the_simbox = simbox
-  allocate(the_particles(size(particles)))
-  the_particles = particles
-end subroutine get_system
-
 !> Runs one sweep of Metropolis Monte Carlo updates to the system. A
 !! full Parallel tempering NPT-ensemble sweep consists of trial moves
 !! of particles, trial scaling of the simulation box (barostat) and an
@@ -254,7 +218,9 @@ end subroutine get_system
 !! @param genstates random number generator states for all threads.
 !! @param isweep the sweep counter.
 !!  
-subroutine sweep(genstates, isweep)    
+subroutine sweep(simbox, particles, genstates, isweep)
+  type(poly_box), intent(inout) :: simbox
+  type(particledat), intent(inout) :: particles(:)
   type(rngstate), intent(inout) :: genstates(0:)
   integer, intent(in) :: isweep
   integer :: ivolmove
@@ -618,9 +584,11 @@ end subroutine scalepositions
 
 !> Tests that there are no overlaps in the current configuration of
 !! particles and the simulation box.
-subroutine test_configuration()
+subroutine test_configuration(simbox, particles)
   real(dp) :: total_e
   logical :: overlap
+  type(poly_box), intent(in) :: simbox
+  type(particledat), intent(in) :: particles(:)
   if (.not. is_initialized) then
      stop 'mc_sweep:test_configuration: Error: module not initialized!'
   end if

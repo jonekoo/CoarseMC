@@ -8,6 +8,7 @@ use m_fileunit
 use class_parameterizer
 use class_parameter_writer
 use beta_exchange, only: write_stats, reset_counters
+use m_particlegroup, only: particlegroup
 !$ use omp_lib
 implicit none
 private
@@ -63,6 +64,9 @@ type(mt_state), allocatable, save :: mts(:)
 !> The random number generator seed.
 integer, save :: seed = -1
 
+type(particlegroup), save :: group
+type(poly_box), save :: simbox
+
 contains
   
 !> Initializes this module and its dependencies.
@@ -82,13 +86,6 @@ subroutine mce_init(id, n_tasks)
   type(parameterizer) :: parameterreader
   integer :: thread_id = 0, n_threads = 1
   
-  type(particledat), dimension(:), allocatable :: particles
-  !! is the pointer to the array where the particles are stored
-  !! throughout the simulation.
-
-  type(poly_box) :: simbox
-  !! stores the simulation box that is used. 
-
   write(idchar, '(I9)') id 
   idchar = trim(adjustl(idchar))
   isrestart = .false.
@@ -143,8 +140,8 @@ subroutine mce_init(id, n_tasks)
   statefile = 'inputconfiguration.'//trim(adjustl(idchar))
   open(file=statefile, unit=coordinateunit, action='READ', status='OLD',&
        iostat=ios)
-  call factory_readstate(coordinatereader, coordinateunit, simbox, particles,&
-       ios)
+  call factory_readstate(coordinatereader, coordinateunit, simbox, &
+       group%particles, ios)
   if (0 /= ios) then 
     write(*, *) 'Error ', ios,' reading ', statefile, ' Stopping.' 
     stop
@@ -152,7 +149,7 @@ subroutine mce_init(id, n_tasks)
   close(coordinateunit)
 
   !! Initialize modules. 
-  call mcsweep_init(parameterreader, simbox, particles)
+  call mcsweep_init(parameterreader, simbox, group%particles)
   call delete(parameterreader)
  
   !! Open output for geometries
@@ -213,7 +210,7 @@ end subroutine
 subroutine run
   do while (isweep < nequilibrationsweeps + nproductionsweeps)
     isweep = isweep + 1
-    call sweep(mts, isweep)
+    call sweep(simbox, group%particles, mts, isweep)
     if (isweep <= nequilibrationsweeps) then
       call runequilibrationtasks
     end if
@@ -241,10 +238,7 @@ subroutine makerestartpoint
   type(parameter_writer) :: pwriter
   character(len=80) :: parameterfile
   character(len=80) :: configurationfile
-
   integer :: ios
-  type(particledat), allocatable :: particles(:)
-  type(poly_box) :: simbox
 
   !! Write parameters to a restartfile
   parameterunit = fileunit_getfreeunit()
@@ -265,10 +259,10 @@ subroutine makerestartpoint
   if (ios /= 0) write(*, *) 'makerestartpoint: Warning: Failed opening', &
        configurationfile
 
-  call get_system(simbox, particles)
-  call factory_writestate(restartwriter, configurationunit, simbox, particles)
+  !call get_system(simbox, group%particles)
+  call factory_writestate(restartwriter, configurationunit, simbox, &
+       group%particles)
   close(configurationunit)
-  if (allocated(particles)) deallocate(particles)
 
 end subroutine
 
@@ -290,14 +284,12 @@ subroutine runproductiontasks
   character(len=80) :: parameterfile
   type(parameter_writer) :: writer
   type(factory) :: coordinatewriter
-  type(poly_box) :: simbox
-  type(particledat), allocatable :: particles(:)
   integer :: be_unit
   if (mod(isweep, productionperiod) == 0) then
     !! Record snapshot of molecules and geometry.
-    call get_system(simbox, particles)
-    call factory_writestate(coordinatewriter, coordinateunit, simbox, particles)
-    if (allocated(particles)) deallocate(particles) 
+    !call get_system(simbox, group%particles)
+    call factory_writestate(coordinatewriter, coordinateunit, simbox, &
+         group%particles)
     
     !! Record simulation parameters.
     parameterfile = 'parameters.'//trim(adjustl(idchar))
