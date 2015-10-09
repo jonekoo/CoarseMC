@@ -33,10 +33,7 @@ bin_PROGRAMS = \
   print_xewall_shielding \
   print_xeslab_shielding \
   create_crystal \
-  default_parameters \
-  test_composite 
-
-
+  default_parameters
 
 ## Scripts to install
 dist_bin_SCRIPTS = \
@@ -52,14 +49,11 @@ dist_bin_SCRIPTS = \
   gbs2ljs.py \
   set_inputparameters.py
 
-
-
 ldadd_mtstream = ${top_builddir}/mt_stream_f90-1.11/libmt_stream.la
 
 AM_FCFLAGS = \
 -I${top_builddir}/mt_stream_f90-1.11 \
 -I${top_builddir}/mt_stream_f90-1.11/f_jump_ahead_coeff
-
 
 model_src = \
   particle.f90 \
@@ -127,15 +121,10 @@ parallel_src = \
   mpi.f90 \
   beta_exchange.f90 \
   mc_sweep.f90 \
+  m_particlegroup.f90 \
   mc_engine.f90 
 
 ## Below: Listings of source files needed by programs
-
-test_composite_SOURCES = \
-  list-inc-def.inc \
-  list-inc-proc.inc \
-  json_module.F90 \
-  m_composite.F90
 
 ptgbcyl_SOURCES = \
   ${common_src} \
