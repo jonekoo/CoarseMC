@@ -17,6 +17,7 @@ module mc_sweep
   !$ use omp_lib
   use class_simplelist
   include 'rng.inc'
+  use m_particlegroup, only: particlegroup
   implicit none  
   private 
 
@@ -72,9 +73,6 @@ module mc_sweep
   !> Counter for trial volume updates.
   integer, save :: nscalingtrials = 0
 
-  !> The cell list type of neighbourlist.
-  type(simplelist), save :: sl
-
   !> The types of trial volume updates.
   character(len = 200), dimension(:), allocatable, save :: scalingtypes
 
@@ -92,10 +90,10 @@ module mc_sweep
 !!        conditions and volume.
 !! @param the_particles the particles to be updated with the MC moves.
 !!
-subroutine mcsweep_init(reader, simbox, particles)
+subroutine mcsweep_init(reader, simbox)
   type(parameterizer), intent(in) :: reader
   type(poly_box), intent(in) :: simbox
-  type(particledat), dimension(:), intent(in) :: particles
+  !type(particlegroup), intent(inout) :: group
   real(dp) :: min_cell_length
   character(len = 200), save :: scalingtype = "z"
   call particlemover_init(reader)
@@ -124,16 +122,16 @@ subroutine mcsweep_init(reader, simbox, particles)
   !! in the same simulation. 
   nacceptedmoves = 0
   nacceptedscalings = 0
-  min_cell_length = get_cutoff() + 2._dp * get_max_translation()
-  !call simplelist_init(reader)
-  !$ if (.true.) then
-  !$ call new_simplelist(sl, simbox, particles, min_cell_length, &
-  !$& is_x_even = isxperiodic(simbox), is_y_even = isyperiodic(simbox), &
-  !$& is_z_even = iszperiodic(simbox), cutoff=get_cutoff())
-  !$ else 
-  call new_simplelist(sl, simbox, particles, min_cell_length, &
-       cutoff=get_cutoff())
-  !$ end if
+  !min_cell_length = get_cutoff() + 2._dp * get_max_translation()
+  !!call simplelist_init(reader)
+  !!$ if (.true.) then
+  !!$ call new_simplelist(sl, simbox, particles, min_cell_length, &
+  !!$& is_x_even = isxperiodic(simbox), is_y_even = isyperiodic(simbox), &
+  !!$& is_z_even = iszperiodic(simbox), cutoff=get_cutoff())
+  !!$ else 
+  !call new_simplelist(group%sl, simbox, group%particles, min_cell_length, &
+  !     cutoff=get_cutoff())
+  !!$ end if
   currentvolume = volume(simbox)
   is_initialized = .true.
 end subroutine mcsweep_init
@@ -141,7 +139,6 @@ end subroutine mcsweep_init
 !> Finalizes the module state.
 subroutine mcsweep_finalize
   call be_finalize
-  call simplelist_deallocate(sl)
   if (allocated(scalingtypes)) deallocate(scalingtypes)
   is_initialized = .false.
 end subroutine mcsweep_finalize
@@ -218,18 +215,18 @@ end subroutine mc_sweep_writeparameters
 !! @param genstates random number generator states for all threads.
 !! @param isweep the sweep counter.
 !!  
-subroutine sweep(simbox, particles, genstates, isweep)
+subroutine sweep(simbox, group, genstates, isweep)
   type(poly_box), intent(inout) :: simbox
-  type(particledat), intent(inout) :: particles(:)
+  type(particlegroup), intent(inout) :: group
   type(rngstate), intent(inout) :: genstates(0:)
   integer, intent(in) :: isweep
   integer :: ivolmove
   real(dp) :: beta
-  call update(sl, simbox, particles)
-  call make_particle_moves(simbox, particles, genstates, sl)
-  call update(sl, simbox, particles)
+  call update(group%sl, simbox, group%particles)
+  call make_particle_moves(simbox, group, genstates)
+  call update(group%sl, simbox, group%particles)
   do ivolmove = 1, size(scalingtypes)
-     call movevol(simbox, particles, scalingtypes(ivolmove), genstates(0))
+     call movevol(simbox, group, scalingtypes(ivolmove), genstates(0))
   end do
   if (mod(isweep, pt_period) == 0) then
      beta = 1._dp/temperature
@@ -249,12 +246,11 @@ end subroutine sweep
 !! @param genstates random number generator states. Each thread needs one.
 !! @param sl the cell list presenting the decomposition.
 !! 
-subroutine make_particle_moves(simbox, particles, genstates, sl)
+subroutine make_particle_moves(simbox, group, genstates)
   implicit none
   type(poly_box), intent(in) :: simbox
-  type(particledat), intent(inout) :: particles(:)
+  type(particlegroup), intent(inout) :: group
   type(rngstate), intent(inout) :: genstates(0:)
-  type(simplelist), intent(in) :: sl
   !$ integer :: n_threads
   integer :: thread_id
   real(dp) :: dE 
@@ -277,29 +273,30 @@ subroutine make_particle_moves(simbox, particles, genstates, sl)
   ntrials = 0
   !! Loop over cells. This can be thought of as looping through a 
   !! 2 x 2 x 2 cube of cells.
-  !$OMP PARALLEL shared(particles, simbox, sl, genstates)& 
+  !$OMP PARALLEL shared(group, simbox, genstates)& 
   !$OMP& private(thread_id, n_threads, temp_particles, nbr_mask)&
   !$OMP& reduction(+:dE, nacc, ntrials) 
   !$ thread_id = omp_get_thread_num()
-  allocate(temp_particles(minval([size(particles),&
-       27 * maxval(sl%counts)])), nbr_mask(size(particles)))
-  do iz=0, min(1, sl%nz-1)
-     do iy=0, min(1, sl%ny-1)
-        do ix=0, min(1, sl%nx-1)
+  allocate(temp_particles(minval([size(group%particles),&
+       27 * maxval(group%sl%counts)])), nbr_mask(size(group%particles)))
+  do iz=0, min(1, group%sl%nz-1)
+     do iy=0, min(1, group%sl%ny-1)
+        do ix=0, min(1, group%sl%nx-1)
            !$OMP DO collapse(3) private(j, n_cell, n_local, dE_ij, isaccepted)&
            !$OMP& schedule(dynamic)
-           do jz = iz, sl%nz - 1, 2
-              do jy = iy, sl%ny - 1, 2
-                 do jx = ix, sl%nx - 1, 2
+           do jz = iz, group%sl%nz - 1, 2
+              do jy = iy, group%sl%ny - 1, 2
+                 do jx = ix, group%sl%nx - 1, 2
                     nbr_mask = .false.
-                    n_cell = sl%counts(jx, jy, jz)
-                    call simplelist_nbrmask(sl, simbox, jx, jy, jz, nbr_mask)
+                    n_cell = group%sl%counts(jx, jy, jz)
+                    call simplelist_nbrmask(group%sl, simbox, jx, jy, jz, &
+                         nbr_mask)
                     n_local = count(nbr_mask)
-                    nbr_mask(sl%indices(1:n_cell, jx, jy, jz)) = .false.
+                    nbr_mask(group%sl%indices(1:n_cell, jx, jy, jz)) = .false.
                     temp_particles(1:n_cell) = &
-                         particles(sl%indices(1:n_cell, jx, jy, jz))
+                         group%particles(group%sl%indices(1:n_cell, jx, jy, jz))
                     temp_particles(n_cell + 1 : n_local) = &
-                         pack(particles, nbr_mask)
+                         pack(group%particles, nbr_mask)
                     do j = 1, n_cell
                        call moveparticle_2(simbox, &
                             temp_particles(1:n_local), j, &
@@ -310,7 +307,7 @@ subroutine make_particle_moves(simbox, particles, genstates, sl)
                        end if
                        ntrials = ntrials + 1
                     end do
-                    particles(sl%indices(1:n_cell, jx, jy, jz)) = &
+                    group%particles(group%sl%indices(1:n_cell, jx, jy, jz)) = &
                          temp_particles(1:n_cell)
                  end do
               end do
@@ -396,9 +393,9 @@ end subroutine settemperature
 !!        the system volume.
 !! @param genstate the random number generator state.
 !! 
-subroutine movevol(simbox, particles, scalingtype, genstate)    
+subroutine movevol(simbox, group, scalingtype, genstate)    
   type(poly_box), intent(inout) :: simbox
-  type(particledat), dimension(:), intent(inout) :: particles
+  type(particlegroup), intent(inout) :: group
   character(len=*), intent(in) :: scalingtype
   type(rngstate), intent(inout) :: genstate
   integer :: nparticles 
@@ -411,7 +408,7 @@ subroutine movevol(simbox, particles, scalingtype, genstate)
   type(poly_box) :: oldbox
   real(dp), dimension(3) :: scaling
   logical :: is_update_needed
-  nparticles = size(particles)
+  nparticles = size(group%particles)
   overlap = .false.
   is_update_needed = .false.
   
@@ -420,14 +417,14 @@ subroutine movevol(simbox, particles, scalingtype, genstate)
   oldbox = simbox
   
   !! It seems that total energy may drift if it is not updated here:
-  call totalenergy(sl, simbox, particles, etotal, overlap)
+  call totalenergy(group%sl, simbox, group%particles, etotal, overlap)
   if (overlap) stop 'movevol: overlap in old configuration! '//&
        'Should never happen!'
   
   !! Scale coordinates and the simulations box
   scaling = genvoltrial_scale(simbox, maxscaling, genstate, &
        trim(adjustl(scalingtype)))
-  call scalepositions(oldbox, simbox, particles, nparticles) 
+  call scalepositions(oldbox, simbox, group%particles, nparticles) 
   Vn = volume(simbox)
   
   !! Check that new dimensions are ok. 
@@ -435,18 +432,18 @@ subroutine movevol(simbox, particles, scalingtype, genstate)
 
   if (Vn/Vo < 1._dp/(1._dp + 2._dp * get_max_translation()/get_cutoff())) then
      !! Volume shrank so quickly that the neighbourlist needs updating.
-     call update(sl, simbox, particles)
+     call update(group%sl, simbox, group%particles)
      is_update_needed = .true.
   end if
   
     !! Calculate potential energy in the scaled system.
-  call totalenergy(sl, simbox, particles, totenew, overlap)
+  call totalenergy(group%sl, simbox, group%particles, totenew, overlap)
   
   if (overlap) then
      !! Scale particles back to old coordinates.
-     call scalepositions(simbox, oldbox, particles, nparticles)
+     call scalepositions(simbox, oldbox, group%particles, nparticles)
      simbox = oldbox
-     if (is_update_needed) call update(sl, simbox, particles)
+     if (is_update_needed) call update(group%sl, simbox, group%particles)
   else
      boltzmannn = totenew + pressure * Vn - real(nparticles, dp) * &
           temperature * log(Vn)  
@@ -457,12 +454,12 @@ subroutine movevol(simbox, particles, scalingtype, genstate)
         etotal = totenew
         nacceptedscalings = nacceptedscalings + 1
         currentvolume = volume(simbox)
-        call update(sl, simbox, particles)
+        call update(group%sl, simbox, group%particles)
      else 
         !! Scale particles back to old coordinates
-        call scalepositions(simbox, oldbox, particles, nparticles)
+        call scalepositions(simbox, oldbox, group%particles, nparticles)
         simbox = oldbox
-        if (is_update_needed) call update(sl, simbox, particles)
+        if (is_update_needed) call update(group%sl, simbox, group%particles)
      end if
   end if
   nscalingtrials = nscalingtrials + 1
@@ -504,7 +501,8 @@ end subroutine acceptchange
 !> Adjusts the maximum values for trial moves of particles and trial
 !! scalings of the simulation volume. Should be used only during
 !! equilibration run. 
-subroutine updatemaxvalues
+subroutine updatemaxvalues(group)
+  type(particlegroup), intent(inout) :: group
   real(dp) :: newdthetamax
   real(dp) :: newdximax
   !! Adjust scaling
@@ -517,7 +515,7 @@ subroutine updatemaxvalues
   
   !! Update the minimum cell side length of the cell list because the maximum
   !! translation has changed: 
-  sl%min_length = get_cutoff() + 2._dp * get_max_translation()
+  group%sl%min_length = get_cutoff() + 2._dp * get_max_translation()
   
   !! This should adjust rotations < pi/2 to move the particle end as much as
   !! a random translation. 4.4 is the assumed molecule length-to-breadth 

@@ -120,16 +120,16 @@ common_src = \
 parallel_src = \
   mpi.f90 \
   beta_exchange.f90 \
-  mc_sweep.f90 \
   m_particlegroup.f90 \
+  mc_sweep.f90 \
   mc_engine.f90 
 
 ## Below: Listings of source files needed by programs
 
 ptgbcyl_SOURCES = \
-  ${common_src} \
-  ${energy_src} \
-  ${parallel_src} \
+  $(common_src) \
+  $(energy_src) \
+  $(parallel_src) \
   gbcyl.f90 
 
 default_parameters_LDADD = $(ptgbcyl_LDADD)

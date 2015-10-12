@@ -148,8 +148,9 @@ subroutine mce_init(id, n_tasks)
   end if
   close(coordinateunit)
 
-  !! Initialize modules. 
-  call mcsweep_init(parameterreader, simbox, group%particles)
+  !! Initialize modules.
+  call mcsweep_init(parameterreader, simbox)
+  call group%init(simbox)
   call delete(parameterreader)
  
   !! Open output for geometries
@@ -210,7 +211,7 @@ end subroutine
 subroutine run
   do while (isweep < nequilibrationsweeps + nproductionsweeps)
     isweep = isweep + 1
-    call sweep(simbox, group%particles, mts, isweep)
+    call sweep(simbox, group, mts, isweep)
     if (isweep <= nequilibrationsweeps) then
       call runequilibrationtasks
     end if
@@ -272,7 +273,7 @@ end subroutine
 subroutine runequilibrationtasks
   if (moveadjustperiod /= 0) then
     if (mod(isweep, moveadjustperiod) == 0) then
-      call updatemaxvalues
+      call updatemaxvalues(group)
     end if
   end if
 end subroutine 
