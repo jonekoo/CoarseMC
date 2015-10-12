@@ -80,7 +80,7 @@ end subroutine
 !! cell-by-cell for the @p particles in the cell list @p sl. @p simbox
 !! is the simulation cell. If any two particles are too close to each
 !! other, @p overlap is true. 
-pure subroutine total_by_cell(sl, simbox, particles, energy, overlap)
+subroutine total_by_cell(sl, simbox, particles, energy, overlap)
   type(simplelist), intent(in) :: sl
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
