@@ -1,21 +1,12 @@
 !> Implements routines for creating trial Monte Carlo translations and
 !! rotations for uniaxial particles, such as in the Gay-Berne model.
 module particle_mover
-use particle
 use nrtype
 use utils
 use class_parameterizer
 use class_parameter_writer
 include 'rng.inc'
 implicit none
-private
-
-public :: particlemover_writeparameters
-public :: getmaxmoves
-public :: move
-public :: setmaxmoves
-public :: get_max_translation
-public :: particlemover_init
   
 !> The maximum angle for a trial rotation.
 real(dp), save :: max_rotation = -1._dp
@@ -31,17 +22,12 @@ interface particlemover_init
   module procedure particlemover_init1, particlemover_init2
 end interface
 
-!> Moves a particle.
-interface move
-   module procedure move1, move2
-end interface
-
 contains
 
   !> Initializes this module using a parameterizer object.
   !! 
-  !! @param reader the parameterizer object which gives (reads) the parameters to
-  !! this module.
+  !! @param reader the parameterizer object which gives (reads) the parameters
+  !! to this module.
   !! 
   subroutine particlemover_init1(reader)
     type(parameterizer), intent(in) :: reader
@@ -76,33 +62,9 @@ contains
     call writeparameter(writer, 'max_rotation', max_rotation)    
   end subroutine
 
-  !> Performs a combined translation and rotation of @p particle. 
-  !! @p genstate is the random number generator state.
-  pure subroutine move1(aparticle, genstate)    
-    type(particledat), intent(inout) :: aparticle
-    type(rngstate), intent(inout) :: genstate
-    type(particledat) :: temp
-    call move(aparticle, temp, genstate)
-    aparticle = temp
-  end subroutine
-
-  !> Creates a new particle @p newp by applying a combined translation
-  !! and rotation to @p oldp. @p genstate is the random number
-  !! generator state.
-  pure subroutine move2(oldp, newp, genstate)
-    type(particledat), intent(in) :: oldp
-    type(particledat), intent(out) :: newp
-    type(rngstate), intent(inout) :: genstate
-    newp = oldp
-    call transmove(oldp%x,oldp%y,oldp%z,newp%x,newp%y,newp%z, genstate)
-    if (oldp%rod) then
-      call rotate(oldp%ux,oldp%uy,oldp%uz,newp%ux,newp%uy,newp%uz, genstate)
-    end if
-  end subroutine
-  
-  !> Creates a new position @p xn, @p yn, @p zn from @p xo, @p yo, @p zo by applying a
-  !! random displacement to each of the three coordinates. @p genstate
-  !! is the random number generator state. 
+  !> Creates a new position @p xn, @p yn, @p zn from @p xo, @p yo, @p zo by
+  !! applying a random displacement to each of the three coordinates.
+  !! @p genstate is the random number generator state. 
   pure subroutine transmove(xo, yo, zo, xn, yn, zn, genstate)
     real(dp), intent(in) :: xo, yo, zo
     real(dp), intent(out) :: xn, yn, zn

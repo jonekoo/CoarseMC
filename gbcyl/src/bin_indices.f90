@@ -9,7 +9,7 @@
 !!
 subroutine bin_indices(particles, xfunc, bin_width, indices, offset, direction)
 use nrtype
-use particle
+use particle, only: particledat
 implicit none
 type(particledat), dimension(:), intent(in) :: particles
 real(dp), intent(in) :: bin_width

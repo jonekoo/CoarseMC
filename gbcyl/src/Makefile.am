@@ -56,6 +56,9 @@ AM_FCFLAGS = \
 -I${top_builddir}/mt_stream_f90-1.11/f_jump_ahead_coeff
 
 model_src = \
+  class_parameterizer.f90 \
+  class_parameter_writer.f90 \
+  particle_mover.f90 \
   particle.f90 \
   class_poly_box.f90 \
   class_factory.f90
@@ -74,37 +77,37 @@ energy_src = \
   class_simplelist.f90 \
   energy.f90 
 
-ptgbcyl_LDADD = ${ldadd_mtstream}
+#ptgbcyl_LDADD = $(ldadd_mtstream)
 
 nr_src = num_kind.f90
 ## Use dsyev from LAPACK
-LDADD = ${top_builddir}/lapack/lapack_routine/libdsyev.la
+LDADD = $(top_builddir)/lapack/lapack_routine/libdsyev.la $(ldadd_mtstream) $(ldadd_hyp2f1)
 eigens_src = eigens_dsyev.f90
 ## Use hyp2f1 from cephes
 energy_src += m_hyp2f1_negint.f90 cylinder_integrals.f90 ljwall_cephes.f90
-ldadd_hyp2f1 = ${top_builddir}/cephes/libhyp2f1.la
-ptgbcyl_LDADD += ${ldadd_hyp2f1}
-printpotentials_LDADD = ${ldadd_hyp2f1}
-printforces_LDADD = ${ldadd_hyp2f1}
-AM_FCFLAGS += -I${top_builddir}/cephes/cmath
+ldadd_hyp2f1 = $(top_builddir)/cephes/libhyp2f1.la
+#ptgbcyl_LDADD += $(ldadd_hyp2f1)
+#printpotentials_LDADD = $(ldadd_hyp2f1) $(ldadd_mtstream)
+#printforces_LDADD = $(ldadd_hyp2f1) $(ldadd_mtstream)
+AM_FCFLAGS += -I$(top_builddir)/cephes/cmath
 bin_PROGRAMS += test_hyp2f1 test_zhangI
 test_hyp2f1_SOURCES =  m_hyp2f1_negint.f90 test_hyp2f1.f90
-test_hyp2f1_LDADD = ${ldadd_hyp2f1}  ${ldadd_mtstream}
+#test_hyp2f1_LDADD = $(ldadd_hyp2f1)  $(ldadd_mtstream)
 test_zhangI_SOURCES = utils.f90 m_hyp2f1_negint.f90 test_zhangI.f90 ljwall_cephes.f90
-test_zhangI_LDADD = ${ldadd_hyp2f1}  ${ldadd_mtstream}
-pressurezz_LDADD = ${ldadd_hyp2f1}
-virial_tensor_LDADD = ${ldadd_hyp2f1}
-onwallpressure_LDADD = ${ldadd_hyp2f1}
-test_simplelist_with_openmp_LDADD = ${ldadd_hyp2f1}
-xe_nmr_LDADD = ${LDADD} ${ldadd_hyp2f1}
-xe_nmr_profile_LDADD = ${LDADD} ${ldadd_hyp2f1}
-xe_nmr_profile2_LDADD = ${LDADD} ${ldadd_hyp2f1}
-test_gblj_LDADD = ${ldadd_hyp2f1}
-print_gbxe_qcoupling_LDADD = ${LDADD} ${ldadd_hyp2f1}
-print_gbxe_shielding_LDADD = ${LDADD} ${ldadd_hyp2f1}
-print_xewall_coupling_LDADD = ${LDADD} ${ldadd_hyp2f1}
-print_xewall_shielding_LDADD = ${LDADD} ${ldadd_hyp2f1}
-print_xeslab_shielding_LDADD = ${LDADD} ${ldadd_hyp2f1}
+#test_zhangI_LDADD = $(ldadd_hyp2f1)  $(ldadd_mtstream)
+#pressurezz_LDADD = $(ldadd_hyp2f1)
+#virial_tensor_LDADD = $(ldadd_hyp2f1)
+#onwallpressure_LDADD = $(ldadd_hyp2f1)
+#test_simplelist_with_openmp_LDADD = $(ldadd_hyp2f1)
+#xe_nmr_LDADD = $(LDADD) $(ldadd_hyp2f1)
+#xe_nmr_profile_LDADD = $(LDADD) $(ldadd_hyp2f1)
+#xe_nmr_profile2_LDADD = $(LDADD) $(ldadd_hyp2f1)
+#test_gblj_LDADD = $(ldadd_hyp2f1)
+#print_gbxe_qcoupling_LDADD = $(LDADD) $(ldadd_hyp2f1)
+#print_gbxe_shielding_LDADD = $(LDADD) $(ldadd_hyp2f1)
+#print_xewall_coupling_LDADD = $(LDADD) $(ldadd_hyp2f1)
+#print_xewall_shielding_LDADD = $(LDADD) $(ldadd_hyp2f1)
+#print_xeslab_shielding_LDADD = $(LDADD) $(ldadd_hyp2f1)
 
 common_src = \
   ${nr_src} \
@@ -112,9 +115,6 @@ common_src = \
   utils.f90 \
   m_fileunit.f90 \
   ${model_src} \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
-  particle_mover.f90 \
   genvoltrial.f90 
 
 parallel_src = \
@@ -141,6 +141,7 @@ default_parameters_SOURCES = \
   default_parameters.f90
 
 create_crystal_SOURCES = \
+  m_fileunit.f90 \
   utils.f90 \
   ${model_src} \
   crystal.f90 \
@@ -165,8 +166,6 @@ xe_nmr_SOURCES = \
   ${eigens_src} \
   m_rank2_tensor.f90 \
   xewall_shielding.f90 \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
   ${energy_src} \
   m_constants.f90 \
   m_shielding.f90 \
@@ -193,8 +192,6 @@ xe_nmr_profile_SOURCES = \
   xfunc_module.f90 \
   histogram.f90 \
   parse_cmdline.inc \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
   ${energy_src} \
   xe_nmr_profile.f90 \
   ljcylinder_tensor.f90 
@@ -208,8 +205,6 @@ xe_nmr_profile2_SOURCES = \
   ${eigens_src} \
   m_rank2_tensor.f90 \
   xewall_shielding.f90 \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
   ${energy_src} \
   m_constants.f90 \
   m_shielding.f90 \
@@ -231,8 +226,6 @@ print_xewall_coupling_SOURCES = \
   ${eigens_src} \
   m_rank2_tensor.f90 \
   xewall_shielding.f90 \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
   ${energy_src} \
   m_constants.f90 \
   m_shielding.f90 \
@@ -250,8 +243,6 @@ print_xewall_shielding_SOURCES = \
   ${eigens_src} \
   m_rank2_tensor.f90 \
   xewall_shielding.f90 \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
   ${energy_src} \
   m_constants.f90 \
   m_shielding.f90 \
@@ -267,8 +258,6 @@ print_xeslab_shielding_SOURCES = \
   ${eigens_src} \
   m_rank2_tensor.f90 \
   xewall_shielding.f90 \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
   ${energy_src} \
   m_constants.f90 \
   m_shielding.f90 \
@@ -284,8 +273,6 @@ print_gbxe_qcoupling_SOURCES = \
   ${eigens_src} \
   m_rank2_tensor.f90 \
   xewall_shielding.f90 \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
   ${energy_src} \
   m_constants.f90 \
   m_shielding.f90 \
@@ -303,8 +290,6 @@ print_gbxe_shielding_SOURCES = \
   ${eigens_src} \
   m_rank2_tensor.f90 \
   xewall_shielding.f90 \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
   ${energy_src} \
   m_constants.f90 \
   m_shielding.f90 \
@@ -464,9 +449,7 @@ printpotentials_SOURCES = \
   ${nr_src} \
   utils.f90 \
   m_fileunit.f90 \
-  ${model_src} \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
+  $(model_src) \
   ${energy_src} \
   printpotentials.f90 
 
@@ -475,8 +458,6 @@ printforces_SOURCES = \
   utils.f90 \
   m_fileunit.f90 \
   ${model_src} \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
   ${energy_src} \
   printforces.f90 
 
@@ -492,8 +473,6 @@ test_gblj_SOURCES = \
   ${model_src} \
   utils.f90 \
   m_fileunit.f90 \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
   ${energy_src} \
   test_gblj.f90 
 
@@ -508,16 +487,12 @@ pressurezz_SOURCES = \
   ${nr_src} \
   utils.f90 \
   m_fileunit.f90 \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
   ${model_src} \
   ${energy_src} \
   pressurezz.f90
 
 virial_tensor_SOURCES = \
   ${nr_src} \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
   ${model_src} \
   ${energy_src} \
   utils.f90 \
@@ -528,8 +503,6 @@ onwallpressure_SOURCES = \
   ${nr_src} \
   m_fileunit.f90 \
   ${model_src} \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
   ${energy_src} \
   utils.f90 \
   onwallpressure.f90
@@ -539,8 +512,6 @@ test_simplelist_with_openmp_SOURCES = \
   ${model_src} \
   m_fileunit.f90 \
   utils.f90 \
-  class_parameterizer.f90 \
-  class_parameter_writer.f90 \
   ${energy_src} \
   test_simplelist_with_openmp.f90
 

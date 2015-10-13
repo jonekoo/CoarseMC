@@ -1,8 +1,10 @@
 !> Implements the basic functions needed to handle data for simple, 
 !! uniaxial particles such as in the Gay-Berne potential.
 module particle
-use nrtype
+use nrtype, only: dp
 use utils
+include 'rng.inc'
+use particle_mover, only: transmove, rotate
 implicit none
 
 !> Holds data of a uniaxial particle, e.g. Gay-Berne 
@@ -97,5 +99,29 @@ pure subroutine setorientation(aparticle, vec)
   aparticle%uy = vec(2)
   aparticle%uz = vec(3)
 end subroutine setorientation
+
+!> Performs a combined translation and rotation of @p particle. 
+!! @p genstate is the random number generator state.
+pure subroutine move(aparticle, genstate)    
+  type(particledat), intent(inout) :: aparticle
+  type(rngstate), intent(inout) :: genstate
+  type(particledat) :: temp
+  call move2(aparticle, temp, genstate)
+  aparticle = temp
+end subroutine move
+
+!> Creates a new particle @p newp by applying a combined translation
+!! and rotation to @p oldp. @p genstate is the random number
+!! generator state.
+pure subroutine move2(oldp, newp, genstate)
+  type(particledat), intent(in) :: oldp
+  type(particledat), intent(out) :: newp
+  type(rngstate), intent(inout) :: genstate
+  newp = oldp
+  call transmove(oldp%x,oldp%y,oldp%z,newp%x,newp%y,newp%z, genstate)
+  if (oldp%rod) then
+     call rotate(oldp%ux,oldp%uy,oldp%uz,newp%ux,newp%uy,newp%uz, genstate)
+  end if
+end subroutine move2
   
-end module
+end module particle

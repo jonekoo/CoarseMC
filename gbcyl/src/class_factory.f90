@@ -5,8 +5,8 @@
 !! defines the structure of the coordinate file but leaves details of
 !! writing and reading to the particle and simulation box modules.
 module class_factory
-use particle
-use class_poly_box
+use particle, only: particledat, readparticle, writeparticle
+use class_poly_box, only: poly_box, pbox_read, pbox_write
 use utils
 implicit none
 

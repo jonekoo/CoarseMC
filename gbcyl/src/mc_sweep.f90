@@ -8,7 +8,8 @@ module mc_sweep
   use energy
   use class_poly_box
   use particle
-  use particle_mover
+  use particle_mover, only: get_max_translation, getmaxmoves, &
+       particlemover_init, particlemover_writeparameters, setmaxmoves
   use beta_exchange, beta_exchange_init => init, be_finalize => finalize
   use class_parameterizer
   use class_parameter_writer

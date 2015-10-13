@@ -6,10 +6,11 @@ program xe_nmr_profile2
   use class_factory
   use m_shielding
   use m_quadrupole_coupling
-  use m_rank2_tensor, only: rank2_tensor
+  use m_rank2_tensor, only: rank2_tensor, new_tensor, rotate, operator(+)
   use class_parameterizer
   use m_fileunit
-  use lj_nmr
+  use lj_nmr, only: gblj_tensor, ljlj_tensor, ljwall_tensor, gblj_local, &
+       ljlj_local, ljwall_local
   use xfunc_module, only: xfunc => rho
   use histogram
   use utils, only: splitstr, join, fmt_char_dp_array
