@@ -108,7 +108,8 @@ end subroutine
 !! The Journal of Chemical Physics, 135(19):194110, 2011.
 !!
 subroutine try_beta_exchanges(beta, energy, p, genstate)
-  real(dp), intent(inout) :: beta, energy
+  real(dp), intent(inout) :: beta
+  real(dp), intent(in) :: energy
   integer, intent(in) :: p
   type(rngstate), intent(inout) :: genstate
   integer :: n_tasks, ierr, task_id, i, j, k
