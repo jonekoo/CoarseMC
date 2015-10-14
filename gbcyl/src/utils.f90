@@ -1,20 +1,43 @@
 module utils
-use nrtype
-implicit none
-intrinsic index
+  use nrtype
+  include 'rng.inc'
+  implicit none
+  intrinsic index
 
-interface
-   !> Computes the eigenvectors and eigenvalues @p values of @p matrix.
-   !! @p matrix is replaced by the eigenvectors on output.
-   subroutine eigensystem(matrix, values)
-     use nrtype, only: dp
-     implicit none
-     real(dp), intent(inout) :: matrix(3, 3)
-     real(dp), intent(out) :: values(3)
-   end subroutine eigensystem
-end interface
-
+  interface
+     !> Computes the eigenvectors and eigenvalues @p values of @p matrix.
+     !! @p matrix is replaced by the eigenvectors on output.
+     subroutine eigensystem(matrix, values)
+       use nrtype, only: dp
+       implicit none
+       real(dp), intent(inout) :: matrix(3, 3)
+       real(dp), intent(out) :: values(3)
+     end subroutine eigensystem
+  end interface
+  
 contains 
+
+!> Implements the Metropolis acceptance rule for a Monte Carlo update. 
+!!
+!! @param oldenergy the energy/enthalpy of the system before the move.
+!! @param newenergy the energy/enthalpy of the system after the move.
+!! @param genstate is the random number generator state.
+!! @param isaccepted == .true. if the move is accepted. 
+!!
+  pure subroutine acceptchange(oldenergy, newenergy, temperature, genstate, &
+       isaccepted)
+  real(dp), intent(in) :: oldenergy, newenergy, temperature
+  type(rngstate), intent(inout) :: genstate
+  logical, intent(out) :: isaccepted
+  real(dp) :: dE
+  real(dp) :: r
+  isaccepted = .true.
+  dE = newenergy - oldenergy
+  if (dE > 0._dp) then
+     call rng(genstate, r)
+     isaccepted = (r < exp(-dE/temperature))
+  end if
+end subroutine acceptchange
 
 !> Returns the number of @p substr occurences in string @p str.
 function substrcount(str, substr)

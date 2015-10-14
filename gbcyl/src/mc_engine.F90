@@ -1,14 +1,20 @@
 !> Implements the streering of the simulation and controlling it's
 !! input and output.
 module mc_engine
-use mc_sweep
-use class_factory
+  use mc_sweep, only: make_particle_moves, update_volume, get_total_energy, &
+       mc_sweep_writeparameters, mcsweep_finalize, mcsweep_init, &
+       resetcounters, updatemaxvalues
+use class_factory, only: factory, factory_readstate, factory_writestate
 use mt_stream
 use m_fileunit
+use class_poly_box, only: poly_box, volume
 use class_parameterizer
 use class_parameter_writer
-use beta_exchange, only: write_stats, reset_counters
+use beta_exchange, only: write_stats, reset_counters, &
+     beta_exchange_init => init, be_finalize => finalize, try_beta_exchanges
 use m_particlegroup, only: particlegroup
+use energy, only: simple_singleparticleenergy
+use iso_fortran_env, only: dp => REAL64, error_unit
 !$ use omp_lib
 implicit none
 private
@@ -36,6 +42,9 @@ integer, save :: productionperiod = 1
 !! equilibration MC sweeps.
 integer, save :: moveadjustperiod = 100
 
+!> The number of sweeps between parallel tempering updates.
+integer, save :: pt_period = 1
+
 !> If adjusting of temperatures in the temperature series for parallel 
 !! tempering is used defines the period for these actions. (DEPRECATED)
 integer, save :: ptadjustperiod = 100
@@ -47,6 +56,14 @@ integer, save :: restartperiod = 10000
 
 !> The sweep counter.
 integer, save :: isweep = 0
+
+!> The simulation temperature.
+real(dp), save :: temperature = -1._dp
+
+
+!> The simulation pressure. Only meaningful in a constant-pressure
+!! simulation.
+real(dp), save :: pressure = -1._dp
 
 !> Output unit and filename for writing parameters.
 integer, save :: pwunit
@@ -132,9 +149,21 @@ subroutine mce_init(id, n_tasks)
   call getparameter(parameterreader, 'i_sweep', isweep)
   call getparameter(parameterreader, 'move_adjusting_period', &
   moveadjustperiod)
+  call getparameter(parameterreader, 'pt_period', pt_period)
   call getparameter(parameterreader, 'pt_adjusting_period', ptadjustperiod)
   call getparameter(parameterreader, 'restartperiod', restartperiod)
-
+  call getparameter(parameterreader, 'temperature', temperature)
+  if (temperature < 0._dp) then
+     write(error_unit, *) 'mc_engine:'//&
+          'trying to set a negative temperature, stopping.'
+     stop  
+  end if
+  call getparameter(parameterreader, 'pressure', pressure)
+  if (pressure < 0._dp) then
+     write(error_unit, *) 'mc_engine:'//&
+          'trying to set a negative pressure, stopping.'
+     stop  
+  end if
   !! Read geometry
   coordinateunit = fileunit_getfreeunit()
   statefile = 'inputconfiguration.'//trim(adjustl(idchar))
@@ -150,6 +179,7 @@ subroutine mce_init(id, n_tasks)
 
   !! Initialize modules.
   call mcsweep_init(parameterreader, simbox)
+  call beta_exchange_init(1._dp / temperature)
   call group%init(simbox)
   call delete(parameterreader)
  
@@ -177,6 +207,7 @@ subroutine finalize(id)
   close(coordinateunit)
   call makerestartpoint
   call mcsweep_finalize
+  call be_finalize
   do i = 0, size(mts) - 1
      call delete(mts(i))
   end do
@@ -185,6 +216,31 @@ subroutine finalize(id)
 end subroutine 
 
   
+!> Runs one sweep of Metropolis Monte Carlo updates to the system. A
+!! full Parallel tempering NPT-ensemble sweep consists of trial moves
+!! of particles, trial scaling of the simulation box (barostat) and an
+!! exchange of particle system coordinates with another particle system
+!! (replica) in another temperature (replica exchange).
+!! 
+!! @param genstates random number generator states for all threads.
+!! @param isweep the sweep counter.
+!!  
+subroutine sweep(simbox, group, genstates, isweep)
+  type(poly_box), intent(inout) :: simbox
+  type(particlegroup), intent(inout) :: group
+  type(mt_state), intent(inout) :: genstates(0:)
+  integer, intent(in) :: isweep
+  real(dp) :: beta
+  call make_particle_moves(simbox, group, genstates, &
+       simple_singleparticleenergy, temperature)
+  call update_volume(simbox, group, genstates(0), temperature, pressure)
+  if (mod(isweep, pt_period) == 0) then
+     beta = 1._dp / temperature
+     call try_beta_exchanges(beta, get_total_energy(), 3, genstates(0)) 
+     temperature = 1._dp / beta
+  end if
+end subroutine sweep
+
 !> Writes the parameters and observables of this module and its children
 !! with the class_parameter_writer module and by calling the write routines
 !! of the child modules.
@@ -200,9 +256,14 @@ subroutine mce_writeparameters(writer)
   call writeparameter(writer, 'i_sweep', isweep)
   call writeparameter(writer, 'production_period', productionperiod)
   call writeparameter(writer, 'move_adjusting_period', moveadjustperiod)
+  call writeparameter(writer, 'pt_period', pt_period)
   call writeparameter(writer, 'pt_adjusting_period', ptadjustperiod)
   call writeparameter(writer, 'restartperiod', restartperiod)
   call writeparameter(writer, 'seed', seed)
+  call writeparameter(writer, 'pressure', pressure)
+  call writeparameter(writer, 'temperature', temperature)
+  call writeparameter(writer, 'enthalpy', get_total_energy() + &
+       volume(simbox) * pressure)
   call mc_sweep_writeparameters(writer)
 end subroutine
 

@@ -3,6 +3,7 @@
 module particle
 use nrtype, only: dp
 use utils
+use class_poly_box, only: poly_box, minimage
 include 'rng.inc'
 use particle_mover, only: transmove, rotate
 implicit none
@@ -29,6 +30,27 @@ type particledat
    real(dp) :: uz = 1._dp
    logical :: rod = .true.
 end type particledat
+
+interface   
+   !> Returns the potential energy of @p particles(@p i).
+   !! 
+   !! @param simbox the simulation box where the @p particles are.
+   !! @param particles the particles in the system.
+   !! @param i the index of the particle in @p particles.
+   !! @param energy the potential energy of @p particles(@p i)
+   !! @param overlap is .true. if e.g. @p particles(@p i) is too close to
+     !!        some other particle.
+   !!
+   pure subroutine particle_energy(simbox, particles, i, &
+        energy, overlap)
+     import
+     type(poly_box), intent(in) :: simbox
+     type(particledat), intent(in) :: particles(:)
+     integer, intent(in) :: i
+     real(dp), intent(out) :: energy
+     logical, intent(out) :: overlap
+   end subroutine particle_energy
+end interface
 
 contains
 
@@ -66,6 +88,51 @@ subroutine readparticle(readunit, aparticle, ios)
   end if
   if (ios /= 0) backspace readunit
 end subroutine readparticle
+
+!> Performs a trial move of @p particles(@p i). @p simbox is the
+!! simulation box in which the @p particles reside. @p genstate is the
+!! random number generator state. After the move, @p dE contains the
+!! change in energy of the system and @p isaccepted == .true. if the
+!! move was accepted. 
+pure subroutine moveparticle_2(simbox, particles, i, temperature, genstate, &
+     subr_particle_energy, dE, isaccepted)
+  type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:), intent(inout) :: particles
+  integer, intent(in) :: i
+  real(dp), intent(in) :: temperature
+  type(rngstate), intent(inout) :: genstate
+  procedure(particle_energy) :: subr_particle_energy
+  real(dp), intent(out) :: dE
+  logical, intent(out) :: isaccepted
+  
+  type(particledat) :: newparticle
+  type(particledat) :: oldparticle
+  logical :: overlap
+  real(dp) :: enew
+  real(dp) :: eold
+  
+  enew = 0._dp
+  eold = 0._dp
+  dE = 0._dp
+  overlap = .false.
+  isaccepted = .false.
+  newparticle = particles(i)
+  call move(newparticle, genstate)
+  call setposition(newparticle, minimage(simbox, position(newparticle)))
+  oldparticle = particles(i) 
+  particles(i) = newparticle
+  call subr_particle_energy(simbox, particles, i, enew, overlap)
+  
+  particles(i) = oldparticle
+  if(.not. overlap) then 
+     call subr_particle_energy(simbox, particles, i, eold, overlap)
+     call acceptchange(eold, enew, temperature, genstate, isaccepted)
+     if(isaccepted) then
+        particles(i) = newparticle
+        dE = enew - eold
+     end if
+  end if  
+end subroutine moveparticle_2
 
 !> Returns the position of @p aparticle as a vector.
 pure function position(aparticle)

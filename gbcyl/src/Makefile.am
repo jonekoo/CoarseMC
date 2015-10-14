@@ -58,9 +58,9 @@ AM_FCFLAGS = \
 model_src = \
   class_parameterizer.f90 \
   class_parameter_writer.f90 \
+  class_poly_box.f90 \
   particle_mover.f90 \
   particle.f90 \
-  class_poly_box.f90 \
   class_factory.f90
 
 energy_src = \

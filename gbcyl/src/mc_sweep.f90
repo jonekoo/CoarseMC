@@ -5,12 +5,11 @@
 !! particle moves and energy calculations. 
 module mc_sweep
   use nrtype
-  use energy
+  use energy, only: totalenergy, get_cutoff, energy_init, energy_writeparameters
   use class_poly_box
   use particle
   use particle_mover, only: get_max_translation, getmaxmoves, &
        particlemover_init, particlemover_writeparameters, setmaxmoves
-  use beta_exchange, beta_exchange_init => init, be_finalize => finalize
   use class_parameterizer
   use class_parameter_writer
   use genvoltrial
@@ -20,21 +19,6 @@ module mc_sweep
   include 'rng.inc'
   use m_particlegroup, only: particlegroup
   implicit none  
-  private 
-
-  public :: mcsweep_init
-  public :: sweep
-  public :: updatemaxvalues
-  public :: getpressure
-  public :: gettemperature
-  public :: mc_sweep_writeparameters
-  public :: settemperature
-  public :: resetcounters
-  public :: movevol
-  public :: pt_period
-  public :: get_total_energy
-  public :: test_configuration
-  public :: mcsweep_finalize
 
   !> The number of accepted particle moves
   integer, save :: nacceptedmoves
@@ -45,22 +29,11 @@ module mc_sweep
   !> The maximum absolute change of volume in a trial volume update.
   real(dp), save :: maxscaling = 100._dp
 
-  !> The simulation temperature.
-  real(dp), save :: temperature = -1._dp
-
-
-  !> The simulation pressure. Only meaningful in a constant-pressure
-  !! simulation.
-  real(dp), save :: pressure = -1._dp
-
   !> The desired acceptance ratio for trial particle moves.
   real(dp), save :: moveratio
 
   !> The desired acceptance ratio for trial volume updates.
   real(dp), save :: scalingratio
-
-  !> The number of sweeps between parallel tempering updates.
-  integer, save :: pt_period = 1
 
   !> The total energy.
   real(dp), save :: etotal = 0._dp
@@ -101,21 +74,9 @@ subroutine mcsweep_init(reader, simbox)
   call energy_init(reader)
   call getparameter(reader, 'scaling_type', scalingtype)
   call parsescalingtype(scalingtype)
-  call getparameter(reader, 'temperature', temperature)
-  if (temperature < 0._dp) then
-     write(*, *) 'mc_sweep: mcsweep_init: trying to set a negative temperature, stopping.'
-     stop  
-  end if
-  call beta_exchange_init(1._dp / temperature)
-  call getparameter(reader, 'pressure', pressure)
-  if (pressure < 0._dp) then
-     write(*, *) 'mc_sweep: mcsweep_init: trying to set a negative pressure, stopping.'
-     stop  
-  end if
   call getparameter(reader, 'move_ratio', moveratio)
   call getparameter(reader, 'scaling_ratio', scalingratio)
   call getparameter(reader, 'max_scaling', maxscaling)
-  call getparameter(reader, 'pt_period', pt_period)
   call getparameter(reader, 'nmovetrials', nmovetrials)
   call getparameter(reader, 'nscalingtrials', nscalingtrials)
   call getparameter(reader, 'nacceptedscalings', nacceptedscalings)
@@ -139,7 +100,6 @@ end subroutine mcsweep_init
 
 !> Finalizes the module state.
 subroutine mcsweep_finalize
-  call be_finalize
   if (allocated(scalingtypes)) deallocate(scalingtypes)
   is_initialized = .false.
 end subroutine mcsweep_finalize
@@ -175,7 +135,6 @@ subroutine mc_sweep_writeparameters(writer)
   call writeparameter(writer, 'move_ratio', moveratio)
   call writeparameter(writer, 'scaling_ratio', scalingratio)
   call writeparameter(writer, 'max_scaling', maxscaling)
-  call writeparameter(writer, 'pt_period', pt_period)
   if (allocated(scalingtypes)) then
      call join(scalingtypes, ',', joined)
   else
@@ -198,43 +157,11 @@ subroutine mc_sweep_writeparameters(writer)
   else
      call writeparameter(writer, 'current_scaling_ratio', 'nan')
   end if
-  call writeparameter(writer, 'pressure', pressure)
-  call writeparameter(writer, 'temperature', temperature)
   call writeparameter(writer, 'volume', currentvolume)
-  call writeparameter(writer, 'enthalpy', etotal + currentvolume * pressure)
   call writeparameter(writer, 'total_energy', etotal)
   call particlemover_writeparameters(writer)
   call energy_writeparameters(writer)
 end subroutine mc_sweep_writeparameters
-
-!> Runs one sweep of Metropolis Monte Carlo updates to the system. A
-!! full Parallel tempering NPT-ensemble sweep consists of trial moves
-!! of particles, trial scaling of the simulation box (barostat) and an
-!! exchange of particle system coordinates with another particle system
-!! (replica) in another temperature (replica exchange).
-!! 
-!! @param genstates random number generator states for all threads.
-!! @param isweep the sweep counter.
-!!  
-subroutine sweep(simbox, group, genstates, isweep)
-  type(poly_box), intent(inout) :: simbox
-  type(particlegroup), intent(inout) :: group
-  type(rngstate), intent(inout) :: genstates(0:)
-  integer, intent(in) :: isweep
-  integer :: ivolmove
-  real(dp) :: beta
-  call update(group%sl, simbox, group%particles)
-  call make_particle_moves(simbox, group, genstates)
-  call update(group%sl, simbox, group%particles)
-  do ivolmove = 1, size(scalingtypes)
-     call movevol(simbox, group, scalingtypes(ivolmove), genstates(0))
-  end do
-  if (mod(isweep, pt_period) == 0) then
-     beta = 1._dp/temperature
-     call try_beta_exchanges(beta, etotal, 3, genstates(0)) 
-     temperature = 1._dp/beta
-  end if
-end subroutine sweep
 
 !> Schedules parallel moves of particles using OpenMP with a domain 
 !! decomposition algorithm. 
@@ -247,11 +174,15 @@ end subroutine sweep
 !! @param genstates random number generator states. Each thread needs one.
 !! @param sl the cell list presenting the decomposition.
 !! 
-subroutine make_particle_moves(simbox, group, genstates)
+subroutine make_particle_moves(simbox, group, genstates, subr_particle_energy, &
+     temperature)
   implicit none
   type(poly_box), intent(in) :: simbox
   type(particlegroup), intent(inout) :: group
   type(rngstate), intent(inout) :: genstates(0:)
+  procedure(particle_energy) :: subr_particle_energy
+  real(dp), intent(in) :: temperature
+  
   !$ integer :: n_threads
   integer :: thread_id
   real(dp) :: dE 
@@ -266,6 +197,7 @@ subroutine make_particle_moves(simbox, group, genstates)
   real(dp) :: dE_ij
   integer :: nacc, ntrials
   integer :: j, ix, iy, iz, jx, jy, jz
+  call update(group%sl, simbox, group%particles)
   thread_id = 0
   !$ n_threads = 1
   dE = 0._dp
@@ -300,8 +232,9 @@ subroutine make_particle_moves(simbox, group, genstates)
                          pack(group%particles, nbr_mask)
                     do j = 1, n_cell
                        call moveparticle_2(simbox, &
-                            temp_particles(1:n_local), j, &
-                        genstates(thread_id), dE_ij, isaccepted)
+                            temp_particles(1:n_local), j, temperature, &
+                            genstates(thread_id), subr_particle_energy, dE_ij, &
+                            isaccepted)
                        if (isaccepted) then 
                           nacc = nacc + 1
                           dE = dE + dE_ij
@@ -329,59 +262,31 @@ subroutine make_particle_moves(simbox, group, genstates)
   nacceptedmoves = nacceptedmoves + nacc
 end subroutine make_particle_moves
 
-!> Performs a trial move of @p particles(@p i). @p simbox is the
-!! simulation box in which the @p particles reside. @p genstate is the
-!! random number generator state. After the move, @p dE contains the
-!! change in energy of the system and @p isaccepted == .true. if the
-!! move was accepted. 
-pure subroutine moveparticle_2(simbox, particles, i, genstate, dE, isaccepted)
-  type(poly_box), intent(in) :: simbox
-  type(particledat), dimension(:), intent(inout) :: particles
-  integer, intent(in) :: i
-  type(rngstate), intent(inout) :: genstate
-  real(dp), intent(out) :: dE
-  logical, intent(out) :: isaccepted
-  
-  type(particledat) :: newparticle
-  type(particledat) :: oldparticle
-  logical :: overlap
-  real(dp) :: enew
-  real(dp) :: eold
-  
-  enew = 0._dp
-  eold = 0._dp
-  dE = 0._dp
-  overlap = .false.
-  isaccepted = .false.
-  newparticle = particles(i)
-  call move(newparticle, genstate)
-  call setposition(newparticle, minimage(simbox, position(newparticle)))
-  oldparticle = particles(i) 
-  particles(i) = newparticle
-  call singleparticleenergy(simbox, particles, i, enew, overlap)
-  
-  particles(i) = oldparticle
-  if(.not. overlap) then 
-     call singleparticleenergy(simbox, particles, i, eold, overlap)
-     call acceptchange(eold, enew, genstate, isaccepted)
-     if(isaccepted) then
-        particles(i) = newparticle
-        dE = enew - eold
-     end if
-  end if  
-end subroutine moveparticle_2
-
 !> Returns the simulation temperature.
-pure function gettemperature() result(temp)
-  real(dp) :: temp
-  temp = temperature
-end function gettemperature
+!pure function gettemperature() result(temp)
+!  real(dp) :: temp
+!  temp = temperature
+!end function gettemperature
 
 !> Sets the simulation temperature.
-subroutine settemperature(temperaturein)
-  real(dp), intent(in) :: temperaturein
-  temperature = temperaturein
-end subroutine settemperature
+!subroutine settemperature(temperaturein)
+!  real(dp), intent(in) :: temperaturein
+!  temperature = temperaturein
+!end subroutine settemperature
+
+
+subroutine update_volume(simbox, group, genstate, temperature, pressure)
+  type(poly_box), intent(inout) :: simbox
+  type(particlegroup), intent(inout) :: group
+  type(rngstate), intent(inout) :: genstate
+  real(dp), intent(in) :: temperature, pressure
+  integer :: i
+  do i = 1, size(scalingtypes)
+     call movevol(simbox, group, scalingtypes(i), genstate, temperature, &
+          pressure)
+  end do
+end subroutine update_volume
+
 
 !> Performs a trial volume scaling which scales the @p simbox and all
 !! the positions of @p particles. For more information see for example
@@ -394,11 +299,12 @@ end subroutine settemperature
 !!        the system volume.
 !! @param genstate the random number generator state.
 !! 
-subroutine movevol(simbox, group, scalingtype, genstate)    
+subroutine movevol(simbox, group, scalingtype, genstate, temperature, pressure)
   type(poly_box), intent(inout) :: simbox
   type(particlegroup), intent(inout) :: group
   character(len=*), intent(in) :: scalingtype
   type(rngstate), intent(inout) :: genstate
+  real(dp), intent(in) :: temperature, pressure
   integer :: nparticles 
   logical :: overlap
   real(dp) :: Vo, Vn
@@ -411,6 +317,7 @@ subroutine movevol(simbox, group, scalingtype, genstate)
   logical :: is_update_needed
   nparticles = size(group%particles)
   overlap = .false.
+  call update(group%sl, simbox, group%particles)
   is_update_needed = .false.
   
   !! Store old volume and simulation box
@@ -450,7 +357,8 @@ subroutine movevol(simbox, group, scalingtype, genstate)
           temperature * log(Vn)  
      boltzmanno = etotal + pressure * Vo - real(nparticles, dp) * &
           temperature * log(Vo)
-     call acceptchange(boltzmanno, boltzmannn, genstate, isaccepted)
+     call acceptchange(boltzmanno, boltzmannn, temperature, genstate, &
+          isaccepted)
      if (isaccepted) then
         etotal = totenew
         nacceptedscalings = nacceptedscalings + 1
@@ -476,28 +384,6 @@ subroutine check_simbox(simbox)
   if (simbox%zperiodic .and. getz(simbox) < 2._dp * get_cutoff()) &
        stop 'Simulation box too small!'
 end subroutine
-
-!> Implements the Metropolis acceptance rule for a Monte Carlo update. 
-!!
-!! @param oldenergy the energy/enthalpy of the system before the move.
-!! @param newenergy the energy/enthalpy of the system after the move.
-!! @param genstate is the random number generator state.
-!! @param isaccepted == .true. if the move is accepted. 
-!!
-pure subroutine acceptchange(oldenergy, newenergy, genstate, isaccepted)
-  real(dp), intent(in) :: oldenergy
-  real(dp), intent(in) :: newenergy
-  type(rngstate), intent(inout) :: genstate
-  logical, intent(out) :: isaccepted
-  real(dp) :: dE
-  real(dp) :: r
-  isaccepted = .true.
-  dE = newenergy - oldenergy
-  if (dE > 0._dp) then
-     call rng(genstate, r)
-     isaccepted = (r < exp(-dE/temperature))
-  end if
-end subroutine acceptchange
 
 !> Adjusts the maximum values for trial moves of particles and trial
 !! scalings of the simulation volume. Should be used only during
@@ -551,10 +437,10 @@ function newmaxvalue(ntrials, naccepted, desiredratio, oldvalue) &
 end function newmaxvalue
   
 !> Returns the simulation pressure in reduced units.
-function getpressure()
-  real(dp) :: getpressure
-  getpressure = pressure
-end function getpressure
+!function getpressure()
+!  real(dp) :: getpressure
+!  getpressure = pressure
+!end function getpressure
 
 !> Resets the counters that are used to monitor acceptances of trial
 !! moves. 
