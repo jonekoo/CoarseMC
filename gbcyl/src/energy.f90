@@ -22,7 +22,7 @@ public :: energy_writeparameters
 public :: get_cutoff
 public :: total_by_cell
 public :: totalenergy
-public :: singleparticleenergy
+public :: simple_singleparticleenergy
 
 !> True if interactions between a wall and the particles should
 !! be computed.
