@@ -1,4 +1,5 @@
 program pressurezz
+  use mc_sweep, only: total_by_cell => total_energy, mcsweep_init
 use class_factory
 use particle
 use particle_mover
@@ -30,9 +31,11 @@ type(poly_nbrlist) :: nbrlist
 real(dp) :: newvolume, oldvolume, dVdec, dVinc
 real(dp) :: temperature
 read(*, *) idchar, direction
-reader = new_parameterizer('parameters.in.' // trim(adjustl(idchar)))
+reader = new_parameterizer('inputparameters.' // trim(adjustl(idchar)))
 !call initparticle(reader)
 call getparameter(reader, 'temperature', temperature)
+call energy_init(reader)
+call mcsweep_init(reader)
 coordinateunit = fileunit_getfreeunit()
 open(unit=coordinateunit, file='configurations.' //trim(adjustl(idchar)), action='READ', status='OLD')
 write(*, '(6(A6,18X))') '#dV   ', 'P ', 'dV ', 'P', 'dV ', 'P '
@@ -44,7 +47,8 @@ do
   nparticles = size(particles)
   !call set_system(simbox, particles)
   !! Calculate initial volume and potential energy
-  call total_by_cell(nbrlist, simbox, particles, oldenergy, overlap)
+  call total_by_cell(nbrlist, simbox, particles, simple_singleparticleenergy, &
+       oldenergy, overlap)
   !oldenergy = get_total_energy()
   oldvolume = volume(simbox)
 
@@ -65,7 +69,8 @@ do
     !! Record new potential energy and volume
     !call set_system(simbox, particles)
     !newenergy = get_total_energy()
-    call total_by_cell(nbrlist, simbox, particles, oldenergy, overlap)
+    call total_by_cell(nbrlist, simbox, particles, simple_singleparticleenergy,&
+         oldenergy, overlap)
     newvolume = volume(simbox)
     !! record dV/V and change in energy dU
     dUinc = newenergy - oldenergy
@@ -100,7 +105,8 @@ do
     !! Record new potential energy and volume
     !call set_system(simbox, particles)
     !newenergy = get_total_energy()
-    call total_by_cell(nbrlist, simbox, particles, newenergy, overlap)
+    call total_by_cell(nbrlist, simbox, particles, simple_singleparticleenergy,&
+         newenergy, overlap)
     newvolume = volume(simbox)
     !! record dV/V and change in energy dU
     dUdec = newenergy - oldenergy
