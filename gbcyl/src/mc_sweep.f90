@@ -5,7 +5,7 @@
 !! particle moves and energy calculations. 
 module mc_sweep
   use nrtype
-  use energy, only: get_cutoff, energy_init, energy_writeparameters
+  use energy, only: get_cutoff
   use class_poly_box
   use particle
   use particle_mover, only: get_max_translation, getmaxmoves, &
@@ -70,7 +70,6 @@ subroutine mcsweep_init(reader)
   real(dp) :: min_cell_length
   character(len = 200), save :: scalingtype = "z"
   call particlemover_init(reader)
-  call energy_init(reader)
   call getparameter(reader, 'scaling_type', scalingtype)
   call parsescalingtype(scalingtype)
   call getparameter(reader, 'move_ratio', moveratio)
@@ -157,7 +156,6 @@ subroutine mc_sweep_writeparameters(writer)
   end if
   call writeparameter(writer, 'total_energy', etotal)
   call particlemover_writeparameters(writer)
-  call energy_writeparameters(writer)
 end subroutine mc_sweep_writeparameters
 
 !> Schedules parallel moves of particles using OpenMP with a domain 

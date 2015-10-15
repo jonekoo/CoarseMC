@@ -14,7 +14,8 @@ use particle_mover, only: get_max_translation
 use beta_exchange, only: write_stats, reset_counters, &
      beta_exchange_init => init, be_finalize => finalize, try_beta_exchanges
 use m_particlegroup, only: particlegroup
-use energy, only: simple_singleparticleenergy, get_cutoff
+use energy, only: simple_singleparticleenergy, get_cutoff, energy_init, &
+energy_writeparameters
 use iso_fortran_env, only: dp => REAL64, error_unit
 !$ use omp_lib
 implicit none
@@ -179,6 +180,7 @@ subroutine mce_init(id, n_tasks)
   close(coordinateunit)
 
   !! Initialize modules.
+  call energy_init(parameterreader)
   call mcsweep_init(parameterreader)
   call beta_exchange_init(1._dp / temperature)
   call group%init(simbox)
@@ -267,6 +269,7 @@ subroutine mce_writeparameters(writer)
   call writeparameter(writer, 'volume', volume(simbox))
   call writeparameter(writer, 'enthalpy', get_total_energy() + &
        volume(simbox) * pressure)
+  call energy_writeparameters(writer)
   call mc_sweep_writeparameters(writer)
 end subroutine
 
