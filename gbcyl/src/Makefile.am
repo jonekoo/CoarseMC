@@ -489,6 +489,8 @@ pressurezz_SOURCES = \
   m_fileunit.f90 \
   ${model_src} \
   ${energy_src} \
+  genvoltrial.f90 \
+  mc_sweep.f90 \
   pressurezz.f90
 
 virial_tensor_SOURCES = \

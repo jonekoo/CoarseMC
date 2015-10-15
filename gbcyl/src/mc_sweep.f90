@@ -5,7 +5,7 @@
 !! particle moves and energy calculations. 
 module mc_sweep
   use nrtype
-  use energy, only: totalenergy, get_cutoff, energy_init, energy_writeparameters
+  use energy, only: get_cutoff, energy_init, energy_writeparameters
   use class_poly_box
   use particle
   use particle_mover, only: get_max_translation, getmaxmoves, &
@@ -39,7 +39,7 @@ module mc_sweep
   real(dp), save :: etotal = 0._dp
 
   !> Current volume of the system.
-  real(dp), save :: currentvolume = 0._dp
+  !real(dp), save :: currentvolume = 0._dp
 
   !> Counter for trial particle moves.
   integer, save :: nmovetrials = 0
@@ -64,9 +64,8 @@ module mc_sweep
 !!        conditions and volume.
 !! @param the_particles the particles to be updated with the MC moves.
 !!
-subroutine mcsweep_init(reader, simbox)
+subroutine mcsweep_init(reader)
   type(parameterizer), intent(in) :: reader
-  type(poly_box), intent(in) :: simbox
   !type(particlegroup), intent(inout) :: group
   real(dp) :: min_cell_length
   character(len = 200), save :: scalingtype = "z"
@@ -94,7 +93,6 @@ subroutine mcsweep_init(reader, simbox)
   !call new_simplelist(group%sl, simbox, group%particles, min_cell_length, &
   !     cutoff=get_cutoff())
   !!$ end if
-  currentvolume = volume(simbox)
   is_initialized = .true.
 end subroutine mcsweep_init
 
@@ -157,7 +155,6 @@ subroutine mc_sweep_writeparameters(writer)
   else
      call writeparameter(writer, 'current_scaling_ratio', 'nan')
   end if
-  call writeparameter(writer, 'volume', currentvolume)
   call writeparameter(writer, 'total_energy', etotal)
   call particlemover_writeparameters(writer)
   call energy_writeparameters(writer)
@@ -275,15 +272,17 @@ end subroutine make_particle_moves
 !end subroutine settemperature
 
 
-subroutine update_volume(simbox, group, genstate, temperature, pressure)
+subroutine update_volume(simbox, group, genstate, temperature, pressure, &
+     subr_particle_energy)
   type(poly_box), intent(inout) :: simbox
   type(particlegroup), intent(inout) :: group
   type(rngstate), intent(inout) :: genstate
   real(dp), intent(in) :: temperature, pressure
+  procedure(particle_energy) :: subr_particle_energy
   integer :: i
   do i = 1, size(scalingtypes)
      call movevol(simbox, group, scalingtypes(i), genstate, temperature, &
-          pressure)
+          pressure, subr_particle_energy)
   end do
 end subroutine update_volume
 
@@ -299,12 +298,14 @@ end subroutine update_volume
 !!        the system volume.
 !! @param genstate the random number generator state.
 !! 
-subroutine movevol(simbox, group, scalingtype, genstate, temperature, pressure)
+subroutine movevol(simbox, group, scalingtype, genstate, temperature, pressure,&
+     subr_particle_energy)
   type(poly_box), intent(inout) :: simbox
   type(particlegroup), intent(inout) :: group
   character(len=*), intent(in) :: scalingtype
   type(rngstate), intent(inout) :: genstate
   real(dp), intent(in) :: temperature, pressure
+  procedure(particle_energy) :: subr_particle_energy
   integer :: nparticles 
   logical :: overlap
   real(dp) :: Vo, Vn
@@ -325,7 +326,8 @@ subroutine movevol(simbox, group, scalingtype, genstate, temperature, pressure)
   oldbox = simbox
   
   !! It seems that total energy may drift if it is not updated here:
-  call totalenergy(group%sl, simbox, group%particles, etotal, overlap)
+  call total_energy(group%sl, simbox, group%particles, subr_particle_energy, &
+       etotal, overlap)
   if (overlap) stop 'movevol: overlap in old configuration! '//&
        'Should never happen!'
   
@@ -345,7 +347,8 @@ subroutine movevol(simbox, group, scalingtype, genstate, temperature, pressure)
   end if
   
     !! Calculate potential energy in the scaled system.
-  call totalenergy(group%sl, simbox, group%particles, totenew, overlap)
+  call total_energy(group%sl, simbox, group%particles, subr_particle_energy, &
+       totenew, overlap)
   
   if (overlap) then
      !! Scale particles back to old coordinates.
@@ -362,7 +365,6 @@ subroutine movevol(simbox, group, scalingtype, genstate, temperature, pressure)
      if (isaccepted) then
         etotal = totenew
         nacceptedscalings = nacceptedscalings + 1
-        currentvolume = volume(simbox)
         call update(group%sl, simbox, group%particles)
      else 
         !! Scale particles back to old coordinates
@@ -373,6 +375,64 @@ subroutine movevol(simbox, group, scalingtype, genstate, temperature, pressure)
   end if
   nscalingtrials = nscalingtrials + 1
 end subroutine movevol
+
+!> Computes the total @p energy of the system. Interactions are computed
+!! cell-by-cell for the @p particles in the cell list @p sl. @p simbox
+!! is the simulation cell. If any two particles are too close to each
+!! other, @p overlap is true. 
+subroutine total_energy(sl, simbox, particles, subr_particle_energy, &
+     energy, overlap)
+  type(simplelist), intent(in) :: sl
+  type(poly_box), intent(in) :: simbox
+  type(particledat), dimension(:), intent(in) :: particles
+  procedure(particle_energy) :: subr_particle_energy
+  real(dp), intent(out) :: energy
+  logical, intent(out) :: overlap 
+  integer :: i, j, ix, iy, iz
+  logical :: mask(size(particles))
+  real(dp) :: energy_j
+  logical :: overlap_j
+  integer :: helper(size(particles))
+  integer, allocatable :: temp_helper(:)
+  integer :: n_mask
+  integer :: temp_j
+  type(particledat), allocatable :: temp_particles(:)
+
+  helper = (/(i, i=1, size(particles))/) !! ifort vectorizes
+  energy = 0._dp
+  overlap = .false.
+  
+  !$OMP PARALLEL default(shared) reduction(+:energy) reduction(.or.:overlap)& 
+  !$OMP& private(energy_j, overlap_j, i, j, mask, temp_particles, temp_j, temp_helper, n_mask)
+  allocate(temp_particles(size(particles)), temp_helper(size(particles))) 
+  !$OMP DO collapse(3) schedule(dynamic)
+  do ix=0, sl%nx-1 
+  do iy=0, sl%ny-1
+  do iz=0, sl%nz-1
+    call simplelist_nbrmask(sl, simbox, ix, iy, iz, mask)
+    n_mask = count(mask) 
+    temp_particles(1:n_mask) = pack(particles, mask)
+    temp_helper(1:n_mask) = pack(helper, mask)
+    do i=1, sl%counts(ix, iy, iz)
+      j = sl%indices(i, ix, iy, iz)
+      ! Find position of particles(j) in temp_particles:
+      do temp_j = 1, n_mask 
+         if(temp_helper(temp_j) == j) exit
+      end do
+      call subr_particle_energy(simbox, temp_particles(temp_j:n_mask), &
+           1, energy_j, overlap_j)
+      overlap = overlap .or. overlap_j 
+      energy = energy + energy_j
+    end do 
+  end do
+  end do
+  end do
+  !$OMP END DO 
+  if (allocated(temp_particles)) deallocate(temp_particles)
+  if (allocated(temp_helper)) deallocate(temp_helper)
+  !$OMP END PARALLEL  
+end subroutine total_energy
+
 
 !> Check that @p simbox is large enough if it is periodic.
 subroutine check_simbox(simbox)
@@ -402,7 +462,6 @@ subroutine updatemaxvalues(group)
   
   !! Update the minimum cell side length of the cell list because the maximum
   !! translation has changed: 
-  group%sl%min_length = get_cutoff() + 2._dp * get_max_translation()
   
   !! This should adjust rotations < pi/2 to move the particle end as much as
   !! a random translation. 4.4 is the assumed molecule length-to-breadth 
@@ -469,20 +528,20 @@ end subroutine scalepositions
 
 !> Tests that there are no overlaps in the current configuration of
 !! particles and the simulation box.
-subroutine test_configuration(simbox, particles)
-  real(dp) :: total_e
-  logical :: overlap
-  type(poly_box), intent(in) :: simbox
-  type(particledat), intent(in) :: particles(:)
-  if (.not. is_initialized) then
-     stop 'mc_sweep:test_configuration: Error: module not initialized!'
-  end if
-  !! This is pretty heavy since goes through all particles:
-  call totalenergy(simbox, particles, total_e, overlap)
-  if (overlap) then
-     stop 'mc_sweep:test_configuration: Overlap!'
-  end if
-end subroutine test_configuration
+!subroutine test_configuration(simbox, particles)
+!  real(dp) :: total_e
+!  logical :: overlap
+!  type(poly_box), intent(in) :: simbox
+!  type(particledat), intent(in) :: particles(:)
+!  if (.not. is_initialized) then
+!     stop 'mc_sweep:test_configuration: Error: module not initialized!'
+!  end if
+!  !! This is pretty heavy since goes through all particles:
+!  call total_energy(simbox, particles, total_e, overlap)
+!  if (overlap) then
+!     stop 'mc_sweep:test_configuration: Overlap!'
+!  end if
+!end subroutine test_configuration
 
 
 !include 'map_and_reduce.f90'

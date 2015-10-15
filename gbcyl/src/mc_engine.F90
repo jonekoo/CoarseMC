@@ -10,10 +10,11 @@ use m_fileunit
 use class_poly_box, only: poly_box, volume
 use class_parameterizer
 use class_parameter_writer
+use particle_mover, only: get_max_translation
 use beta_exchange, only: write_stats, reset_counters, &
      beta_exchange_init => init, be_finalize => finalize, try_beta_exchanges
 use m_particlegroup, only: particlegroup
-use energy, only: simple_singleparticleenergy
+use energy, only: simple_singleparticleenergy, get_cutoff
 use iso_fortran_env, only: dp => REAL64, error_unit
 !$ use omp_lib
 implicit none
@@ -178,7 +179,7 @@ subroutine mce_init(id, n_tasks)
   close(coordinateunit)
 
   !! Initialize modules.
-  call mcsweep_init(parameterreader, simbox)
+  call mcsweep_init(parameterreader)
   call beta_exchange_init(1._dp / temperature)
   call group%init(simbox)
   call delete(parameterreader)
@@ -233,7 +234,8 @@ subroutine sweep(simbox, group, genstates, isweep)
   real(dp) :: beta
   call make_particle_moves(simbox, group, genstates, &
        simple_singleparticleenergy, temperature)
-  call update_volume(simbox, group, genstates(0), temperature, pressure)
+  call update_volume(simbox, group, genstates(0), temperature, pressure, &
+       simple_singleparticleenergy)
   if (mod(isweep, pt_period) == 0) then
      beta = 1._dp / temperature
      call try_beta_exchanges(beta, get_total_energy(), 3, genstates(0)) 
@@ -262,6 +264,7 @@ subroutine mce_writeparameters(writer)
   call writeparameter(writer, 'seed', seed)
   call writeparameter(writer, 'pressure', pressure)
   call writeparameter(writer, 'temperature', temperature)
+  call writeparameter(writer, 'volume', volume(simbox))
   call writeparameter(writer, 'enthalpy', get_total_energy() + &
        volume(simbox) * pressure)
   call mc_sweep_writeparameters(writer)
@@ -334,7 +337,8 @@ end subroutine
 subroutine runequilibrationtasks
   if (moveadjustperiod /= 0) then
     if (mod(isweep, moveadjustperiod) == 0) then
-      call updatemaxvalues(group)
+       call updatemaxvalues(group)
+       group%sl%min_length = get_cutoff() + 2._dp * get_max_translation()
     end if
   end if
 end subroutine 
