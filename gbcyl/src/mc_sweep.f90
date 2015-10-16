@@ -5,7 +5,6 @@
 !! particle moves and energy calculations. 
 module mc_sweep
   use nrtype
-  use energy, only: get_cutoff
   use class_poly_box
   use particle
   use particle_mover, only: get_max_translation, getmaxmoves, &
@@ -38,9 +37,6 @@ module mc_sweep
   !> The total energy.
   real(dp), save :: etotal = 0._dp
 
-  !> Current volume of the system.
-  !real(dp), save :: currentvolume = 0._dp
-
   !> Counter for trial particle moves.
   integer, save :: nmovetrials = 0
 
@@ -66,8 +62,6 @@ module mc_sweep
 !!
 subroutine mcsweep_init(reader)
   type(parameterizer), intent(in) :: reader
-  !type(particlegroup), intent(inout) :: group
-  real(dp) :: min_cell_length
   character(len = 200), save :: scalingtype = "z"
   call particlemover_init(reader)
   call getparameter(reader, 'scaling_type', scalingtype)
@@ -82,16 +76,6 @@ subroutine mcsweep_init(reader)
   !! in the same simulation. 
   nacceptedmoves = 0
   nacceptedscalings = 0
-  !min_cell_length = get_cutoff() + 2._dp * get_max_translation()
-  !!call simplelist_init(reader)
-  !!$ if (.true.) then
-  !!$ call new_simplelist(sl, simbox, particles, min_cell_length, &
-  !!$& is_x_even = isxperiodic(simbox), is_y_even = isyperiodic(simbox), &
-  !!$& is_z_even = iszperiodic(simbox), cutoff=get_cutoff())
-  !!$ else 
-  !call new_simplelist(group%sl, simbox, group%particles, min_cell_length, &
-  !     cutoff=get_cutoff())
-  !!$ end if
   is_initialized = .true.
 end subroutine mcsweep_init
 
@@ -313,11 +297,8 @@ subroutine movevol(simbox, group, scalingtype, genstate, temperature, pressure,&
   real(dp) :: boltzmanno
   type(poly_box) :: oldbox
   real(dp), dimension(3) :: scaling
-  logical :: is_update_needed
   nparticles = size(group%particles)
   overlap = .false.
-  call update(group%sl, simbox, group%particles)
-  is_update_needed = .false.
   
   !! Store old volume and simulation box
   Vo = volume(simbox)
@@ -335,16 +316,7 @@ subroutine movevol(simbox, group, scalingtype, genstate, temperature, pressure,&
   call scalepositions(oldbox, simbox, group%particles, nparticles) 
   Vn = volume(simbox)
   
-  !! Check that new dimensions are ok. 
-  call check_simbox(simbox)
-
-  if (Vn/Vo < 1._dp/(1._dp + 2._dp * get_max_translation()/get_cutoff())) then
-     !! Volume shrank so quickly that the neighbourlist needs updating.
-     call update(group%sl, simbox, group%particles)
-     is_update_needed = .true.
-  end if
-  
-    !! Calculate potential energy in the scaled system.
+  !! Calculate potential energy in the scaled system.
   call total_energy(group%sl, simbox, group%particles, subr_particle_energy, &
        totenew, overlap)
   
@@ -352,7 +324,6 @@ subroutine movevol(simbox, group, scalingtype, genstate, temperature, pressure,&
      !! Scale particles back to old coordinates.
      call scalepositions(simbox, oldbox, group%particles, nparticles)
      simbox = oldbox
-     if (is_update_needed) call update(group%sl, simbox, group%particles)
   else
      boltzmannn = totenew + pressure * Vn - real(nparticles, dp) * &
           temperature * log(Vn)  
@@ -363,12 +334,10 @@ subroutine movevol(simbox, group, scalingtype, genstate, temperature, pressure,&
      if (isaccepted) then
         etotal = totenew
         nacceptedscalings = nacceptedscalings + 1
-        call update(group%sl, simbox, group%particles)
      else 
         !! Scale particles back to old coordinates
         call scalepositions(simbox, oldbox, group%particles, nparticles)
         simbox = oldbox
-        if (is_update_needed) call update(group%sl, simbox, group%particles)
      end if
   end if
   nscalingtrials = nscalingtrials + 1
@@ -380,7 +349,7 @@ end subroutine movevol
 !! other, @p overlap is true. 
 subroutine total_energy(sl, simbox, particles, subr_particle_energy, &
      energy, overlap)
-  type(simplelist), intent(in) :: sl
+  type(simplelist), intent(inout) :: sl
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
   procedure(particle_energy) :: subr_particle_energy
@@ -396,6 +365,7 @@ subroutine total_energy(sl, simbox, particles, subr_particle_energy, &
   integer :: temp_j
   type(particledat), allocatable :: temp_particles(:)
 
+  call update(sl, simbox, particles)
   helper = (/(i, i=1, size(particles))/) !! ifort vectorizes
   energy = 0._dp
   overlap = .false.
@@ -431,17 +401,6 @@ subroutine total_energy(sl, simbox, particles, subr_particle_energy, &
   !$OMP END PARALLEL  
 end subroutine total_energy
 
-
-!> Check that @p simbox is large enough if it is periodic.
-subroutine check_simbox(simbox)
-  type(poly_box), intent(in) :: simbox
-  if (simbox%xperiodic .and. getx(simbox) < 2._dp * get_cutoff()) &
-       stop 'Simulation box too small!'
-  if (simbox%yperiodic .and. gety(simbox) < 2._dp * get_cutoff()) &
-       stop 'Simulation box too small!'
-  if (simbox%zperiodic .and. getz(simbox) < 2._dp * get_cutoff()) &
-       stop 'Simulation box too small!'
-end subroutine
 
 !> Adjusts the maximum values for trial moves of particles and trial
 !! scalings of the simulation volume. Should be used only during

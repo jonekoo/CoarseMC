@@ -20,16 +20,17 @@ end interface
 
 !> Stores the cell list. 
 type simplelist
-  real(dp) :: threshold = 0.0
-  real(dp) :: min_length
-  integer :: nx, ny, nz
-  real(dp) :: lx, ly, lz
-  logical :: is_x_even = .false., is_y_even = .false., is_z_even = .false.
-  integer, allocatable, dimension(:,:,:,:) :: indices
-  integer, allocatable, dimension(:,:,:) :: counts
-  integer, allocatable, dimension(:,:) :: coords
-  real(dp), allocatable, dimension(:,:) :: xyzlist
-end type
+   type(poly_box) :: cached_box
+   real(dp) :: threshold = 0.0
+   real(dp) :: min_length
+   integer :: nx, ny, nz
+   real(dp) :: lx, ly, lz
+   logical :: is_x_even = .false., is_y_even = .false., is_z_even = .false.
+   integer, allocatable, dimension(:,:,:,:) :: indices
+   integer, allocatable, dimension(:,:,:) :: counts
+   integer, allocatable, dimension(:,:) :: coords
+   real(dp), allocatable, dimension(:,:) :: xyzlist
+end type simplelist
 
 interface simplelist_nbrmask
   module procedure simplelist_nbrmask, simplelist_cell_nbrmask
@@ -57,6 +58,7 @@ subroutine new_simplelist(sl, simbox, particles, min_length, is_x_even, is_y_eve
   logical, intent(in), optional :: is_x_even, is_y_even, is_z_even
   real(dp), intent(in), optional :: threshold, cutoff
   type(simplelist), intent(out) :: sl
+  sl%cached_box = simbox
   sl%min_length = min_length
   if(present(is_x_even)) sl%is_x_even = is_x_even
   if(present(is_y_even)) sl%is_y_even = is_y_even
@@ -121,14 +123,28 @@ subroutine simplelist_update(sl, simbox, particles)
   type(particledat), dimension(:), intent(in) :: particles
   real(dp) :: maxdiff
   integer :: i
+  type(simplelist) :: temp
+  logical :: update_needed
   maxdiff = 0.0
-  !$OMP PARALLEL DO shared(sl, particles), reduction(max:maxdiff), private(i)
-  do i = 1, size(particles)
-     maxdiff = maxval([maxval(abs(sl%xyzlist(i, :) - position(particles(i)))), maxdiff])
-  end do
-  !$OMP END PARALLEL DO
 
-  if (maxdiff > sl%threshold) then
+  !! Check if simbox should have a different decomposition compared to cached
+  !! box.
+  temp%min_length = sl%min_length
+  call calculate_dimensions(temp, simbox)
+  update_needed = temp%nx /= sl%nx .or. temp%ny /= sl%ny .or. temp%nz /= sl%nz
+  
+  if (.not. update_needed) then
+     !! Find out the particle that has moved the most in one direction:
+     !$OMP PARALLEL DO shared(sl, particles), reduction(max:maxdiff), private(i)
+     do i = 1, size(particles)
+        maxdiff = maxval([maxval(abs(sl%xyzlist(i, :) - &
+             position(particles(i)))), maxdiff])
+     end do
+     !$OMP END PARALLEL DO
+  end if
+  
+  if (update_needed .or. maxdiff > sl%threshold) then
+     sl%cached_box = simbox
      call simplelist_deallocate(sl)
      call calculate_dimensions(sl, simbox)
      call simplelist_allocate(sl, size(particles))

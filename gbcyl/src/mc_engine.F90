@@ -7,7 +7,7 @@ module mc_engine
 use class_factory, only: factory, factory_readstate, factory_writestate
 use mt_stream
 use m_fileunit
-use class_poly_box, only: poly_box, volume
+use class_poly_box, only: poly_box, volume, getx, gety, getz
 use class_parameterizer
 use class_parameter_writer
 use particle_mover, only: get_max_translation
@@ -238,6 +238,7 @@ subroutine sweep(simbox, group, genstates, isweep)
        simple_singleparticleenergy, temperature)
   call update_volume(simbox, group, genstates(0), temperature, pressure, &
        simple_singleparticleenergy)
+  call check_simbox(simbox)
   if (mod(isweep, pt_period) == 0) then
      beta = 1._dp / temperature
      call try_beta_exchanges(beta, get_total_energy(), 3, genstates(0)) 
@@ -386,5 +387,16 @@ subroutine runproductiontasks
     call resetcounters
   end if
 end subroutine
-  
+
+!> Check that @p simbox is large enough if it is periodic.
+subroutine check_simbox(simbox)
+  type(poly_box), intent(in) :: simbox
+  if (simbox%xperiodic .and. getx(simbox) < 2._dp * get_cutoff()) &
+       stop 'Simulation box too small!'
+  if (simbox%yperiodic .and. gety(simbox) < 2._dp * get_cutoff()) &
+       stop 'Simulation box too small!'
+  if (simbox%zperiodic .and. getz(simbox) < 2._dp * get_cutoff()) &
+       stop 'Simulation box too small!'
+end subroutine
+
 end module
