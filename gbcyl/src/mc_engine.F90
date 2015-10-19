@@ -3,89 +3,109 @@
 module mc_engine
   use mc_sweep, only: make_particle_moves, update_volume, get_total_energy, &
        mc_sweep_writeparameters, mcsweep_finalize, mcsweep_init, &
-       resetcounters, updatemaxvalues
-use class_factory, only: factory, factory_readstate, factory_writestate
-use mt_stream
-use m_fileunit
-use class_poly_box, only: poly_box, volume, getx, gety, getz
-use class_parameterizer
-use class_parameter_writer
-use particle_mover, only: get_max_translation
-use beta_exchange, only: write_stats, reset_counters, &
-     beta_exchange_init => init, be_finalize => finalize, try_beta_exchanges
-use m_particlegroup, only: particlegroup
-use energy, only: simple_singleparticleenergy, get_cutoff, energy_init, &
-energy_writeparameters
-use iso_fortran_env, only: dp => REAL64, error_unit
-!$ use omp_lib
-implicit none
-private
+       get_maxscaling, set_maxscaling
+  
+  use class_factory, only: factory, factory_readstate, factory_writestate
+  use mt_stream
+  use m_fileunit
+  use class_poly_box, only: poly_box, volume, getx, gety, getz
+  use class_parameterizer
+  use class_parameter_writer
+  use particle_mover, only: particlemover_init, particlemover_writeparameters, &
+       get_max_translation, getmaxmoves, setmaxmoves
+  use beta_exchange, only: write_stats, reset_counters, &
+       beta_exchange_init => init, be_finalize => finalize, try_beta_exchanges
+  use m_particlegroup, only: particlegroup
+  use energy, only: simple_singleparticleenergy, get_cutoff, energy_init, &
+       energy_writeparameters
+  use iso_fortran_env, only: dp => REAL64, error_unit
+  !$ use omp_lib
+  implicit none
+  private
+  
+  public :: mce_init
+  public :: run
+  public :: finalize
+  public :: mce_writeparameters
+  
+  !> The number of equilibration MC sweeps in the simulation.  Equilibration
+  !! sweeps are used to do all kinds of adjusting and should be discarded
+  !! from the analysis of results.
+  integer, save :: nequilibrationsweeps = 0
+  
+  !> The number of production MC sweeps in the simulation.
+  integer, save :: nproductionsweeps = 0
+  
+  !> The periodicity of writing the configuration of molecules and
+  !! simulation parameters on the disk. If productionperiod=400, every
+  !! 400th MC sweep the configuration and parameters are written to the
+  !! disk. 
+  integer, save :: productionperiod = 1
+  
+  !> The period of adjusting maximum trial move sizes during the
+  !! equilibration MC sweeps.
+  integer, save :: moveadjustperiod = 100
+  
+  !> The number of sweeps between parallel tempering updates.
+  integer, save :: pt_period = 1
+  
+  !> If adjusting of temperatures in the temperature series for parallel 
+  !! tempering is used defines the period for these actions. (DEPRECATED)
+  integer, save :: ptadjustperiod = 100
+  
+  !> The period of writing a restart point on the disk. This includes the
+  !! configuration of molecules, the simulation parameters and the random
+  !! number generator state. 
+  integer, save :: restartperiod = 10000
+  
+  !> The sweep counter.
+  integer, save :: isweep = 0
+  
+  !> The simulation temperature.
+  real(dp), save :: temperature = -1._dp
 
-public :: mce_init
-public :: run
-public :: finalize
-public :: mce_writeparameters
-
-!> The number of equilibration MC sweeps in the simulation.  Equilibration
-!! sweeps are used to do all kinds of adjusting and should be discarded
-!! from the analysis of results.
-integer, save :: nequilibrationsweeps = 0
-
-!> The number of production MC sweeps in the simulation.
-integer, save :: nproductionsweeps = 0
-
-!> The periodicity of writing the configuration of molecules and
-!! simulation parameters on the disk. If productionperiod=400, every
-!! 400th MC sweep the configuration and parameters are written to the
-!! disk. 
-integer, save :: productionperiod = 1
-
-!> The period of adjusting maximum trial move sizes during the
-!! equilibration MC sweeps.
-integer, save :: moveadjustperiod = 100
-
-!> The number of sweeps between parallel tempering updates.
-integer, save :: pt_period = 1
-
-!> If adjusting of temperatures in the temperature series for parallel 
-!! tempering is used defines the period for these actions. (DEPRECATED)
-integer, save :: ptadjustperiod = 100
-
-!> The period of writing a restart point on the disk. This includes the
-!! configuration of molecules, the simulation parameters and the random
-!! number generator state. 
-integer, save :: restartperiod = 10000
-
-!> The sweep counter.
-integer, save :: isweep = 0
-
-!> The simulation temperature.
-real(dp), save :: temperature = -1._dp
-
-
-!> The simulation pressure. Only meaningful in a constant-pressure
-!! simulation.
-real(dp), save :: pressure = -1._dp
-
-!> Output unit and filename for writing parameters.
-integer, save :: pwunit
-
-!> The input and output unit used for reading and writing the geometry of 
-!! molecules and the simulation box.
-integer, save :: coordinateunit
-
-!> The (MPI) id of this process formatted to a character.
-character(len = 9), save :: idchar
-
-!> The random number generator states.
-type(mt_state), allocatable, save :: mts(:)
-
-!> The random number generator seed.
-integer, save :: seed = -1
-
-type(particlegroup), save :: group
-type(poly_box), save :: simbox
-
+  
+  !> The simulation pressure. Only meaningful in a constant-pressure
+  !! simulation.
+  real(dp), save :: pressure = -1._dp
+  
+  !> Output unit and filename for writing parameters.
+  integer, save :: pwunit
+  
+  !> The input and output unit used for reading and writing the geometry of 
+  !! molecules and the simulation box.
+  integer, save :: coordinateunit
+  
+  !> The (MPI) id of this process formatted to a character.
+  character(len = 9), save :: idchar
+  
+  !> The random number generator states.
+  type(mt_state), allocatable, save :: mts(:)
+  
+  !> The random number generator seed.
+  integer, save :: seed = -1
+  
+  !> Counter for trial particle moves.
+  integer, save :: nmovetrials = 0
+  
+  !> Counter for trial volume updates.
+  integer, save :: nscalingtrials = 0
+  
+  !> The number of accepted particle moves
+  integer, save :: nacceptedmoves = 0
+  
+  !> The number of accepted volume moves
+  integer, save :: nacceptedscalings = 0
+  
+  !> The desired acceptance ratio for trial particle moves.
+  real(dp), save :: moveratio
+  
+  !> The desired acceptance ratio for trial volume updates.
+  real(dp), save :: scalingratio
+  
+  type(particlegroup), save :: group
+  type(poly_box), save :: simbox
+  
 contains
   
 !> Initializes this module and its dependencies.
@@ -150,7 +170,9 @@ subroutine mce_init(id, n_tasks)
   productionperiod)
   call getparameter(parameterreader, 'i_sweep', isweep)
   call getparameter(parameterreader, 'move_adjusting_period', &
-  moveadjustperiod)
+       moveadjustperiod)
+  call getparameter(parameterreader, 'move_ratio', moveratio)
+  call getparameter(parameterreader, 'scaling_ratio', scalingratio)
   call getparameter(parameterreader, 'pt_period', pt_period)
   call getparameter(parameterreader, 'pt_adjusting_period', ptadjustperiod)
   call getparameter(parameterreader, 'restartperiod', restartperiod)
@@ -166,6 +188,11 @@ subroutine mce_init(id, n_tasks)
           'trying to set a negative pressure, stopping.'
      stop  
   end if
+
+  call getparameter(parameterreader, 'nmovetrials', nmovetrials)
+  call getparameter(parameterreader, 'nscalingtrials', nscalingtrials)
+  call getparameter(parameterreader, 'nacceptedscalings', nacceptedscalings)
+
   !! Read geometry
   coordinateunit = fileunit_getfreeunit()
   statefile = 'inputconfiguration.'//trim(adjustl(idchar))
@@ -181,6 +208,7 @@ subroutine mce_init(id, n_tasks)
 
   !! Initialize modules.
   call energy_init(parameterreader)
+  call particlemover_init(parameterreader)
   call mcsweep_init(parameterreader)
   call beta_exchange_init(1._dp / temperature)
   call group%init(simbox)
@@ -234,10 +262,16 @@ subroutine sweep(simbox, group, genstates, isweep)
   type(mt_state), intent(inout) :: genstates(0:)
   integer, intent(in) :: isweep
   real(dp) :: beta
+  integer :: n_trials, n_accepted
   call make_particle_moves(simbox, group, genstates, &
-       simple_singleparticleenergy, temperature)
+       simple_singleparticleenergy, temperature, n_trials, n_accepted)
+  nmovetrials = nmovetrials + n_trials
+  nacceptedmoves = nacceptedmoves + n_accepted
+
   call update_volume(simbox, group, genstates(0), temperature, pressure, &
-       simple_singleparticleenergy)
+       simple_singleparticleenergy, n_trials, n_accepted)
+  nscalingtrials = nscalingtrials + n_trials
+  nacceptedscalings = nacceptedscalings + n_accepted
   call check_simbox(simbox)
   if (mod(isweep, pt_period) == 0) then
      beta = 1._dp / temperature
@@ -270,7 +304,26 @@ subroutine mce_writeparameters(writer)
   call writeparameter(writer, 'volume', volume(simbox))
   call writeparameter(writer, 'enthalpy', get_total_energy() + &
        volume(simbox) * pressure)
+  call writeparameter(writer, 'move_ratio', moveratio)
+  call writeparameter(writer, 'scaling_ratio', scalingratio)
+  call writeparameter(writer, 'nmovetrials', nmovetrials)
+  call writeparameter(writer, 'nacceptedmoves', nacceptedmoves)
+  if (nmovetrials > 0) then
+     call writeparameter(writer, 'current_move_ratio', &
+          real(nacceptedmoves, dp)/real(nmovetrials, dp))
+  else
+     call writeparameter(writer, 'current_move_ratio', 'nan')
+  end if
+  call writeparameter(writer, 'nscalingtrials', nscalingtrials)
+  call writeparameter(writer, 'nacceptedscalings', nacceptedscalings)
+  if (nscalingtrials > 0) then
+     call writeparameter(writer, 'current_scaling_ratio', &
+          real(nacceptedscalings, dp)/real(nscalingtrials, dp))
+  else
+     call writeparameter(writer, 'current_scaling_ratio', 'nan')
+  end if
   call energy_writeparameters(writer)
+  call particlemover_writeparameters(writer)
   call mc_sweep_writeparameters(writer)
 end subroutine
 
@@ -281,7 +334,12 @@ subroutine run
     isweep = isweep + 1
     call sweep(simbox, group, mts, isweep)
     if (isweep <= nequilibrationsweeps) then
-      call runequilibrationtasks
+      if (moveadjustperiod /= 0) then
+         if (mod(isweep, moveadjustperiod) == 0) then
+            call updatemaxvalues
+            group%sl%min_length = get_cutoff() + 2._dp * get_max_translation()
+         end if
+      end if
     end if
     if (mod(isweep, restartperiod)==0) then
       call makerestartpoint()
@@ -328,24 +386,11 @@ subroutine makerestartpoint
   if (ios /= 0) write(*, *) 'makerestartpoint: Warning: Failed opening', &
        configurationfile
 
-  !call get_system(simbox, group%particles)
   call factory_writestate(restartwriter, configurationunit, simbox, &
        group%particles)
   close(configurationunit)
 
 end subroutine
-
-
-!> All actions performed only during equilibration sweeps and not
-!! during production sweeps are gathered inside this routine.
-subroutine runequilibrationtasks
-  if (moveadjustperiod /= 0) then
-    if (mod(isweep, moveadjustperiod) == 0) then
-       call updatemaxvalues(group)
-       group%sl%min_length = get_cutoff() + 2._dp * get_max_translation()
-    end if
-  end if
-end subroutine 
 
 !> All actions done during both the equilibration and production sweeps
 !! should be gathered inside this routine for clarity. 
@@ -357,7 +402,6 @@ subroutine runproductiontasks
   integer :: be_unit
   if (mod(isweep, productionperiod) == 0) then
     !! Record snapshot of molecules and geometry.
-    !call get_system(simbox, group%particles)
     call factory_writestate(coordinatewriter, coordinateunit, simbox, &
          group%particles)
     
@@ -388,6 +432,65 @@ subroutine runproductiontasks
   end if
 end subroutine
 
+!> Resets the counters that are used to monitor acceptances of trial
+!! moves. 
+subroutine resetcounters
+  nacceptedmoves = 0
+  nmovetrials = 0
+  nscalingtrials = 0 
+  nacceptedscalings = 0
+end subroutine resetcounters
+
+!> Adjusts the maximum values for trial moves of particles and trial
+!! scalings of the simulation volume. Should be used only during
+!! equilibration run. 
+subroutine updatemaxvalues
+  real(dp) :: newdthetamax
+  real(dp) :: newdximax
+  !! Adjust scaling
+  call set_maxscaling(newmaxvalue(nscalingtrials, nacceptedscalings, &
+       scalingratio, get_maxscaling()))
+  call getmaxmoves(newdximax, newdthetamax)
+  !! Adjust translation
+  newdximax = newmaxvalue(nmovetrials, nacceptedmoves, moveratio, newdximax)
+  
+  !! Update the minimum cell side length of the cell list because the maximum
+  !! translation has changed: 
+  
+  !! This should adjust rotations < pi/2 to move the particle end as much as
+  !! a random translation. 4.4 is the assumed molecule length-to-breadth 
+  !! ratio.
+  newdthetamax = 2._dp * asin(newdximax/4.4_dp) 
+  call setmaxmoves(newdximax, newdthetamax)
+end subroutine updatemaxvalues
+  
+!> Returns a new trial move parameter value calculated from the desired
+!! acceptance ratio.
+!! 
+!! @param ntrials the total number of trials of the kind of move in
+!!        question.
+!! @param naccepted number of accepted trials.
+!! @param desiredratio the desired acceptance ratio for trial moves.
+!! @param oldvalue the old value of the parameter setting the maximum
+!!        size for the trial move in question.
+!!
+function newmaxvalue(ntrials, naccepted, desiredratio, oldvalue) &
+     result(newvalue)
+  integer, intent(in) :: ntrials
+  integer, intent(in) :: naccepted
+  real(dp), intent(in) :: desiredratio
+  real(dp), intent(in) :: oldvalue
+  real(dp) :: newvalue
+  real(dp), parameter :: multiplier = 1.05_dp
+  if (real(naccepted, dp) / real(ntrials, dp) > desiredratio) then
+     newvalue = oldvalue * multiplier
+  else 
+     newvalue = oldvalue / multiplier
+  end if
+  write(*, *) 'ntrials=', ntrials, 'naccepted=', naccepted, &
+       'oldvalue=', oldvalue, 'newvalue=', newvalue
+end function newmaxvalue
+  
 !> Check that @p simbox is large enough if it is periodic.
 subroutine check_simbox(simbox)
   type(poly_box), intent(in) :: simbox

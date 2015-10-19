@@ -95,7 +95,7 @@ end subroutine readparticle
 !! change in energy of the system and @p isaccepted == .true. if the
 !! move was accepted. 
 pure subroutine moveparticle_2(simbox, particles, i, temperature, genstate, &
-     subr_particle_energy, dE, isaccepted)
+     subr_particle_energy, dE, n_trials, n_accepted)
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(inout) :: particles
   integer, intent(in) :: i
@@ -103,13 +103,14 @@ pure subroutine moveparticle_2(simbox, particles, i, temperature, genstate, &
   type(rngstate), intent(inout) :: genstate
   procedure(particle_energy) :: subr_particle_energy
   real(dp), intent(out) :: dE
-  logical, intent(out) :: isaccepted
-  
+  integer, intent(out), optional :: n_trials, n_accepted
+
   type(particledat) :: newparticle
   type(particledat) :: oldparticle
   logical :: overlap
   real(dp) :: enew
   real(dp) :: eold
+  logical :: isaccepted
   
   enew = 0._dp
   eold = 0._dp
@@ -131,7 +132,17 @@ pure subroutine moveparticle_2(simbox, particles, i, temperature, genstate, &
         particles(i) = newparticle
         dE = enew - eold
      end if
-  end if  
+  end if
+
+  if (present(n_trials)) n_trials = 1
+  if (present(n_accepted)) then
+     if (isaccepted) then
+        n_accepted = 1
+     else
+        n_accepted = 0
+     end if
+  end if
+  
 end subroutine moveparticle_2
 
 !> Returns the position of @p aparticle as a vector.

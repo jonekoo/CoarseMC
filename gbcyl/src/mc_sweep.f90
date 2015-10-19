@@ -7,8 +7,6 @@ module mc_sweep
   use nrtype
   use class_poly_box
   use particle
-  use particle_mover, only: get_max_translation, getmaxmoves, &
-       particlemover_init, particlemover_writeparameters, setmaxmoves
   use class_parameterizer
   use class_parameter_writer
   use genvoltrial
@@ -19,29 +17,11 @@ module mc_sweep
   use m_particlegroup, only: particlegroup
   implicit none  
 
-  !> The number of accepted particle moves
-  integer, save :: nacceptedmoves
-
-  !> The number of accepted volume moves
-  integer, save :: nacceptedscalings
-
   !> The maximum absolute change of volume in a trial volume update.
   real(dp), save :: maxscaling = 100._dp
 
-  !> The desired acceptance ratio for trial particle moves.
-  real(dp), save :: moveratio
-
-  !> The desired acceptance ratio for trial volume updates.
-  real(dp), save :: scalingratio
-
   !> The total energy.
   real(dp), save :: etotal = 0._dp
-
-  !> Counter for trial particle moves.
-  integer, save :: nmovetrials = 0
-
-  !> Counter for trial volume updates.
-  integer, save :: nscalingtrials = 0
 
   !> The types of trial volume updates.
   character(len = 200), dimension(:), allocatable, save :: scalingtypes
@@ -63,19 +43,9 @@ module mc_sweep
 subroutine mcsweep_init(reader)
   type(parameterizer), intent(in) :: reader
   character(len = 200), save :: scalingtype = "z"
-  call particlemover_init(reader)
   call getparameter(reader, 'scaling_type', scalingtype)
   call parsescalingtype(scalingtype)
-  call getparameter(reader, 'move_ratio', moveratio)
-  call getparameter(reader, 'scaling_ratio', scalingratio)
   call getparameter(reader, 'max_scaling', maxscaling)
-  call getparameter(reader, 'nmovetrials', nmovetrials)
-  call getparameter(reader, 'nscalingtrials', nscalingtrials)
-  call getparameter(reader, 'nacceptedscalings', nacceptedscalings)
-  !! The initializations below may affect restart so that it does not result
-  !! in the same simulation. 
-  nacceptedmoves = 0
-  nacceptedscalings = 0
   is_initialized = .true.
 end subroutine mcsweep_init
 
@@ -107,14 +77,22 @@ subroutine parsescalingtype(scalingtype)
   call splitstr(scalingtype, ',', scalingtypes)
 end subroutine parsescalingtype
 
+subroutine set_maxscaling(upper_limit)
+  real(dp), intent(in) :: upper_limit
+  maxscaling = upper_limit
+end subroutine set_maxscaling
+
+function get_maxscaling() result(upper_limit)
+  real(dp) :: upper_limit
+  upper_limit = maxscaling
+end function get_maxscaling
+
 !> Writes the parameters and observables of this module and its
 !! dependencies. The @p writer defines the format and output unit..
 subroutine mc_sweep_writeparameters(writer)
   type(parameter_writer), intent(inout) :: writer
   character(len=200) :: joined
   call writecomment(writer, 'MC sweep parameters')
-  call writeparameter(writer, 'move_ratio', moveratio)
-  call writeparameter(writer, 'scaling_ratio', scalingratio)
   call writeparameter(writer, 'max_scaling', maxscaling)
   if (allocated(scalingtypes)) then
      call join(scalingtypes, ',', joined)
@@ -122,24 +100,7 @@ subroutine mc_sweep_writeparameters(writer)
      joined = ''
   end if
   call writeparameter(writer, 'scaling_type', trim(joined))
-  call writeparameter(writer, 'nmovetrials', nmovetrials)
-  call writeparameter(writer, 'nacceptedmoves', nacceptedmoves)
-  if (nmovetrials > 0) then
-     call writeparameter(writer, 'current_move_ratio', &
-          real(nacceptedmoves, dp)/real(nmovetrials, dp))
-  else
-     call writeparameter(writer, 'current_move_ratio', 'nan')
-  end if
-  call writeparameter(writer, 'nscalingtrials', nscalingtrials)
-  call writeparameter(writer, 'nacceptedscalings', nacceptedscalings)
-  if (nscalingtrials > 0) then
-     call writeparameter(writer, 'current_scaling_ratio', &
-          real(nacceptedscalings, dp)/real(nscalingtrials, dp))
-  else
-     call writeparameter(writer, 'current_scaling_ratio', 'nan')
-  end if
   call writeparameter(writer, 'total_energy', etotal)
-  call particlemover_writeparameters(writer)
 end subroutine mc_sweep_writeparameters
 
 !> Schedules parallel moves of particles using OpenMP with a domain 
@@ -154,13 +115,14 @@ end subroutine mc_sweep_writeparameters
 !! @param sl the cell list presenting the decomposition.
 !! 
 subroutine make_particle_moves(simbox, group, genstates, subr_particle_energy, &
-     temperature)
+     temperature, n_trials, n_accepted)
   implicit none
   type(poly_box), intent(in) :: simbox
   type(particlegroup), intent(inout) :: group
   type(rngstate), intent(inout) :: genstates(0:)
   procedure(particle_energy) :: subr_particle_energy
   real(dp), intent(in) :: temperature
+  integer, intent(out) :: n_accepted, n_trials
   
   !$ integer :: n_threads
   integer :: thread_id
@@ -173,28 +135,28 @@ subroutine make_particle_moves(simbox, group, genstates, subr_particle_energy, &
   logical, allocatable :: nbr_mask(:)
   integer :: n_cell ! particles in the cell where particles are moved.
   integer :: n_local ! particles cell and its neighbour cells.
-  real(dp) :: dE_ij
-  integer :: nacc, ntrials
-  integer :: j, ix, iy, iz, jx, jy, jz
+  real(dp) :: dE_j
+  integer :: j, ix, iy, iz, jx, jy, jz, n_trials_j, n_accepted_j
   call update(group%sl, simbox, group%particles)
   thread_id = 0
   !$ n_threads = 1
   dE = 0._dp
-  dE_ij = 0._dp
-  nacc = 0
-  ntrials = 0
+  dE_j = 0._dp
+  n_accepted = 0
+  n_trials = 0
   !! Loop over cells. This can be thought of as looping through a 
   !! 2 x 2 x 2 cube of cells.
   !$OMP PARALLEL shared(group, simbox, genstates)& 
-  !$OMP& private(thread_id, n_threads, temp_particles, nbr_mask)&
-  !$OMP& reduction(+:dE, nacc, ntrials) 
+  !$OMP& private(thread_id, n_threads, temp_particles, nbr_mask, n_trials_j, &
+  !$OMP& n_accepted_j)&
+  !$OMP& reduction(+:dE, n_accepted, n_trials) 
   !$ thread_id = omp_get_thread_num()
   allocate(temp_particles(minval([size(group%particles),&
        27 * maxval(group%sl%counts)])), nbr_mask(size(group%particles)))
   do iz=0, min(1, group%sl%nz-1)
      do iy=0, min(1, group%sl%ny-1)
         do ix=0, min(1, group%sl%nx-1)
-           !$OMP DO collapse(3) private(j, n_cell, n_local, dE_ij, isaccepted)&
+           !$OMP DO collapse(3) private(j, n_cell, n_local, dE_j, isaccepted)&
            !$OMP& schedule(dynamic)
            do jz = iz, group%sl%nz - 1, 2
               do jy = iy, group%sl%ny - 1, 2
@@ -212,13 +174,11 @@ subroutine make_particle_moves(simbox, group, genstates, subr_particle_energy, &
                     do j = 1, n_cell
                        call moveparticle_2(simbox, &
                             temp_particles(1:n_local), j, temperature, &
-                            genstates(thread_id), subr_particle_energy, dE_ij, &
-                            isaccepted)
-                       if (isaccepted) then 
-                          nacc = nacc + 1
-                          dE = dE + dE_ij
-                       end if
-                       ntrials = ntrials + 1
+                            genstates(thread_id), subr_particle_energy, dE_j, &
+                            n_trials=n_trials_j, n_accepted=n_accepted_j)
+                       n_accepted = n_accepted + n_accepted_j
+                       n_trials = n_trials + n_trials_j
+                       dE = dE + dE_j
                     end do
                     group%particles(group%sl%indices(1:n_cell, jx, jy, jz)) = &
                          temp_particles(1:n_cell)
@@ -237,8 +197,6 @@ subroutine make_particle_moves(simbox, group, genstates, subr_particle_energy, &
   if (allocated(nbr_mask)) deallocate(nbr_mask)
   !$OMP END PARALLEL
   etotal = etotal + dE
-  nmovetrials = nmovetrials + ntrials
-  nacceptedmoves = nacceptedmoves + nacc
 end subroutine make_particle_moves
 
 !> Returns the simulation temperature.
@@ -255,16 +213,17 @@ end subroutine make_particle_moves
 
 
 subroutine update_volume(simbox, group, genstate, temperature, pressure, &
-     subr_particle_energy)
+     subr_particle_energy, n_trials, n_accepted)
   type(poly_box), intent(inout) :: simbox
   type(particlegroup), intent(inout) :: group
   type(rngstate), intent(inout) :: genstate
   real(dp), intent(in) :: temperature, pressure
   procedure(particle_energy) :: subr_particle_energy
+  integer, intent(out), optional :: n_trials, n_accepted
   integer :: i
   do i = 1, size(scalingtypes)
      call movevol(simbox, group, scalingtypes(i), genstate, temperature, &
-          pressure, subr_particle_energy)
+          pressure, subr_particle_energy, n_trials, n_accepted)
   end do
 end subroutine update_volume
 
@@ -281,13 +240,14 @@ end subroutine update_volume
 !! @param genstate the random number generator state.
 !! 
 subroutine movevol(simbox, group, scalingtype, genstate, temperature, pressure,&
-     subr_particle_energy)
+     subr_particle_energy, n_trials, n_accepted)
   type(poly_box), intent(inout) :: simbox
   type(particlegroup), intent(inout) :: group
   character(len=*), intent(in) :: scalingtype
   type(rngstate), intent(inout) :: genstate
   real(dp), intent(in) :: temperature, pressure
   procedure(particle_energy) :: subr_particle_energy
+  integer, intent(out), optional :: n_trials, n_accepted
   integer :: nparticles 
   logical :: overlap
   real(dp) :: Vo, Vn
@@ -333,14 +293,22 @@ subroutine movevol(simbox, group, scalingtype, genstate, temperature, pressure,&
           isaccepted)
      if (isaccepted) then
         etotal = totenew
-        nacceptedscalings = nacceptedscalings + 1
      else 
         !! Scale particles back to old coordinates
         call scalepositions(simbox, oldbox, group%particles, nparticles)
         simbox = oldbox
      end if
   end if
-  nscalingtrials = nscalingtrials + 1
+
+  if (present(n_accepted)) then
+     if (isaccepted) then
+        n_accepted = 1
+     else
+        n_accepted = 0
+     end if
+  end if
+
+  if(present(n_trials)) n_trials = 1
 end subroutine movevol
 
 !> Computes the total @p energy of the system. Interactions are computed
@@ -402,70 +370,11 @@ subroutine total_energy(sl, simbox, particles, subr_particle_energy, &
 end subroutine total_energy
 
 
-!> Adjusts the maximum values for trial moves of particles and trial
-!! scalings of the simulation volume. Should be used only during
-!! equilibration run. 
-subroutine updatemaxvalues(group)
-  type(particlegroup), intent(inout) :: group
-  real(dp) :: newdthetamax
-  real(dp) :: newdximax
-  !! Adjust scaling
-  maxscaling = newmaxvalue(nscalingtrials, nacceptedscalings, scalingratio,&
-       maxscaling)
-  
-  call getmaxmoves(newdximax, newdthetamax)
-  !! Adjust translation
-  newdximax = newmaxvalue(nmovetrials, nacceptedmoves, moveratio, newdximax)
-  
-  !! Update the minimum cell side length of the cell list because the maximum
-  !! translation has changed: 
-  
-  !! This should adjust rotations < pi/2 to move the particle end as much as
-  !! a random translation. 4.4 is the assumed molecule length-to-breadth 
-  !! ratio.
-  newdthetamax = 2._dp * asin(newdximax/4.4_dp) 
-  call setmaxmoves(newdximax, newdthetamax)
-end subroutine updatemaxvalues
-  
-!> Returns a new trial move parameter value calculated from the desired
-!! acceptance ratio.
-!! 
-!! @param ntrials the total number of trials of the kind of move in
-!!        question.
-!! @param naccepted number of accepted trials.
-!! @param desiredratio the desired acceptance ratio for trial moves.
-!! @param oldvalue the old value of the parameter setting the maximum
-!!        size for the trial move in question.
-!!
-function newmaxvalue(ntrials, naccepted, desiredratio, oldvalue) &
-     result(newvalue)
-  integer, intent(in) :: ntrials
-  integer, intent(in) :: naccepted
-  real(dp), intent(in) :: desiredratio
-  real(dp), intent(in) :: oldvalue
-  real(dp) :: newvalue
-  real(dp), parameter :: multiplier = 1.05_dp
-  if (real(naccepted, dp) / real(ntrials, dp) > desiredratio) then
-     newvalue = oldvalue * multiplier
-  else 
-     newvalue = oldvalue / multiplier
-  end if
-end function newmaxvalue
-  
 !> Returns the simulation pressure in reduced units.
 !function getpressure()
 !  real(dp) :: getpressure
 !  getpressure = pressure
 !end function getpressure
-
-!> Resets the counters that are used to monitor acceptances of trial
-!! moves. 
-subroutine resetcounters
-  nacceptedmoves = 0
-  nmovetrials = 0
-  nscalingtrials = 0 
-  nacceptedscalings = 0
-end subroutine resetcounters
 
 !> Scales the positions of @p particles with the same factors that were
 !! used to scale the simulation box dimensions from @p oldbox to
