@@ -199,18 +199,6 @@ subroutine make_particle_moves(simbox, group, genstates, subr_particle_energy, &
   etotal = etotal + dE
 end subroutine make_particle_moves
 
-!> Returns the simulation temperature.
-!pure function gettemperature() result(temp)
-!  real(dp) :: temp
-!  temp = temperature
-!end function gettemperature
-
-!> Sets the simulation temperature.
-!subroutine settemperature(temperaturein)
-!  real(dp), intent(in) :: temperaturein
-!  temperature = temperaturein
-!end subroutine settemperature
-
 
 subroutine update_volume(simbox, group, genstate, temperature, pressure, &
      subr_particle_energy, n_trials, n_accepted)
@@ -370,12 +358,6 @@ subroutine total_energy(sl, simbox, particles, subr_particle_energy, &
 end subroutine total_energy
 
 
-!> Returns the simulation pressure in reduced units.
-!function getpressure()
-!  real(dp) :: getpressure
-!  getpressure = pressure
-!end function getpressure
-
 !> Scales the positions of @p particles with the same factors that were
 !! used to scale the simulation box dimensions from @p oldbox to
 !! @p newbox.
@@ -391,25 +373,5 @@ pure subroutine scalepositions(oldbox, newbox, particles, nparticles)
      particles(i)%z = particles(i)%z * getz(newbox) / getz(oldbox)
   end do
 end subroutine scalepositions
-
-!> Tests that there are no overlaps in the current configuration of
-!! particles and the simulation box.
-!subroutine test_configuration(simbox, particles)
-!  real(dp) :: total_e
-!  logical :: overlap
-!  type(poly_box), intent(in) :: simbox
-!  type(particledat), intent(in) :: particles(:)
-!  if (.not. is_initialized) then
-!     stop 'mc_sweep:test_configuration: Error: module not initialized!'
-!  end if
-!  !! This is pretty heavy since goes through all particles:
-!  call total_energy(simbox, particles, total_e, overlap)
-!  if (overlap) then
-!     stop 'mc_sweep:test_configuration: Overlap!'
-!  end if
-!end subroutine test_configuration
-
-
-!include 'map_and_reduce.f90'
 
 end module mc_sweep
