@@ -1,5 +1,5 @@
 program pressurezz
-  use mc_sweep, only: total_energy, mcsweep_init
+use m_particlegroup, only: total_energy, mcsweep_init
 use class_factory
 use particle
 use particle_mover

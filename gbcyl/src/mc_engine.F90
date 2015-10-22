@@ -1,9 +1,9 @@
 !> Implements the streering of the simulation and controlling it's
 !! input and output.
 module mc_engine
-  use mc_sweep, only: make_particle_moves, update_volume, get_total_energy, &
+  use m_particlegroup, only: make_particle_moves, update_volume, get_total_energy, &
        mc_sweep_writeparameters, mcsweep_finalize, mcsweep_init, &
-       get_maxscaling, set_maxscaling
+       get_maxscaling, set_maxscaling, particlegroup
   
   use class_factory, only: factory, factory_readstate, factory_writestate
   use mt_stream
@@ -16,7 +16,6 @@ module mc_engine
        get_max_translation, getmaxmoves, setmaxmoves
   use beta_exchange, only: write_stats, reset_counters, &
        beta_exchange_init => init, be_finalize => finalize, try_beta_exchanges
-  use m_particlegroup, only: particlegroup
   use class_pair_potential, only: create_conditional_interaction, pp_init, &
        pp_writeparameters
   use iso_fortran_env, only: dp => REAL64, error_unit

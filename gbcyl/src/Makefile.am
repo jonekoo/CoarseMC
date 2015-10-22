@@ -120,7 +120,6 @@ parallel_src = \
   mpi.f90 \
   beta_exchange.f90 \
   m_particlegroup.f90 \
-  mc_sweep.f90 \
   mc_engine.f90 
 
 ## Below: Listings of source files needed by programs
@@ -489,7 +488,7 @@ pressurezz_SOURCES = \
   ${model_src} \
   ${energy_src} \
   genvoltrial.f90 \
-  mc_sweep.f90 \
+  m_particlegroup.f90 \
   pressurezz.f90
 
 virial_tensor_SOURCES = \
