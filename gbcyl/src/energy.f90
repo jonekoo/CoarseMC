@@ -6,7 +6,7 @@
 !! modules.
 module energy
 use nrtype, only: dp
-use particle
+use particle, only: particledat
 use particlewall
 use class_simplelist
 use class_poly_box
@@ -19,9 +19,7 @@ private
 public :: totalparticlewallenergy
 public :: energy_init
 public :: energy_writeparameters
-public :: get_cutoff
-!public :: total_by_cell
-!public :: totalenergy
+!public :: get_cutoff
 public :: simple_singleparticleenergy
 
 !> True if interactions between a wall and the particles should
@@ -35,10 +33,6 @@ real(dp), save :: rcutoff = 5.5_dp
 !! energy_init.
 logical :: is_initialized = .false.
 
-!interface totalenergy
-!   module procedure simple_totalenergy, total_by_cell
-!end interface
-  
 interface singleparticleenergy
    module procedure simple_singleparticleenergy
 end interface
@@ -60,7 +54,6 @@ subroutine energy_init(reader)
   type(parameterizer), intent(in) :: reader
   call getparameter(reader, 'is_wall_on', iswall)
   if (iswall) call particlewall_init(reader)
-  call getparameter(reader, 'r_cutoff', rcutoff)
   call pp_init(reader)
   is_initialized = .true.
 end subroutine
@@ -71,7 +64,6 @@ subroutine energy_writeparameters(writer)
   type(parameter_writer), intent(inout) :: writer
   call writeparameter(writer, 'is_wall_on', iswall)
   if (iswall) call particlewall_writeparameters(writer)
-  call writeparameter(writer, 'r_cutoff', rcutoff)
   call pp_writeparameters(writer)
 end subroutine
 
@@ -124,11 +116,13 @@ pure subroutine totalparticlewallenergy(simbox, particles, energy, overlap)
   real(dp), intent(out) :: energy
   logical, intent(out) :: overlap 
   integer :: i
-  real(dp) :: oneprtclV 
+  real(dp) :: oneprtclV
+  integer :: err
   energy = 0._dp
   overlap = .false.
   do i = 1, size(particles)
-     call particlewall_potential(particles(i), simbox, oneprtclV, overlap)
+     call particlewall_potential(particles(i), simbox, oneprtclV, err)
+     if (err /= 0) overlap = .true.
      if (overlap) return
      energy = energy + oneprtclV
   end do
@@ -151,14 +145,16 @@ pure subroutine simple_singleparticleenergy(simbox, particles, i, energy, overla
   real(dp), intent(out) :: energy
   logical, intent(out) :: overlap
   real(dp) :: e_particles 
-  real(dp) :: e_wall 
+  real(dp) :: e_wall
+  integer :: err
   e_wall = 0._dp 
   e_particles = 0._dp
   energy = 0._dp
   overlap = .false.
   if (iswall) then
-     call particlewall_potential(particles(i), simbox, e_wall, overlap)
+     call particlewall_potential(particles(i), simbox, e_wall, err)
   end if
+  if (err /= 0) overlap = .true.
   if (.not. overlap) then
      call pairinteractions(simbox, particles, i, e_particles, overlap)
   end if
@@ -181,8 +177,9 @@ end subroutine simple_singleparticleenergy
 !! @param n_pairs optionally gives the number of pairs to which the
 !!        interactions were computed.
 !! 
-pure subroutine pairinteractions(simbox, particles, i, energy, overlap, &
-     n_pairs)
+pure subroutine pairinteractions(simbox, particles, i, energy,&
+     overlap, n_pairs)
+  !class(pair_interaction), intent(in) :: pair_ia
   type(particledat), dimension(:), intent(in) :: particles
   type(poly_box), intent(in) :: simbox
   integer, intent(in) :: i
@@ -220,8 +217,8 @@ pure subroutine pairinteractions(simbox, particles, i, energy, overlap, &
   !! :TODO: sort particles by type here as well?  
   do j = 1, nparticles
      if (cutoff_mask(j)) then
-        call pair_potential(particles(i), particles(j), rijs(:,j), epair, &
-             overlap)
+        call pair_potential(prototype, particles(i), particles(j), rijs(:,j), &
+             epair, overlap)
         if (present(n_pairs)) n_pairs = n_pairs + 1
         if(overlap) then
            return
@@ -263,7 +260,7 @@ pure subroutine allpairinteractions(simbox, particles, energy, overlap, &
      do j = i + 1, nparticles
         rij = minimage(simbox, position(particles(j))-position(particles(i)))
         if (dot_product(rij, rij) < rcutoff**2) then
-           call pair_potential(particles(i), particles(j), rij, epair, overlap)
+           call pair_potential(prototype, particles(i), particles(j), rij, epair, overlap)
            if (present(n_pairs)) n_pairs = n_pairs + 1
            if(overlap) then
               return

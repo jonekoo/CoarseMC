@@ -14,7 +14,6 @@ program analysis
   use particle_mover, only: initParticle
   use cylinder, only: initcylinder
   use verlet, only: initvlist, freevlist
-  use energy, only: total_energy
   implicit none
   type(particledat), dimension(:), pointer :: particles
   integer :: io_status

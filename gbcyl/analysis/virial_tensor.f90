@@ -28,17 +28,22 @@ integer :: i, j, k, l
 real(dp), dimension(3, 3) :: w
 real(dp), dimension(3) :: rij, deriv
 real(dp) :: cutoff
+class(pair_interaction), allocatable :: pair_ia
 read(*, *) idchar
-reader = new_parameterizer('inputparameters.'//trim(adjustl(idchar)), logfile = "virial_tensor_log."//trim(adjustl(idchar)))
+reader = new_parameterizer('inputparameters.'//trim(adjustl(idchar)), &
+     logfile="virial_tensor_log."//trim(adjustl(idchar)))
 !! Initialize the modules needed
 call pp_init(reader)
+allocate(pair_ia, source=create_conditional_interaction())
 call getparameter(reader, 'temperature', temperature)
 call getparameter(reader, 'r_cutoff', cutoff)
 coordinateunit = fileunit_getfreeunit()
-open(unit=coordinateunit, file='configurations.' //trim(adjustl(idchar)), action='READ', status='OLD')
+open(unit=coordinateunit, file='configurations.' //trim(adjustl(idchar)), &
+     action='READ', status='OLD')
 do
   w(:,:) = 0._dp 
-  call factory_readstate(coordinatereader, coordinateunit, simbox, particles, ios)
+  call factory_readstate(coordinatereader, coordinateunit, simbox, particles, &
+       ios)
   if (ios /= 0) then
     exit
   end if
@@ -53,7 +58,7 @@ do
       !! the gradient of the intermolecular potential (force)
       !forall(k=1:3) deriv(k) = d_potential(orientation(particles(i)), &
       !  orientation(particles(j)), rij, k)
-      deriv = pair_force(particles(i), particles(j), rij)
+      deriv = pair_ia%pair_force(particles(i), particles(j), rij)
       !! Calculate the virial tensor
       forall (k=1:3, l=1:3) w(k, l) = w(k, l) + rij(k) * deriv(l)
     end do

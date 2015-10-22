@@ -74,8 +74,7 @@ energy_src = \
   particlewall.f90 \
   class_pair_potential.f90 \
   verlet.f90 \
-  class_simplelist.f90 \
-  energy.f90 
+  class_simplelist.f90
 
 #ptgbcyl_LDADD = $(ldadd_mtstream)
 

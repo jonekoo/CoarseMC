@@ -5,7 +5,7 @@ use utils, only : fmt_char_dp
 use m_fileunit
 use particlewall
 use class_poly_box
-use particle
+use particle, only: particledat, setposition, setorientation
 use class_factory
 use class_parameterizer
 implicit none
@@ -36,6 +36,9 @@ real(dp) :: rmax
 real(dp) :: f(3)
 real(dp) :: energy
 logical :: overlap
+integer :: err
+
+class(pair_interaction), allocatable :: pair_ia
 
 read(*, *) idchar
 
@@ -43,6 +46,7 @@ read(*, *) idchar
 reader = new_parameterizer('inputparameters.'//trim(adjustl(idchar)), &
      logfile = "printpotentials_log."//trim(adjustl(idchar)))
 call pp_init(reader)
+allocate(pair_ia, source=create_conditional_interaction())
 
 call getparameter(reader, 'is_wall_on', is_wall_on)
 if (is_wall_on) then
@@ -126,8 +130,8 @@ do i = 1, n
      temp = testparticles(j)
      temp%x = testparticles(j)%x - r  
      if (is_wall_on) then
-        call particlewall_potential(temp, simbox, energy, overlap)
-        if (overlap) then 
+        call particlewall_potential(temp, simbox, energy, err)
+        if (err /= 0) then 
            write(*, '(A23,1X)', advance='no') 'NaN'
         else
            rij = position(temp)
@@ -138,13 +142,13 @@ do i = 1, n
         end if
      end if
      do k = 1, j
-        call pair_potential(temp, testparticles(k), &
-             position(testparticles(k))-position(temp), energy, overlap)
-        if (overlap) then 
+        call pair_ia%pair_potential(temp, testparticles(k), &
+             position(testparticles(k))-position(temp), energy, err)
+        if (err /= 0) then 
            write(*, '(A23,1X)', advance='no') 'NaN'
         else
            rij = position(temp) - position(testparticles(k))
-           f = pair_force(testparticles(k), temp, rij)
+           f = pair_ia%pair_force(testparticles(k), temp, rij)
            ! We want to print out the force acting on temp by
            ! testparticles(k), when testparticles(k) is at origin.
            write(*, '(G23.15E3,1X)', advance='no') dot_product(rij, f) / &

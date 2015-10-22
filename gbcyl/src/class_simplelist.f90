@@ -23,6 +23,7 @@ type simplelist
    type(poly_box) :: cached_box
    real(dp) :: threshold = 0.0
    real(dp) :: min_length
+   real(dp) :: min_boundary_width
    integer :: nx, ny, nz
    real(dp) :: lx, ly, lz
    logical :: is_x_even = .false., is_y_even = .false., is_z_even = .false.
@@ -51,25 +52,21 @@ contains
 !! Note that the resulting cell side lengths may be different in
 !! different directions. 
 !! 
-subroutine new_simplelist(sl, simbox, particles, min_length, is_x_even, is_y_even, is_z_even, threshold, cutoff)
+  subroutine new_simplelist(sl, simbox, particles, min_length, &
+       min_boundary_width, is_x_even, is_y_even, is_z_even)
   type(poly_box), intent(in) :: simbox
   type(particledat), intent(in) :: particles(:)
   real(dp), intent(in) :: min_length
+  real(dp), intent(in) :: min_boundary_width
   logical, intent(in), optional :: is_x_even, is_y_even, is_z_even
-  real(dp), intent(in), optional :: threshold, cutoff
   type(simplelist), intent(out) :: sl
   sl%cached_box = simbox
   sl%min_length = min_length
+  sl%min_boundary_width = min_boundary_width
   if(present(is_x_even)) sl%is_x_even = is_x_even
   if(present(is_y_even)) sl%is_y_even = is_y_even
   if(present(is_z_even)) sl%is_z_even = is_z_even
   call calculate_dimensions(sl, simbox)
-  if(present(threshold)) then
-     sl%threshold = threshold
-  else if (present(cutoff)) then
-     !! Compute threshold from cell dimensions
-     sl%threshold = minval([sl%lx, sl%ly, sl%lz] - cutoff) / 2.0
-  end if
   call simplelist_allocate(sl, size(particles))
   !! :TODO: Could make the indices list size parameterizable or optimizable
   call simplelist_populate(sl, simbox, particles)
@@ -113,6 +110,9 @@ subroutine calculate_dimensions(sl, simbox)
   sl%lx = getx(simbox) / sl%nx
   sl%ly = gety(simbox) / sl%ny
   sl%lz = getz(simbox) / sl%nz
+  !! Compute threshold from cell dimensions
+  sl%threshold = 0.5 * (minval([sl%lx, sl%ly, sl%lz]) - &
+       sl%min_length +  sl%min_boundary_width)
 end subroutine
 
 !> Updates the cell list @p sl based on @p simbox size and the positions

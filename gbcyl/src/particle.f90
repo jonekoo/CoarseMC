@@ -29,6 +29,8 @@ type particledat
    real(dp) :: uy = 0._dp
    real(dp) :: uz = 1._dp
    logical :: rod = .true.
+ contains
+   procedure :: energy => particle_potential
 end type particledat
 
 interface   
@@ -39,19 +41,70 @@ interface
    !! @param i the index of the particle in @p particles.
    !! @param energy the potential energy of @p particles(@p i)
    !! @param overlap is .true. if e.g. @p particles(@p i) is too close to
-     !!        some other particle.
+   !!        some other particle.
    !!
    pure subroutine particle_energy(simbox, particles, i, &
         energy, overlap)
-     import
+     import particledat, poly_box, dp
      type(poly_box), intent(in) :: simbox
      type(particledat), intent(in) :: particles(:)
      integer, intent(in) :: i
      real(dp), intent(out) :: energy
      logical, intent(out) :: overlap
    end subroutine particle_energy
+
+
+   pure subroutine pair_energy(aparticle, another, simbox, energy, err)
+     import particledat, poly_box, dp
+     type(particledat), intent(in) :: aparticle, another
+     type(poly_box), intent(in) :: simbox
+     real(dp), intent(out) :: energy
+     integer, intent(out) :: err
+   end subroutine pair_energy
+
+   pure subroutine single_energy(aparticle, simbox, energy, err)
+     import particledat, poly_box, dp
+     type(particledat), intent(in) :: aparticle
+     type(poly_box), intent(in) :: simbox
+     real(dp), intent(out) :: energy
+     integer, intent(out) :: err
+   end subroutine single_energy
 end interface
 
+
+type, abstract :: pair_interaction
+ contains
+   procedure(pair_potential), deferred :: pair_potential
+   procedure(pair_force), deferred :: pair_force
+   procedure(get_cutoff), deferred :: get_cutoff
+end type pair_interaction
+
+abstract interface
+   pure subroutine pair_potential(this, particlei, particlej, rij, energy, &
+        err)
+     import
+     class(pair_interaction), intent(in) :: this
+     type(particledat), intent(in) :: particlei, particlej
+     real(dp), intent(in) :: rij(3)
+     real(dp), intent(out) :: energy
+     integer, intent(out) :: err
+   end subroutine pair_potential
+
+   pure function pair_force(this, particlei, particlej, rij) result(f)
+     import
+     class(pair_interaction), intent(in) :: this
+     type(particledat), intent(in) :: particlei, particlej
+     real(dp), intent(in) :: rij(3)
+     real(dp) :: f(3)
+   end function pair_force
+   
+   pure function get_cutoff(this) result(res)
+     import pair_interaction, dp
+     class(pair_interaction), intent(in) :: this
+     real(dp) :: res
+   end function get_cutoff
+end interface
+   
 contains
 
 !> Writes @p aparticle to the outputunit @p writeunit.
@@ -94,20 +147,21 @@ end subroutine readparticle
 !! random number generator state. After the move, @p dE contains the
 !! change in energy of the system and @p isaccepted == .true. if the
 !! move was accepted. 
-pure subroutine moveparticle_2(simbox, particles, i, temperature, genstate, &
-     subr_particle_energy, dE, n_trials, n_accepted)
+pure subroutine moveparticle_2(this, nbrs, simbox, temperature, &
+     genstate, pair_ia, subr_single_energy, dE, n_trials, n_accepted)
+  type(particledat), intent(inout) :: this
+  type(particledat), dimension(:), intent(in) :: nbrs
   type(poly_box), intent(in) :: simbox
-  type(particledat), dimension(:), intent(inout) :: particles
-  integer, intent(in) :: i
   real(dp), intent(in) :: temperature
   type(rngstate), intent(inout) :: genstate
-  procedure(particle_energy) :: subr_particle_energy
+  class(pair_interaction), intent(in) :: pair_ia
+  procedure(single_energy) :: subr_single_energy
   real(dp), intent(out) :: dE
   integer, intent(out), optional :: n_trials, n_accepted
 
   type(particledat) :: newparticle
   type(particledat) :: oldparticle
-  logical :: overlap
+  integer :: err
   real(dp) :: enew
   real(dp) :: eold
   logical :: isaccepted
@@ -115,21 +169,23 @@ pure subroutine moveparticle_2(simbox, particles, i, temperature, genstate, &
   enew = 0._dp
   eold = 0._dp
   dE = 0._dp
-  overlap = .false.
   isaccepted = .false.
-  newparticle = particles(i)
+  newparticle = this
   call move(newparticle, genstate)
   call setposition(newparticle, minimage(simbox, position(newparticle)))
-  oldparticle = particles(i) 
-  particles(i) = newparticle
-  call subr_particle_energy(simbox, particles, i, enew, overlap)
+  oldparticle = this 
+  this = newparticle
+  !call subr_particle_energy(simbox, nbrs, i, enew, overlap)
+
+  call this%energy(nbrs, pair_ia, simbox, subr_single_energy, enew, err)
   
-  particles(i) = oldparticle
-  if(.not. overlap) then 
-     call subr_particle_energy(simbox, particles, i, eold, overlap)
+  this = oldparticle
+  if(err == 0) then 
+     !call subr_particle_energy(simbox, nbrs, i, eold, overlap)
+     call this%energy(nbrs, pair_ia, simbox, subr_single_energy, enew, err)
      call acceptchange(eold, enew, temperature, genstate, isaccepted)
      if(isaccepted) then
-        particles(i) = newparticle
+        this = newparticle
         dE = enew - eold
      end if
   end if
@@ -144,6 +200,51 @@ pure subroutine moveparticle_2(simbox, particles, i, temperature, genstate, &
   end if
   
 end subroutine moveparticle_2
+
+
+pure subroutine particle_potential(this, nbrs, pair_ia, simbox, &
+     subr_single_energy, energy, err)
+  class(particledat), intent(in) :: this
+  type(particledat), intent(in) :: nbrs(:)
+  class(pair_interaction), intent(in) :: pair_ia
+  type(poly_box), intent(in) :: simbox
+  procedure(single_energy) :: subr_single_energy
+  real(dp), intent(out) :: energy
+  integer, intent(out) :: err
+  real(dp) :: e
+  integer :: i
+  real(dp) :: rcutoff
+  real(dp) :: rijs(3, size(nbrs))
+  logical :: cutoff_mask(size(nbrs))
+  energy = 0
+
+  rcutoff = pair_ia%get_cutoff()
+  !! Select the calculated interactions by cutoff already here
+  do i = 1, size(nbrs)
+     !! :NOTE: The chosen way is better than
+     !! :NOTE: rij = minimage(simbox, position(particlei), 
+     !! position(particlej)) It is significantly faster to use direct
+     !! references to particle coordinates.
+     rijs(:, i) = minimage(simbox, (/nbrs(i)%x-this%x,& 
+          nbrs(i)%y-this%y, nbrs(i)%z-this%z/))
+  end do !! ifort does not vectorize
+  do i = 1, size(nbrs)
+     cutoff_mask(i) = dot_product(rijs(:, i), rijs(:, i)) < rcutoff**2
+  end do
+
+  do i = 1, size(nbrs)
+     if (cutoff_mask(i)) then
+        call pair_ia%pair_potential(this, nbrs(i), rijs(:, i), e, err)
+        if (err /= 0) exit
+        energy = energy + e
+     end if
+  end do
+  if (err == 0) then
+     call subr_single_energy(this, simbox, e, err)
+     if (err == 0) energy = energy + e
+  end if  
+end subroutine particle_potential
+
 
 !> Returns the position of @p aparticle as a vector.
 pure function position(aparticle)

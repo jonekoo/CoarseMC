@@ -114,13 +114,14 @@ end subroutine mc_sweep_writeparameters
 !! @param genstates random number generator states. Each thread needs one.
 !! @param sl the cell list presenting the decomposition.
 !! 
-subroutine make_particle_moves(simbox, group, genstates, subr_particle_energy, &
-     temperature, n_trials, n_accepted)
+subroutine make_particle_moves(simbox, group, genstates, pair_ia, &
+     subr_single_energy, temperature, n_trials, n_accepted)
   implicit none
   type(poly_box), intent(in) :: simbox
   type(particlegroup), intent(inout) :: group
   type(rngstate), intent(inout) :: genstates(0:)
-  procedure(particle_energy) :: subr_particle_energy
+  class(pair_interaction), intent(in) :: pair_ia
+  procedure(single_energy) :: subr_single_energy
   real(dp), intent(in) :: temperature
   integer, intent(out) :: n_accepted, n_trials
   
@@ -172,10 +173,13 @@ subroutine make_particle_moves(simbox, group, genstates, subr_particle_energy, &
                     temp_particles(n_cell + 1 : n_local) = &
                          pack(group%particles, nbr_mask)
                     do j = 1, n_cell
-                       call moveparticle_2(simbox, &
-                            temp_particles(1:n_local), j, temperature, &
-                            genstates(thread_id), subr_particle_energy, dE_j, &
-                            n_trials=n_trials_j, n_accepted=n_accepted_j)
+                       call moveparticle_2(temp_particles(j), &
+                            [temp_particles(1:j - 1), &
+                            temp_particles(j + 1:n_local)], simbox, &
+                            temperature, &
+                            genstates(thread_id), pair_ia, &
+                            subr_single_energy, dE_j, n_trials=n_trials_j, &
+                            n_accepted=n_accepted_j)
                        n_accepted = n_accepted + n_accepted_j
                        n_trials = n_trials + n_trials_j
                        dE = dE + dE_j
@@ -200,18 +204,19 @@ subroutine make_particle_moves(simbox, group, genstates, subr_particle_energy, &
 end subroutine make_particle_moves
 
 
-subroutine update_volume(simbox, group, genstate, temperature, pressure, &
-     subr_particle_energy, n_trials, n_accepted)
+subroutine update_volume(simbox, group, genstate, pair_ia, subr_single_energy,&
+     temperature, pressure, n_trials, n_accepted)
   type(poly_box), intent(inout) :: simbox
   type(particlegroup), intent(inout) :: group
   type(rngstate), intent(inout) :: genstate
+  class(pair_interaction), intent(in) :: pair_ia
+  procedure(single_energy) :: subr_single_energy
   real(dp), intent(in) :: temperature, pressure
-  procedure(particle_energy) :: subr_particle_energy
   integer, intent(out), optional :: n_trials, n_accepted
   integer :: i
   do i = 1, size(scalingtypes)
-     call movevol(simbox, group, scalingtypes(i), genstate, temperature, &
-          pressure, subr_particle_energy, n_trials, n_accepted)
+     call movevol(simbox, group, scalingtypes(i), genstate, pair_ia, &
+          subr_single_energy, temperature, pressure, n_trials, n_accepted)
   end do
 end subroutine update_volume
 
@@ -227,17 +232,17 @@ end subroutine update_volume
 !!        the system volume.
 !! @param genstate the random number generator state.
 !! 
-subroutine movevol(simbox, group, scalingtype, genstate, temperature, pressure,&
-     subr_particle_energy, n_trials, n_accepted)
+subroutine movevol(simbox, group, scalingtype, genstate, pair_ia, &
+     subr_single_energy, temperature, pressure, n_trials, n_accepted)
   type(poly_box), intent(inout) :: simbox
   type(particlegroup), intent(inout) :: group
   character(len=*), intent(in) :: scalingtype
   type(rngstate), intent(inout) :: genstate
+  class(pair_interaction), intent(in) :: pair_ia
+  procedure(single_energy) :: subr_single_energy
   real(dp), intent(in) :: temperature, pressure
-  procedure(particle_energy) :: subr_particle_energy
   integer, intent(out), optional :: n_trials, n_accepted
-  integer :: nparticles 
-  logical :: overlap
+  integer :: nparticles, err
   real(dp) :: Vo, Vn
   logical :: isaccepted
   real(dp) :: totenew
@@ -246,16 +251,15 @@ subroutine movevol(simbox, group, scalingtype, genstate, temperature, pressure,&
   type(poly_box) :: oldbox
   real(dp), dimension(3) :: scaling
   nparticles = size(group%particles)
-  overlap = .false.
   
   !! Store old volume and simulation box
   Vo = volume(simbox)
   oldbox = simbox
   
   !! It seems that total energy may drift if it is not updated here:
-  call total_energy(group%sl, simbox, group%particles, subr_particle_energy, &
-       etotal, overlap)
-  if (overlap) stop 'movevol: overlap in old configuration! '//&
+  call total_energy(group%sl, simbox, group%particles, pair_ia, &
+       subr_single_energy, etotal, err)
+  if (err /= 0) stop 'movevol: overlap in old configuration! '//&
        'Should never happen!'
   
   !! Scale coordinates and the simulations box
@@ -265,10 +269,10 @@ subroutine movevol(simbox, group, scalingtype, genstate, temperature, pressure,&
   Vn = volume(simbox)
   
   !! Calculate potential energy in the scaled system.
-  call total_energy(group%sl, simbox, group%particles, subr_particle_energy, &
-       totenew, overlap)
+  call total_energy(group%sl, simbox, group%particles, pair_ia, &
+       subr_single_energy, totenew, err)
   
-  if (overlap) then
+  if (err /= 0) then
      !! Scale particles back to old coordinates.
      call scalepositions(simbox, oldbox, group%particles, nparticles)
      simbox = oldbox
@@ -303,18 +307,19 @@ end subroutine movevol
 !! cell-by-cell for the @p particles in the cell list @p sl. @p simbox
 !! is the simulation cell. If any two particles are too close to each
 !! other, @p overlap is true. 
-subroutine total_energy(sl, simbox, particles, subr_particle_energy, &
-     energy, overlap)
+subroutine total_energy(sl, simbox, particles, pair_ia, subr_single_energy, &
+     energy, err)
   type(simplelist), intent(inout) :: sl
   type(poly_box), intent(in) :: simbox
   type(particledat), dimension(:), intent(in) :: particles
-  procedure(particle_energy) :: subr_particle_energy
+  class(pair_interaction), intent(in) :: pair_ia
+  procedure(single_energy) :: subr_single_energy
   real(dp), intent(out) :: energy
-  logical, intent(out) :: overlap 
+  integer, intent(out) :: err
   integer :: i, j, ix, iy, iz
   logical :: mask(size(particles))
   real(dp) :: energy_j
-  logical :: overlap_j
+  integer :: err_j
   integer :: helper(size(particles))
   integer, allocatable :: temp_helper(:)
   integer :: n_mask
@@ -324,10 +329,10 @@ subroutine total_energy(sl, simbox, particles, subr_particle_energy, &
   call update(sl, simbox, particles)
   helper = (/(i, i=1, size(particles))/) !! ifort vectorizes
   energy = 0._dp
-  overlap = .false.
+  err = 0
   
-  !$OMP PARALLEL default(shared) reduction(+:energy) reduction(.or.:overlap)& 
-  !$OMP& private(energy_j, overlap_j, i, j, mask, temp_particles, temp_j, temp_helper, n_mask)
+  !$OMP PARALLEL default(shared) reduction(+:energy) reduction(+:err)& 
+  !$OMP& private(energy_j, err_j, i, j, mask, temp_particles, temp_j, temp_helper, n_mask)
   allocate(temp_particles(size(particles)), temp_helper(size(particles))) 
   !$OMP DO collapse(3) schedule(dynamic)
   do ix=0, sl%nx-1 
@@ -343,15 +348,15 @@ subroutine total_energy(sl, simbox, particles, subr_particle_energy, &
       do temp_j = 1, n_mask 
          if(temp_helper(temp_j) == j) exit
       end do
-      call subr_particle_energy(simbox, temp_particles(temp_j:n_mask), &
-           1, energy_j, overlap_j)
-      overlap = overlap .or. overlap_j 
+      call temp_particles(temp_j)%energy(temp_particles(temp_j + 1:n_mask), &
+           pair_ia, simbox, subr_single_energy, energy_j, err_j)
+      err = err + err_j
       energy = energy + energy_j
     end do 
   end do
   end do
   end do
-  !$OMP END DO 
+  !$OMP END DO
   if (allocated(temp_particles)) deallocate(temp_particles)
   if (allocated(temp_helper)) deallocate(temp_helper)
   !$OMP END PARALLEL  

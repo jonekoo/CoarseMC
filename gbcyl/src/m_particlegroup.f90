@@ -1,7 +1,6 @@
 module m_particlegroup
   use particle, only: particledat
   use class_simplelist, only: simplelist, new_simplelist, simplelist_deallocate
-  use energy, only: get_cutoff
   use particle_mover, only: get_max_translation
   use class_parameterizer, only: parameterizer
   use class_poly_box
@@ -18,18 +17,17 @@ module m_particlegroup
 
 contains
 
-  subroutine init(group, simbox)
+  subroutine init(group, simbox, min_cell_length, min_boundary_width)
     class(particlegroup) :: group
     type(poly_box), intent(in) :: simbox
-    real(dp) :: min_cell_length
-    min_cell_length = get_cutoff() + 2._dp * get_max_translation()
+    real(dp), intent(in) :: min_cell_length, min_boundary_width
     !$ if (.true.) then
     !$ call new_simplelist(group%sl, simbox, group%particles, min_cell_length, &
-    !$& is_x_even = isxperiodic(simbox), is_y_even = isyperiodic(simbox), &
-    !$& is_z_even = iszperiodic(simbox), cutoff=get_cutoff())
+    !$& min_boundary_width, is_x_even = isxperiodic(simbox), &
+    !$& is_y_even = isyperiodic(simbox), is_z_even = iszperiodic(simbox))
     !$ else 
     call new_simplelist(group%sl, simbox, group%particles, min_cell_length, &
-         cutoff=get_cutoff())
+         min_boundary_width)
     !$ end if
   end subroutine init
 

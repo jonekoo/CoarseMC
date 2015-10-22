@@ -11,14 +11,17 @@ module mc_engine
   use class_poly_box, only: poly_box, volume, getx, gety, getz
   use class_parameterizer
   use class_parameter_writer
-  use particle_mover, only: particlemover_init, particlemover_writeparameters, &
+  use particle, only: pair_interaction
+  use particle_mover, only: particlemover_init, particlemover_writeparameters,&
        get_max_translation, getmaxmoves, setmaxmoves
   use beta_exchange, only: write_stats, reset_counters, &
        beta_exchange_init => init, be_finalize => finalize, try_beta_exchanges
   use m_particlegroup, only: particlegroup
-  use energy, only: simple_singleparticleenergy, get_cutoff, energy_init, &
-       energy_writeparameters
+  use class_pair_potential, only: create_conditional_interaction, pp_init, &
+       pp_writeparameters
   use iso_fortran_env, only: dp => REAL64, error_unit
+  use particlewall, only: particlewall_potential, particlewall_init, &
+       particlewall_writeparameters
   !$ use omp_lib
   implicit none
   private
@@ -105,6 +108,8 @@ module mc_engine
   
   type(particlegroup), save :: group
   type(poly_box), save :: simbox
+
+  class(pair_interaction), allocatable :: pair_ia
   
 contains
   
@@ -207,11 +212,15 @@ subroutine mce_init(id, n_tasks)
   close(coordinateunit)
 
   !! Initialize modules.
-  call energy_init(parameterreader)
+  !call energy_init(parameterreader)
+  call pp_init(parameterreader)
+  allocate(pair_ia, source=create_conditional_interaction())
+  call particlewall_init(parameterreader)
   call particlemover_init(parameterreader)
   call mcsweep_init(parameterreader)
   call beta_exchange_init(1._dp / temperature)
-  call group%init(simbox)
+  call group%init(simbox, min_cell_length=pair_ia%get_cutoff() + &
+       2 * get_max_translation(), min_boundary_width=2 * get_max_translation())
   call delete(parameterreader)
  
   !! Open output for geometries
@@ -263,13 +272,14 @@ subroutine sweep(simbox, group, genstates, isweep)
   integer, intent(in) :: isweep
   real(dp) :: beta
   integer :: n_trials, n_accepted
-  call make_particle_moves(simbox, group, genstates, &
-       simple_singleparticleenergy, temperature, n_trials, n_accepted)
+  call make_particle_moves(simbox, group, genstates, pair_ia, &
+       particlewall_potential, temperature, n_trials, n_accepted)
   nmovetrials = nmovetrials + n_trials
   nacceptedmoves = nacceptedmoves + n_accepted
 
-  call update_volume(simbox, group, genstates(0), temperature, pressure, &
-       simple_singleparticleenergy, n_trials, n_accepted)
+  call update_volume(simbox, group, genstates(0), pair_ia, &
+       particlewall_potential, temperature, pressure, &
+       n_trials, n_accepted)
   nscalingtrials = nscalingtrials + n_trials
   nacceptedscalings = nacceptedscalings + n_accepted
   call check_simbox(simbox)
@@ -322,7 +332,9 @@ subroutine mce_writeparameters(writer)
   else
      call writeparameter(writer, 'current_scaling_ratio', 'nan')
   end if
-  call energy_writeparameters(writer)
+  !call energy_writeparameters(writer)
+  call pp_writeparameters(writer)
+  call particlewall_writeparameters(writer)
   call particlemover_writeparameters(writer)
   call mc_sweep_writeparameters(writer)
 end subroutine
@@ -337,7 +349,7 @@ subroutine run
       if (moveadjustperiod /= 0) then
          if (mod(isweep, moveadjustperiod) == 0) then
             call updatemaxvalues
-            group%sl%min_length = get_cutoff() + 2._dp * get_max_translation()
+            group%sl%min_length = pair_ia%get_cutoff() + 2._dp * get_max_translation()
          end if
       end if
     end if
@@ -487,18 +499,16 @@ function newmaxvalue(ntrials, naccepted, desiredratio, oldvalue) &
   else 
      newvalue = oldvalue / multiplier
   end if
-  write(*, *) 'ntrials=', ntrials, 'naccepted=', naccepted, &
-       'oldvalue=', oldvalue, 'newvalue=', newvalue
 end function newmaxvalue
   
 !> Check that @p simbox is large enough if it is periodic.
 subroutine check_simbox(simbox)
   type(poly_box), intent(in) :: simbox
-  if (simbox%xperiodic .and. getx(simbox) < 2._dp * get_cutoff()) &
+  if (simbox%xperiodic .and. getx(simbox) < 2._dp * pair_ia%get_cutoff()) &
        stop 'Simulation box too small!'
-  if (simbox%yperiodic .and. gety(simbox) < 2._dp * get_cutoff()) &
+  if (simbox%yperiodic .and. gety(simbox) < 2._dp * pair_ia%get_cutoff()) &
        stop 'Simulation box too small!'
-  if (simbox%zperiodic .and. getz(simbox) < 2._dp * get_cutoff()) &
+  if (simbox%zperiodic .and. getz(simbox) < 2._dp * pair_ia%get_cutoff()) &
        stop 'Simulation box too small!'
 end subroutine
 

@@ -136,16 +136,19 @@ contains
   !! cylindrical Lennard-Jones cavity. The radius of the cavity is
   !! defined by @p simbox. If the particle is too close to the wall or
   !! inside the wall @p overlap == true.
-  pure subroutine particlewall_potential(particle, simbox, energy, overlap)
+  pure subroutine particlewall_potential(particle, simbox, energy, err)
     type(particledat), intent(in) :: particle
     type(poly_box), intent(in) :: simbox
     real(dp), intent(out) :: energy
-    logical, intent(out) :: overlap
+    integer, intent(out) :: err
+    logical :: overlap
+    err = 0
     if (particle%rod) then
       call gbwall(particle, simbox, energy, overlap)
     else
       call ljwall(particle, simbox, energy, overlap)
-    end if
+   end if
+   if (overlap) err = 1
   end subroutine
 
 

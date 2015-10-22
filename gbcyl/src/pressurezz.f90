@@ -1,5 +1,5 @@
 program pressurezz
-  use mc_sweep, only: total_by_cell => total_energy, mcsweep_init
+  use mc_sweep, only: total_energy, mcsweep_init
 use class_factory
 use particle
 use particle_mover
@@ -7,7 +7,8 @@ use class_poly_box
 use class_parameterizer
 use m_fileunit
 use class_simplelist, poly_nbrlist => simplelist
-use energy
+use class_pair_potential, only: create_conditional_interaction, pp_init
+use particlewall, only: particlewall_potential, particlewall_init
 use nrtype
 use utils
 implicit none
@@ -30,12 +31,16 @@ character(len=1) :: direction = 'z'
 type(poly_nbrlist) :: nbrlist
 real(dp) :: newvolume, oldvolume, dVdec, dVinc
 real(dp) :: temperature
+class(pair_interaction), allocatable :: pair_ia
+integer :: err
 read(*, *) idchar, direction
 reader = new_parameterizer('inputparameters.' // trim(adjustl(idchar)))
 !call initparticle(reader)
 call getparameter(reader, 'temperature', temperature)
-call energy_init(reader)
 call mcsweep_init(reader)
+call pp_init(reader)
+call particlewall_init(reader)
+allocate(pair_ia, source = create_conditional_interaction())
 coordinateunit = fileunit_getfreeunit()
 open(unit=coordinateunit, file='configurations.' //trim(adjustl(idchar)), action='READ', status='OLD')
 write(*, '(6(A6,18X))') '#dV   ', 'P ', 'dV ', 'P', 'dV ', 'P '
@@ -47,8 +52,8 @@ do
   nparticles = size(particles)
   !call set_system(simbox, particles)
   !! Calculate initial volume and potential energy
-  call total_by_cell(nbrlist, simbox, particles, simple_singleparticleenergy, &
-       oldenergy, overlap)
+  call total_energy(nbrlist, simbox, particles, pair_ia, &
+       particlewall_potential, oldenergy, err)
   !oldenergy = get_total_energy()
   oldvolume = volume(simbox)
 
@@ -69,8 +74,8 @@ do
     !! Record new potential energy and volume
     !call set_system(simbox, particles)
     !newenergy = get_total_energy()
-    call total_by_cell(nbrlist, simbox, particles, simple_singleparticleenergy,&
-         oldenergy, overlap)
+    call total_energy(nbrlist, simbox, particles, pair_ia, &
+         particlewall_potential, oldenergy, err)
     newvolume = volume(simbox)
     !! record dV/V and change in energy dU
     dUinc = newenergy - oldenergy
@@ -105,8 +110,8 @@ do
     !! Record new potential energy and volume
     !call set_system(simbox, particles)
     !newenergy = get_total_energy()
-    call total_by_cell(nbrlist, simbox, particles, simple_singleparticleenergy,&
-         newenergy, overlap)
+    call total_energy(nbrlist, simbox, particles, pair_ia, &
+         particlewall_potential, newenergy, err)
     newvolume = volume(simbox)
     !! record dV/V and change in energy dU
     dUdec = newenergy - oldenergy
@@ -114,7 +119,8 @@ do
     pzzdec = temperature/dVdec*(real(nparticles,dp)*log(newvolume/oldvolume)-&
       dUdec/temperature)
 
-    !! Calculate average pressure component from the increase and decrease of volume
+    !! Calculate average pressure component from the increase and decrease
+    !! of volume
     pzz = (pzzinc + pzzdec)/2._dp
 
     !! Write results to standard output
