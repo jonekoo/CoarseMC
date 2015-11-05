@@ -13,6 +13,9 @@ public :: update
 public :: simplelist_nbrmask
 public :: simplelist_allocate
 public :: simplelist
+public :: cell_index
+public :: simplelist_nbr_cells
+public :: flat_index
 
 interface update
   module procedure simplelist_update
@@ -180,9 +183,10 @@ pure subroutine simplelist_populate(sl, simbox, particles)
      !! if (particle%x >= getx(simbox) / 2) then
      !!     particle%x = particle%x - getx(simbox)
      !! end if
-     ix = int((particles(iparticle)%x / getx(simbox) + 0.5) * sl%nx)
-     iy = int((particles(iparticle)%y / gety(simbox) + 0.5) * sl%ny)
-     iz = int((particles(iparticle)%z / getz(simbox) + 0.5) * sl%nz)
+     !ix = int((particles(iparticle)%x / getx(simbox) + 0.5) * sl%nx)
+     !iy = int((particles(iparticle)%y / gety(simbox) + 0.5) * sl%ny)
+     !iz = int((particles(iparticle)%z / getz(simbox) + 0.5) * sl%nz)
+     call cell_index(sl, particles(iparticle), simbox, ix, iy, iz)
      !! add to the right position in simplelist
      sl%counts(ix, iy, iz) = sl%counts(ix, iy, iz) + 1
      sl%indices(sl%counts(ix, iy, iz), ix, iy, iz) = iparticle
@@ -190,6 +194,17 @@ pure subroutine simplelist_populate(sl, simbox, particles)
      sl%xyzlist(iparticle, :) = position(particles(iparticle))
   end do
 end subroutine simplelist_populate
+
+elemental subroutine cell_index(sl, particle, simbox, ix, iy, iz)
+  type(simplelist), intent(in) :: sl
+  class(particledat), intent(in) :: particle
+  type(poly_box), intent(in) :: simbox
+  integer, intent(out) :: ix, iy, iz
+  ix = int((particle%x / getx(simbox) + 0.5) * sl%nx)
+  iy = int((particle%y / gety(simbox) + 0.5) * sl%ny)
+  iz = int((particle%z / getz(simbox) + 0.5) * sl%nz)
+end subroutine cell_index
+
 
 !> Sets @p mask(j) true if @p particles(j) is a neighbour of
 !! @p particles(@p i) in the @p simbox.
@@ -242,4 +257,49 @@ pure subroutine simplelist_cell_nbrmask(sl, simbox, ix, iy, iz, cell_nbrmask)
   end do
 end subroutine
 
-end module
+subroutine simplelist_nbr_cells(sl, ix, iy, iz, nbr_cells, n_nbr_cells)
+  type(simplelist), intent(in) :: sl
+  integer, intent(in) :: ix, iy, iz
+  integer, intent(out) :: nbr_cells(3, 27)
+  integer, intent(out) :: n_nbr_cells
+  integer :: x, xl, y, yl, z, zl
+  associate(simbox => sl%cached_box)
+    n_nbr_cells = 0
+    nbr_cells = -1
+    do x=ix-1,ix+1
+       xl=x
+       if (isxperiodic(simbox)) xl=mod(sl%nx+xl,sl%nx)
+       if (xl>=0 .and. xl<=sl%nx-1) then
+          do y=iy-1,iy+1
+             yl=y
+             if (isyperiodic(simbox)) yl=mod(sl%ny+yl,sl%ny)
+             if (yl>=0 .and. yl<=sl%ny-1) then
+                do z=iz-1,iz+1
+                   zl=z
+                   if (iszperiodic(simbox)) zl=mod(sl%nz+zl,sl%nz)
+                   if (zl>=0 .and. zl<=sl%nz-1) then
+                      n_nbr_cells = n_nbr_cells + 1
+                      nbr_cells(:, n_nbr_cells) = [xl, yl, zl]
+                   end if
+                end do
+             end if
+          end do
+       end if
+    end do
+  end associate
+end subroutine simplelist_nbr_cells
+
+function flat_index(sl, ix, iy, iz) result(i)
+  type(simplelist), intent(in) :: sl
+  integer, intent(in) :: ix, iy, iz
+  integer :: i
+  ! check indices
+  if (0 <= ix .and. ix < sl%nx .and. 0 <= iy .and. iy < sl%ny .and. &
+       0 <= iz .and. iz < sl%nz) then
+     i = ix + iy * sl%nx + iz * sl%nx * sl%ny
+  else
+     i = -1
+  end if
+end function flat_index
+
+end module class_simplelist

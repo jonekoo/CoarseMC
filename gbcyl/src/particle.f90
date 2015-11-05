@@ -30,7 +30,11 @@ type particledat
    real(dp) :: uz = 1._dp
    logical :: rod = .true.
  contains
+   procedure :: particledat_assign
+   generic :: assignment(=) => particledat_assign
    procedure :: energy => particle_potential
+   procedure :: nvt_update => moveparticle_2
+   procedure :: pair_energy
 end type particledat
 
 interface   
@@ -53,15 +57,6 @@ interface
      logical, intent(out) :: overlap
    end subroutine particle_energy
 
-
-   pure subroutine pair_energy(aparticle, another, simbox, energy, err)
-     import particledat, poly_box, dp
-     type(particledat), intent(in) :: aparticle, another
-     type(poly_box), intent(in) :: simbox
-     real(dp), intent(out) :: energy
-     integer, intent(out) :: err
-   end subroutine pair_energy
-
    pure subroutine single_energy(aparticle, simbox, energy, err)
      import particledat, poly_box, dp
      type(particledat), intent(in) :: aparticle
@@ -71,6 +66,14 @@ interface
    end subroutine single_energy
 end interface
 
+type particlearray_wrapper
+   class(particledat), allocatable :: arr(:)
+   logical, allocatable :: mask(:)
+ contains
+   procedure :: wrapper_assign
+   generic :: assignment(=) => wrapper_assign
+   final :: wrapper_delete
+end type particlearray_wrapper
 
 type, abstract :: pair_interaction
  contains
@@ -80,8 +83,8 @@ type, abstract :: pair_interaction
 end type pair_interaction
 
 abstract interface
-   pure subroutine pair_potential(this, particlei, particlej, rij, energy, &
-        err)
+   pure subroutine pair_potential(this, particlei, particlej, rij, &
+        energy, err)
      import
      class(pair_interaction), intent(in) :: this
      type(particledat), intent(in) :: particlei, particlej
@@ -104,9 +107,30 @@ abstract interface
      real(dp) :: res
    end function get_cutoff
 end interface
-   
+
+!interface assignment(=)
+!   module procedure particledat_assign, wrapper_assign 
+!end interface assignment(=)
+
 contains
 
+  impure elemental subroutine wrapper_delete(this)
+    type(particlearray_wrapper), intent(inout) :: this
+    if (allocated(this%arr)) deallocate(this%arr)
+    if (allocated(this%mask)) deallocate(this%mask)
+  end subroutine wrapper_delete
+
+  impure elemental subroutine wrapper_assign(dest, src)
+    class(particlearray_wrapper), intent(inout) :: dest
+    type(particlearray_wrapper), intent(in) :: src
+    if (allocated(dest%arr)) deallocate(dest%arr)
+    allocate(dest%arr(size(src%arr)), source=src%arr)
+    if (allocated(dest%mask)) deallocate(dest%mask)
+    allocate(dest%mask(size(src%arr)), source=src%mask)
+    !dest%arr = src%arr
+    !dest%mask = src%mask
+  end subroutine wrapper_assign
+  
 !> Writes @p aparticle to the outputunit @p writeunit.
 subroutine writeparticle(writeunit, aparticle)
   integer, intent(in) :: writeunit
@@ -142,70 +166,82 @@ subroutine readparticle(readunit, aparticle, ios)
   if (ios /= 0) backspace readunit
 end subroutine readparticle
 
+elemental subroutine particledat_assign(dest, src)
+  class(particledat), intent(inout) :: dest
+  type(particledat), intent(in) :: src
+  dest%x = src%x
+  dest%y = src%y
+  dest%z = src%z
+  dest%ux = src%ux
+  dest%uy = src%uy
+  dest%uz = src%uz
+  dest%rod = src%rod
+end subroutine particledat_assign
+
 !> Performs a trial move of @p particles(@p i). @p simbox is the
 !! simulation box in which the @p particles reside. @p genstate is the
 !! random number generator state. After the move, @p dE contains the
 !! change in energy of the system and @p isaccepted == .true. if the
 !! move was accepted. 
-pure subroutine moveparticle_2(this, nbrs, simbox, temperature, &
-     genstate, pair_ia, subr_single_energy, dE, n_trials, n_accepted)
-  type(particledat), intent(inout) :: this
-  type(particledat), dimension(:), intent(in) :: nbrs
+subroutine moveparticle_2(this, genstates, simbox, temperature, nbrs, &
+     pair_ia, subr_single_energy, dE, n_trials, n_accepted)
+  class(particledat), intent(inout) :: this
+  class(particlearray_wrapper), intent(in) :: nbrs(:)
   type(poly_box), intent(in) :: simbox
   real(dp), intent(in) :: temperature
-  type(rngstate), intent(inout) :: genstate
+  type(rngstate), intent(inout) :: genstates(0:)
   class(pair_interaction), intent(in) :: pair_ia
   procedure(single_energy) :: subr_single_energy
   real(dp), intent(out) :: dE
-  integer, intent(out), optional :: n_trials, n_accepted
+  integer, intent(out) :: n_trials, n_accepted
 
-  type(particledat) :: newparticle
-  type(particledat) :: oldparticle
+  class(particledat), allocatable :: newparticle
+  class(particledat), allocatable :: oldparticle
   integer :: err
   real(dp) :: enew
   real(dp) :: eold
   logical :: isaccepted
   
+  write(*, *) 'size(nbrs(1)%arr)', size(nbrs(1)%arr)
   enew = 0._dp
   eold = 0._dp
   dE = 0._dp
   isaccepted = .false.
-  newparticle = this
-  call move(newparticle, genstate)
+  allocate(newparticle, source=this)
+  call move(newparticle, genstates(0))
   call setposition(newparticle, minimage(simbox, position(newparticle)))
-  oldparticle = this 
+  allocate(oldparticle, source=this)
   this = newparticle
-  !call subr_particle_energy(simbox, nbrs, i, enew, overlap)
 
   call this%energy(nbrs, pair_ia, simbox, subr_single_energy, enew, err)
   
   this = oldparticle
   if(err == 0) then 
-     !call subr_particle_energy(simbox, nbrs, i, eold, overlap)
-     call this%energy(nbrs, pair_ia, simbox, subr_single_energy, enew, err)
-     call acceptchange(eold, enew, temperature, genstate, isaccepted)
+     call this%energy(nbrs, pair_ia, simbox, subr_single_energy, &
+          enew, err)
+     call acceptchange(eold, enew, temperature, genstates(0), isaccepted)
      if(isaccepted) then
         this = newparticle
         dE = enew - eold
      end if
   end if
 
-  if (present(n_trials)) n_trials = 1
-  if (present(n_accepted)) then
+  !if (present(n_trials)) n_trials = 1
+  !if (present(n_accepted)) then
      if (isaccepted) then
         n_accepted = 1
      else
         n_accepted = 0
      end if
-  end if
-  
+  !end if
+  n_trials = 1
 end subroutine moveparticle_2
 
 
-pure subroutine particle_potential(this, nbrs, pair_ia, simbox, &
+subroutine particle_potential(this, nbrs, pair_ia, simbox, &
      subr_single_energy, energy, err)
   class(particledat), intent(in) :: this
-  type(particledat), intent(in) :: nbrs(:)
+  class(particlearray_wrapper), intent(in) :: nbrs(:)
   class(pair_interaction), intent(in) :: pair_ia
   type(poly_box), intent(in) :: simbox
   procedure(single_energy) :: subr_single_energy
@@ -214,36 +250,60 @@ pure subroutine particle_potential(this, nbrs, pair_ia, simbox, &
   real(dp) :: e
   integer :: i
   real(dp) :: rcutoff
-  real(dp) :: rijs(3, size(nbrs))
-  logical :: cutoff_mask(size(nbrs))
+  real(dp), allocatable :: rijs(:, :)
+  logical, allocatable :: cutoff_mask(:)
+  integer :: i_nbr
   energy = 0
-
+  err = 0
   rcutoff = pair_ia%get_cutoff()
-  !! Select the calculated interactions by cutoff already here
-  do i = 1, size(nbrs)
-     !! :NOTE: The chosen way is better than
-     !! :NOTE: rij = minimage(simbox, position(particlei), 
-     !! position(particlej)) It is significantly faster to use direct
-     !! references to particle coordinates.
-     rijs(:, i) = minimage(simbox, (/nbrs(i)%x-this%x,& 
-          nbrs(i)%y-this%y, nbrs(i)%z-this%z/))
-  end do !! ifort does not vectorize
-  do i = 1, size(nbrs)
-     cutoff_mask(i) = dot_product(rijs(:, i), rijs(:, i)) < rcutoff**2
-  end do
+  do i_nbr = 1, size(nbrs)
+     if (err /= 0) exit
+     !! Select the calculated interactions by cutoff already here
+     if (allocated(rijs)) deallocate(rijs)
+     allocate(rijs(3, size(nbrs(i_nbr)%arr)))
+     do i = 1, size(nbrs(i_nbr)%arr)
+        !! :NOTE: The chosen way is better than
+        !! :NOTE: rij = minimage(simbox, position(particlei), 
+        !! position(particlej)) It is significantly faster to use direct
+        !! references to particle coordinates.
+        rijs(:, i) = minimage(simbox, (/nbrs(i_nbr)%arr(i)%x-this%x,& 
+             nbrs(i_nbr)%arr(i)%y-this%y, nbrs(i_nbr)%arr(i)%z-this%z/))
+     end do !! ifort does not vectorize
 
-  do i = 1, size(nbrs)
-     if (cutoff_mask(i)) then
-        call pair_ia%pair_potential(this, nbrs(i), rijs(:, i), e, err)
-        if (err /= 0) exit
-        energy = energy + e
-     end if
+     if (allocated(cutoff_mask)) deallocate(cutoff_mask)
+     allocate(cutoff_mask(size(nbrs(i_nbr)%arr)))
+     do i = 1, size(nbrs(i_nbr)%arr)
+        cutoff_mask(i) = dot_product(rijs(:, i), rijs(:, i)) < rcutoff**2
+     end do
+     cutoff_mask = cutoff_mask .and. nbrs(i_nbr)%mask
+
+     do i = 1, size(nbrs(i_nbr)%arr)
+        !if (norm2(rijs(:, i)) < rcutoff) then ! .and. nbrs(i_nbr)%mask(i)) then
+        if (cutoff_mask(i)) then
+           call pair_ia%pair_potential(this, nbrs(i_nbr)%arr(i), rijs(:, i), &
+                e, err)
+           if (err /= 0) exit
+           energy = energy + e
+        end if
+     end do
   end do
   if (err == 0) then
      call subr_single_energy(this, simbox, e, err)
      if (err == 0) energy = energy + e
-  end if  
+  end if
 end subroutine particle_potential
+
+
+pure subroutine pair_energy(this, another, pair_ia, simbox, energy, err)
+  class(particledat), intent(in) :: this, another
+  class(pair_interaction), intent(in) :: pair_ia
+  type(poly_box), intent(in) :: simbox
+  real(dp), intent(out) :: energy
+  integer, intent(out) :: err
+  call pair_ia%pair_potential(this, another, &
+       minimage(simbox, [another%x - this%x, another%y - this%y, &
+       another%z - this%z]), energy, err)
+end subroutine pair_energy
 
 
 !> Returns the position of @p aparticle as a vector.

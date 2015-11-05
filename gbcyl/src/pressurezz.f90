@@ -1,5 +1,5 @@
 program pressurezz
-use m_particlegroup, only: total_energy, mcsweep_init
+use m_particlegroup, only: total_energy, mcsweep_init, particlegroup_ptr
 use class_factory
 use particle
 use particle_mover
@@ -10,6 +10,7 @@ use class_simplelist, poly_nbrlist => simplelist
 use class_pair_potential, only: create_conditional_interaction, pp_init
 use particlewall, only: particlewall_potential, particlewall_init
 use nrtype
+use mc_engine, only: create_groups
 use utils
 implicit none
 type(factory) :: coordinatereader
@@ -33,6 +34,7 @@ real(dp) :: newvolume, oldvolume, dVdec, dVinc
 real(dp) :: temperature
 class(pair_interaction), allocatable :: pair_ia
 integer :: err
+type(particlegroup_ptr), allocatable :: groups(:)
 read(*, *) idchar, direction
 reader = new_parameterizer('inputparameters.' // trim(adjustl(idchar)))
 !call initparticle(reader)
@@ -42,17 +44,20 @@ call pp_init(reader)
 call particlewall_init(reader)
 allocate(pair_ia, source = create_conditional_interaction())
 coordinateunit = fileunit_getfreeunit()
-open(unit=coordinateunit, file='configurations.' //trim(adjustl(idchar)), action='READ', status='OLD')
+open(unit=coordinateunit, file='configurations.' //trim(adjustl(idchar)), &
+     action='READ', status='OLD')
 write(*, '(6(A6,18X))') '#dV   ', 'P ', 'dV ', 'P', 'dV ', 'P '
 do 
-  call factory_readstate(coordinatereader, coordinateunit, simbox, particles, ios)
+   call factory_readstate(coordinatereader, coordinateunit, simbox, particles,&
+        ios)
   if (ios /= 0) then
     exit
-  end if
+ end if
+ call create_groups(simbox, particles, groups)
   nparticles = size(particles)
   !call set_system(simbox, particles)
   !! Calculate initial volume and potential energy
-  call total_energy(nbrlist, simbox, particles, pair_ia, &
+  call total_energy(groups, simbox, pair_ia, &
        particlewall_potential, oldenergy, err)
   !oldenergy = get_total_energy()
   oldvolume = volume(simbox)
@@ -74,7 +79,7 @@ do
     !! Record new potential energy and volume
     !call set_system(simbox, particles)
     !newenergy = get_total_energy()
-    call total_energy(nbrlist, simbox, particles, pair_ia, &
+    call total_energy(groups, simbox, pair_ia, &
          particlewall_potential, oldenergy, err)
     newvolume = volume(simbox)
     !! record dV/V and change in energy dU
@@ -110,7 +115,7 @@ do
     !! Record new potential energy and volume
     !call set_system(simbox, particles)
     !newenergy = get_total_energy()
-    call total_energy(nbrlist, simbox, particles, pair_ia, &
+    call total_energy(groups, simbox, pair_ia, &
          particlewall_potential, newenergy, err)
     newvolume = volume(simbox)
     !! record dV/V and change in energy dU

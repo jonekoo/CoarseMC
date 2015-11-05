@@ -489,6 +489,8 @@ pressurezz_SOURCES = \
   ${energy_src} \
   genvoltrial.f90 \
   m_particlegroup.f90 \
+  beta_exchange.f90 \
+  mc_engine.f90 \
   pressurezz.f90
 
 virial_tensor_SOURCES = \

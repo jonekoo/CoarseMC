@@ -1,17 +1,17 @@
 !> Implements the streering of the simulation and controlling it's
 !! input and output.
 module mc_engine
-  use m_particlegroup, only: make_particle_moves, update_volume, get_total_energy, &
-       mc_sweep_writeparameters, mcsweep_finalize, mcsweep_init, &
-       get_maxscaling, set_maxscaling, particlegroup
-  
+  use m_particlegroup, only: make_particle_moves, update_volume, &
+       get_total_energy, mc_sweep_writeparameters, mcsweep_finalize, &
+       mcsweep_init, get_maxscaling, set_maxscaling, particlegroup, &
+       particlegroup_ptr
   use class_factory, only: factory, factory_readstate, factory_writestate
   use mt_stream
   use m_fileunit
   use class_poly_box, only: poly_box, volume, getx, gety, getz
   use class_parameterizer
   use class_parameter_writer
-  use particle, only: pair_interaction
+  use particle, only: pair_interaction, particledat
   use particle_mover, only: particlemover_init, particlemover_writeparameters,&
        get_max_translation, getmaxmoves, setmaxmoves
   use beta_exchange, only: write_stats, reset_counters, &
@@ -23,12 +23,6 @@ module mc_engine
        particlewall_writeparameters
   !$ use omp_lib
   implicit none
-  private
-  
-  public :: mce_init
-  public :: run
-  public :: finalize
-  public :: mce_writeparameters
   
   !> The number of equilibration MC sweeps in the simulation.  Equilibration
   !! sweeps are used to do all kinds of adjusting and should be discarded
@@ -104,8 +98,8 @@ module mc_engine
   
   !> The desired acceptance ratio for trial volume updates.
   real(dp), save :: scalingratio
-  
-  type(particlegroup), save :: group
+
+  type(particlegroup_ptr), allocatable, save :: groups(:)
   type(poly_box), save :: simbox
 
   class(pair_interaction), allocatable :: pair_ia
@@ -128,6 +122,7 @@ subroutine mce_init(id, n_tasks)
 
   type(parameterizer) :: parameterreader
   integer :: thread_id = 0, n_threads = 1
+  type(particledat), allocatable :: particles(:)
   
   write(idchar, '(I9)') id 
   idchar = trim(adjustl(idchar))
@@ -197,30 +192,29 @@ subroutine mce_init(id, n_tasks)
   call getparameter(parameterreader, 'nscalingtrials', nscalingtrials)
   call getparameter(parameterreader, 'nacceptedscalings', nacceptedscalings)
 
-  !! Read geometry
-  coordinateunit = fileunit_getfreeunit()
-  statefile = 'inputconfiguration.'//trim(adjustl(idchar))
-  open(file=statefile, unit=coordinateunit, action='READ', status='OLD',&
-       iostat=ios)
-  call factory_readstate(coordinatereader, coordinateunit, simbox, &
-       group%particles, ios)
-  if (0 /= ios) then 
-    write(*, *) 'Error ', ios,' reading ', statefile, ' Stopping.' 
-    stop
-  end if
-  close(coordinateunit)
-
   !! Initialize modules.
-  !call energy_init(parameterreader)
   call pp_init(parameterreader)
   allocate(pair_ia, source=create_conditional_interaction())
   call particlewall_init(parameterreader)
   call particlemover_init(parameterreader)
   call mcsweep_init(parameterreader)
   call beta_exchange_init(1._dp / temperature)
-  call group%init(simbox, min_cell_length=pair_ia%get_cutoff() + &
-       2 * get_max_translation(), min_boundary_width=2 * get_max_translation())
   call delete(parameterreader)
+
+  !! Read geometry
+  coordinateunit = fileunit_getfreeunit()
+  statefile = 'inputconfiguration.'//trim(adjustl(idchar))
+  open(file=statefile, unit=coordinateunit, action='READ', status='OLD',&
+       iostat=ios)
+  call factory_readstate(coordinatereader, coordinateunit, simbox, &
+       particles, ios)
+  if (0 /= ios) then 
+    write(*, *) 'Error ', ios,' reading ', statefile, ' Stopping.' 
+    stop
+  end if
+  close(coordinateunit)
+
+  call create_groups(simbox, particles, groups)
  
   !! Open output for geometries
   coordinateunit = fileunit_getfreeunit()
@@ -234,6 +228,34 @@ subroutine mce_init(id, n_tasks)
   end if
   call makerestartpoint
 end subroutine 
+
+
+subroutine create_groups(simbox, particles, groups)
+  type(poly_box), intent(in) :: simbox
+  type(particledat), intent(in) :: particles(:)
+  type(particlegroup_ptr), allocatable, intent(out) :: groups(:)
+  integer :: n_rods
+  n_rods = count(particles%rod)
+  if (size(particles) == n_rods .or. n_rods == 0) then
+     allocate(groups(1))
+     allocate(groups(1)%ptr, source=particlegroup(simbox, particles, &
+          min_cell_length=pair_ia%get_cutoff() + &
+          2 * get_max_translation(), &
+          min_boundary_width=2 * get_max_translation()))
+  else
+     allocate(groups(2))
+     allocate(groups(1)%ptr, source=particlegroup(simbox, &
+          pack(particles, particles%rod), &
+          min_cell_length=pair_ia%get_cutoff() + &
+          2 * get_max_translation(), &
+          min_boundary_width=2 * get_max_translation()))
+     allocate(groups(2)%ptr, source=particlegroup(simbox, &
+          pack(particles, .not. particles%rod), &
+          min_cell_length=pair_ia%get_cutoff() + &
+          2 * get_max_translation(), &
+          min_boundary_width=2 * get_max_translation()))
+  end if
+end subroutine create_groups
 
 
 !> Finalizes the simulation.
@@ -264,19 +286,18 @@ end subroutine
 !! @param genstates random number generator states for all threads.
 !! @param isweep the sweep counter.
 !!  
-subroutine sweep(simbox, group, genstates, isweep)
+subroutine sweep(simbox, groups, genstates, isweep)
   type(poly_box), intent(inout) :: simbox
-  type(particlegroup), intent(inout) :: group
+  type(particlegroup_ptr), intent(inout) :: groups(:)
   type(mt_state), intent(inout) :: genstates(0:)
   integer, intent(in) :: isweep
-  real(dp) :: beta
+  real(dp) :: beta, dE
   integer :: n_trials, n_accepted
-  call make_particle_moves(simbox, group, genstates, pair_ia, &
-       particlewall_potential, temperature, n_trials, n_accepted)
+  call make_particle_moves(groups, genstates, simbox, temperature, & 
+          pair_ia, particlewall_potential, dE, n_trials, n_accepted)
   nmovetrials = nmovetrials + n_trials
   nacceptedmoves = nacceptedmoves + n_accepted
-
-  call update_volume(simbox, group, genstates(0), pair_ia, &
+  call update_volume(simbox, groups, genstates(0), pair_ia, &
        particlewall_potential, temperature, pressure, &
        n_trials, n_accepted)
   nscalingtrials = nscalingtrials + n_trials
@@ -341,14 +362,18 @@ end subroutine
 
 !> Runs the simulation. 
 subroutine run
+  integer :: i
   do while (isweep < nequilibrationsweeps + nproductionsweeps)
     isweep = isweep + 1
-    call sweep(simbox, group, mts, isweep)
+    call sweep(simbox, groups, mts, isweep)
     if (isweep <= nequilibrationsweeps) then
       if (moveadjustperiod /= 0) then
          if (mod(isweep, moveadjustperiod) == 0) then
             call updatemaxvalues
-            group%sl%min_length = pair_ia%get_cutoff() + 2._dp * get_max_translation()
+            do i = 1, size(groups)
+               groups(i)%ptr%sl%min_length = pair_ia%get_cutoff() + &
+                    2._dp * get_max_translation()
+            end do
          end if
       end if
     end if
@@ -396,12 +421,28 @@ subroutine makerestartpoint
        action='WRITE', status='REPLACE', iostat=ios)
   if (ios /= 0) write(*, *) 'makerestartpoint: Warning: Failed opening', &
        configurationfile
-
-  call factory_writestate(restartwriter, configurationunit, simbox, &
-       group%particles)
+  call writestate(restartwriter, configurationunit, simbox, groups)
   close(configurationunit)
-
 end subroutine
+
+
+subroutine writestate(writer, unit, simbox, groups)
+  type(factory), intent(in) :: writer
+  integer, intent(in) :: unit
+  type(poly_box), intent(in) :: simbox
+  type(particlegroup_ptr), intent(in) :: groups(:)
+  type(particledat), allocatable :: particles(:)
+  if (size(groups) == 1) then
+     allocate(particles(size(groups(1)%ptr%particles)), &
+          source=groups(1)%ptr%particles)
+  else
+     allocate(particles(size(groups(1)%ptr%particles) + &
+          size(groups(1)%ptr%particles)), &
+          source=[groups(1)%ptr%particles, groups(2)%ptr%particles])
+  end if
+  call factory_writestate(writer, unit, simbox, particles)  
+end subroutine writestate
+
 
 !> All actions done during both the equilibration and production sweeps
 !! should be gathered inside this routine for clarity. 
@@ -413,8 +454,7 @@ subroutine runproductiontasks
   integer :: be_unit
   if (mod(isweep, productionperiod) == 0) then
     !! Record snapshot of molecules and geometry.
-    call factory_writestate(coordinatewriter, coordinateunit, simbox, &
-         group%particles)
+    call writestate(coordinatewriter, coordinateunit, simbox, groups)
     
     !! Record simulation parameters.
     parameterfile = 'parameters.'//trim(adjustl(idchar))
@@ -459,20 +499,24 @@ subroutine updatemaxvalues
   real(dp) :: newdthetamax
   real(dp) :: newdximax
   !! Adjust scaling
-  call set_maxscaling(newmaxvalue(nscalingtrials, nacceptedscalings, &
-       scalingratio, get_maxscaling()))
-  call getmaxmoves(newdximax, newdthetamax)
-  !! Adjust translation
-  newdximax = newmaxvalue(nmovetrials, nacceptedmoves, moveratio, newdximax)
-  
-  !! Update the minimum cell side length of the cell list because the maximum
-  !! translation has changed: 
-  
-  !! This should adjust rotations < pi/2 to move the particle end as much as
-  !! a random translation. 4.4 is the assumed molecule length-to-breadth 
-  !! ratio.
-  newdthetamax = 2._dp * asin(newdximax/4.4_dp) 
-  call setmaxmoves(newdximax, newdthetamax)
+  if (nscalingtrials > 0) then
+     call set_maxscaling(newmaxvalue(nscalingtrials, nacceptedscalings, &
+          scalingratio, get_maxscaling()))
+  end if
+  if (nmovetrials > 0) then
+     call getmaxmoves(newdximax, newdthetamax)
+     !! Adjust translation
+     newdximax = newmaxvalue(nmovetrials, nacceptedmoves, moveratio, newdximax)
+     
+     !! Update the minimum cell side length of the cell list because the maximum
+     !! translation has changed: 
+     
+     !! This should adjust rotations < pi/2 to move the particle end as much as
+     !! a random translation. 4.4 is the assumed molecule length-to-breadth 
+     !! ratio.
+     newdthetamax = 2._dp * asin(newdximax/4.4_dp) 
+     call setmaxmoves(newdximax, newdthetamax)
+  end if
 end subroutine updatemaxvalues
   
 !> Returns a new trial move parameter value calculated from the desired
