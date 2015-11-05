@@ -1,16 +1,19 @@
 program xe_nmr
   use nrtype, only: dp
   use particle, only : particledat
-  use orientational_ordering
-  use class_poly_box
-  use class_factory
-  use m_shielding
-  use m_quadrupole_coupling
+  use orientational_ordering, only: orientation_parameter, eigens, cycle_largest_to_3rd
+  use class_poly_box, only: poly_box
+  use class_factory, only: factory, factory_readstate
+  use m_shielding, only: gbxe_shielding_local, xexe_shielding_local, &
+       xewall_shielding_local, init_shielding
+  use m_quadrupole_coupling, only: gbxe_coupling_local, xexe_coupling_local, &
+       xewall_coupling_local
   use m_rank2_tensor
   use class_parameterizer
   use m_fileunit
-  use lj_nmr
-  use utils, only: splitstr, join
+  use lj_nmr, only: gblj_tensor, ljlj_tensor, ljwall_tensor, gblj_local, &
+       ljlj_local, ljwall_local
+  use utils, only: splitstr, join, fmt_char_dp
   implicit none
   type(particledat), allocatable :: particles(:)
   type(particledat), allocatable :: xes(:)
