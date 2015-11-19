@@ -10,7 +10,7 @@
 
 
 module ljcylinder
-use nrtype
+use num_kind
 implicit none
 
 interface 
@@ -21,7 +21,7 @@ interface
    !! reduced LJ units, where distances are in sigma_0:s and energies
    !! in epsilon_0:s.
    pure function repwall2(k, rc)
-     use nrtype, only: dp
+     use num_kind
      real(dp), intent(in) :: k, rc
      real(dp) :: repwall2
    end function repwall2
@@ -33,7 +33,7 @@ interface
    !! reduced LJ units, where distances are in sigma_0:s and energies
    !! in epsilon_0:s.
    pure function attwall2(k, rc)
-     use nrtype, only: dp
+     use num_kind
      real(dp), intent(in) :: k, rc
      real(dp) :: attwall2
    end function attwall2
@@ -45,7 +45,7 @@ interface
    !! reduced LJ units, where distances are in sigma_0:s and energies
    !! in epsilon_0:s.
    pure real(dp) function d_repwall(k, rc)
-     use nrtype, only: dp
+     use num_kind
      real(dp), intent(in) :: k, rc
    end function d_repwall
 
@@ -56,7 +56,7 @@ interface
    !! reduced LJ units, where distances are in sigma_0:s and energies
    !! in epsilon_0:s.
    pure real(dp) function d_attwall(k, rc)
-     use nrtype, only: dp
+     use num_kind
      real(dp), intent(in) :: k, rc
    end function d_attwall
 end interface

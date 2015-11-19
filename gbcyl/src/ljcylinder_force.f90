@@ -1,5 +1,5 @@
 pure function ljcylinder_force(eps, density, sigma, alpha, r, rwall) result(f)
-   use nrtype, only: dp
+   use num_kind, only: dp
    use ljcylinder, only: EllipticK, EllipticE
    implicit none
    real(dp), intent(in) :: eps, density, sigma, alpha, r, rwall
@@ -18,7 +18,7 @@ end function
 
 
 pure function EllipticK(k_sqrd) result(Kk)
-  use nrtype, only: sp, dp
+  use num_kind, only: sp, dp
   use nr, only: rf
   implicit none
   real(dp), intent(in) :: k_sqrd
@@ -32,7 +32,7 @@ end function
 
 
 pure function EllipticE(k_sqrd) result(Ek)
-  use nrtype, only: sp, dp
+  use num_kind, only: sp, dp
   use nr, only: rd, rf
   real(dp), intent(in) :: k_sqrd
   real(dp) :: Ek

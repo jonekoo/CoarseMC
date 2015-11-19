@@ -9,7 +9,7 @@
 !!      Phys. Rev. E, 54(1):559, 1996.
 !! 
 module m_gblj
-use nrtype
+use num_kind
 use class_parameterizer
 use class_parameter_writer
 use m_rodsphere_potential

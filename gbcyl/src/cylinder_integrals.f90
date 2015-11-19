@@ -4,7 +4,7 @@ interface
    function ljwall_tensor(k, radiusA, densityA, epsilonratio, &
         sigmaratio, powers, isotropic_coeffs, anisotropy_coeffs) &
         result(local_tensor)
-     use nrtype, only: dp
+     use num_kind, only: dp
      implicit none
      real(dp), intent(in) :: k, radiusA, densityA, epsilonratio, sigmaratio
      integer, intent(in) :: powers(:)
@@ -16,7 +16,7 @@ end interface
 
 interface
    pure function zhangI(m, k, rc)
-     use nrtype, only: dp
+     use num_kind, only: dp
      implicit none
      integer, intent(in) :: m
      real(dp), intent(in) :: k, rc
@@ -26,7 +26,7 @@ end interface
 
 interface
    pure function d_zhangI(m, k, rc)
-     use nrtype, only: dp
+     use num_kind, only: dp
      implicit none
      integer, intent(in) :: m
      real(dp), intent(in) :: k, rc

@@ -1,5 +1,5 @@
 subroutine eigensystem(vectors, values)
-  use nrtype, only: dp
+  use num_kind, only: dp
   implicit none
   integer, parameter :: n = 3
   real(dp), intent(inout) :: vectors(n, n)

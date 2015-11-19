@@ -1,7 +1,7 @@
 module io
-  use nrtype, only: dp
+  use num_kind, only: dp
   use particle, only: particledat
-
+  implicit none
 
 
   character(len = 15), private, save :: molecule_data_file_

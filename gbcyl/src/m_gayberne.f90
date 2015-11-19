@@ -6,7 +6,7 @@
 !!      110(14):7087, 1999.
 !!
 module m_gayberne
-  use nrtype, only: sp, dp
+  use num_kind
   use class_parameterizer
   use class_parameter_writer
   use m_rod_interaction

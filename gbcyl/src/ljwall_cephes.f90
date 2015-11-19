@@ -1,5 +1,5 @@
 pure function zhangI(m, k, rc)
-  use nrtype, only: dp
+  use num_kind, only: dp
   use cylinder_integrals, only: hyp2f1
   use m_hyp2f1_negint, only: hyp2f1_negint
   implicit none
@@ -18,7 +18,7 @@ end function zhangI
 
 !> Derivative of zhangI with respect to k.
 pure function d_zhangI(m, k, rc)
-  use nrtype, only: dp
+  use num_kind, only: dp
   use cylinder_integrals, only: hyp2f1
   use m_hyp2f1_negint, only: hyp2f1_negint
   implicit none
@@ -41,7 +41,7 @@ end function d_zhangI
 
 
 pure function repwall2(k, rc)
-  use nrtype, only: dp
+  use num_kind, only: dp
   use cylinder_integrals, only: zhangI
   implicit none
   real(dp), intent(in) :: k, rc
@@ -52,7 +52,7 @@ end function repwall2
 
 
 pure function attwall2(k, rc)
-  use nrtype, only: dp
+  use num_kind, only: dp
   use cylinder_integrals, only: zhangI
   implicit none
   real(dp), intent(in) :: k, rc
@@ -63,7 +63,7 @@ end function attwall2
 
 
 pure function d_repwall(k, rc)
-  use nrtype, only: dp
+  use num_kind, only: dp
   use cylinder_integrals, only: d_zhangI
   implicit none
   real(dp), intent(in) :: k, rc
@@ -73,7 +73,7 @@ pure function d_repwall(k, rc)
 end function d_repwall
 
 pure function d_attwall(k, rc)
-  use nrtype, only: dp
+  use num_kind, only: dp
   use cylinder_integrals, only: d_zhangI
   implicit none
   real(dp), intent(in) :: k, rc

@@ -7,7 +7,7 @@
 !! @param rc is the radius of the cylinder in reduced LJ units.
 !!
 pure function repwall2(k, rc)
-  use nrtype, only: dp, sp
+  use num_kind, only: dp, sp
   use nr, only: rf, rd
   use utils, only: horner
   implicit none
@@ -58,7 +58,7 @@ end function
 !! @param rc is the radius of the cylinder in reduced LJ units.
 !!
 pure function attwall2(k, rc)
-  use nrtype, only: dp, sp
+  use num_kind, only: dp, sp
   use nr, only: rf, rd
   implicit none
   real(dp), intent(in) :: k, rc !, sigwall

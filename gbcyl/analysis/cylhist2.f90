@@ -19,7 +19,7 @@
 !! ./cylhist --help 
 !! 
 program cylhist
-  use nrtype
+  use num_kind
   use particle
   use orientational_ordering
   use tau1_module

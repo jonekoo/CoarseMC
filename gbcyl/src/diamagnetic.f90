@@ -13,7 +13,7 @@
 
 function diamagnetic(particlei)
   use particle
-  use nrtype
+  use num_kind
   implicit none
   intrinsic dot_product
   type(particledat), intent(in) :: particlei

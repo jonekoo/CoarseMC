@@ -7,8 +7,8 @@
 !!      121(22):11183, 2004.
 !!
 module genvoltrial
-use class_poly_box
-use nrtype
+use class_poly_box, only: poly_box, getx, gety, getz, setx, sety, setz, volume
+use num_kind, only: dp
 implicit none
 
 contains

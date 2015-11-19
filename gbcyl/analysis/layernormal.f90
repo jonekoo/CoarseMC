@@ -1,6 +1,6 @@
 module layernormal
-use nrtype
-use utils
+use iso_fortran_env, only: dp => REAL64, sp => REAL32
+use utils, only: cross_product
 use particle
 use class_poly_box
 implicit none
@@ -15,9 +15,7 @@ subroutine globalnormal(simbox, particles, cutoff, p2, direction)
   real(dp), dimension(3), intent(out) :: direction
   real(dp), dimension(3, 3) :: vectors
   real(dp), dimension(3) :: values
-  integer :: nrot
   real(dp), dimension(size(particles), 3) :: localnormals
-  !real(dp), dimension(3, 3) :: orientationtensor
   integer, dimension(1) :: ml
   integer :: i
 
@@ -68,7 +66,6 @@ function localnormal(simbox, particles, i, cutoff) result(normal)
   real(dp), dimension(3) :: values
   integer :: a, b
   integer :: j, k
-  integer :: nrot
   real(dp), dimension(3) :: cp
   integer, dimension(1) :: ml
   integer :: nneighbours

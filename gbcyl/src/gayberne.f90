@@ -1,5 +1,5 @@
 module gayberne
-  use nrtype, only: sp, dp
+  use num_kind, only: sp, dp
   implicit none
 
   public :: init

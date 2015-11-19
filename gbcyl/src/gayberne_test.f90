@@ -1,7 +1,7 @@
 module gayberne_test
 use gayberne
 use ftnunit
-use nrtype
+use num_kind
 implicit none
 private 
 public :: test_all
@@ -63,7 +63,7 @@ subroutine test_zero_at_cross_contact
 end subroutine
 
 subroutine test_kappa_sigma_defined
-  use nrtype, only: dp
+  use num_kind, only: dp
   real(dp) :: kappa_sigma = 4.4_dp
   real(dp) :: kappa_epsilon = 20._dp
   real(dp) :: mu = 5.235_dp
@@ -83,7 +83,7 @@ subroutine test_kappa_sigma_defined
 end subroutine
 
 subroutine test_kappa_epsilon_defined
-  use nrtype, only: dp
+  use num_kind, only: dp
   real(dp) :: kappa_sigma = 4.4_dp
   real(dp) :: kappa_epsilon = 20._dp
   real(dp) :: mu = 6.235_dp
@@ -103,7 +103,7 @@ subroutine test_kappa_epsilon_defined
 end subroutine
 
 subroutine test_reduces_to_lennard_jones
-  use nrtype, only: dp
+  use num_kind, only: dp
   real(dp) :: sigma_0 = 3.435_dp
   real(dp) :: epsilon_0 = 234.234_dp
   real(dp) :: lj_potential
@@ -126,7 +126,7 @@ subroutine test_reduces_to_lennard_jones
 end subroutine
 
 subroutine test_ssderivative
-  use nrtype, only: dp
+  use num_kind, only: dp
   real(dp), parameter :: mu = 1.5_dp, nu=1.3_dp
   real(dp), parameter :: sigma0 = 1.2_dp, epsilon0 = 0.9_dp
   real(dp), parameter :: kappasigma = 4.4_dp, kappaepsilon=20._dp
@@ -139,7 +139,7 @@ subroutine test_ssderivative
 end subroutine
 
 subroutine test_small_separation
-  use nrtype, only: sp, dp
+  use num_kind, only: sp, dp
   intrinsic huge
   intrinsic tiny
   real(dp) :: kappa_sigma = 4.4_dp
@@ -166,7 +166,7 @@ subroutine test_small_separation
 end subroutine
 
 subroutine test_normalop
-  use nrtype
+  use num_kind
   real(dp) :: kappa_sigma = 4.4_dp
   real(dp) :: kappa_epsilon = 20._dp
   real(dp) :: mu = 1._dp
@@ -192,7 +192,7 @@ subroutine test_normalop
 end subroutine
 
 subroutine test_zerosofforce
-  use nrtype
+  use num_kind
   real(dp) :: kappa_sigma = 4.4_dp
   real(dp) :: kappa_epsilon = 20._dp
   real(dp) :: mu = 1._dp
@@ -219,7 +219,7 @@ subroutine test_zerosofforce
 end subroutine
 
 subroutine test_forcevsfinitedifference
-  use nrtype
+  use num_kind
   real(dp), parameter :: kappa_sigma = 4.4_dp
   real(dp), parameter :: kappa_epsilon = 20._dp
   real(dp), parameter :: mu = 1._dp

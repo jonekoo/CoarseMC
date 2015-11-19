@@ -4,7 +4,7 @@ implicit none
 contains
 
 pure function isotropic_integral(n, k, R)
-  use nrtype, only: dp
+  use num_kind, only: dp
   implicit none
   integer, intent(in) :: n
   real(dp), intent(in) :: k, R
@@ -16,7 +16,7 @@ pure function isotropic_integral(n, k, R)
 end function
 
 pure function anisotropic_integral(n, k, R)
-  use nrtype, only: dp
+  use num_kind, only: dp
   implicit none
   integer, intent(in) :: n
   real(dp), intent(in) :: k, R
@@ -33,7 +33,7 @@ end module ljslab_tensor
 pure function ljwall_tensor(k, radiusA, densityA, epsilonratio, sigmaratio, &
      powers, isotropic_coeffs, anisotropy_coeffs) result(local_tensor)
   use ljslab_tensor
-  use nrtype, only: dp
+  use num_kind, only: dp
   implicit none
   real(dp), intent(in) :: k, radiusA, densityA, epsilonratio, sigmaratio
   integer, intent(in) :: powers(:)

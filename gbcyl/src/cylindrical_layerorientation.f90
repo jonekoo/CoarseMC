@@ -1,5 +1,5 @@
 module cylindrical_layerorientation
-  use nrtype, only: dp
+  use num_kind, only: dp
   use particle
   use utils
   use orientational_ordering, only: orientational_ordering_eigens => eigens

@@ -28,7 +28,7 @@ module gayberne_fun
 
  subroutine zero_at_cross_contact
 
-  use nrtype, only: dp
+  use num_kind, only: dp
   real(dp) :: kappa_sigma = 4.4
   real(dp) :: kappa_epsilon = 20.0
   real(dp) :: mu = 1.235
@@ -77,7 +77,7 @@ module gayberne_fun
 
  subroutine kappa_sigma_defined
 
-  use nrtype, only: dp
+  use num_kind, only: dp
   real(dp) :: kappa_sigma = 4.4
   real(dp) :: kappa_epsilon = 20.0
   real(dp) :: mu = 5.235
@@ -128,7 +128,7 @@ module gayberne_fun
 
  subroutine kappa_epsilon_defined
 
-  use nrtype, only: dp
+  use num_kind, only: dp
   real(dp) :: kappa_sigma = 4.4
   real(dp) :: kappa_epsilon = 20.0
   real(dp) :: mu = 6.235
@@ -179,7 +179,7 @@ module gayberne_fun
 
  subroutine reduces_to_lennard_jones
 
-  use nrtype, only: dp
+  use num_kind, only: dp
   real(dp) :: sigma_0 = 3.435
   real(dp) :: epsilon_0 = 234.234
   real(dp) :: lj_potential
@@ -230,7 +230,7 @@ module gayberne_fun
 
  subroutine small_separation
 
-  use nrtype, only: sp, dp
+  use num_kind, only: sp, dp
   intrinsic huge
   intrinsic tiny
   real(dp) :: kappa_sigma = 4.4

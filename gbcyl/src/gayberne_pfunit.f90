@@ -1,7 +1,7 @@
 module gayberne_pfunit
   use m_gayberne
   use pfunit
-  use nrtype
+  use num_kind
   implicit none
 
   !> The relative tolerance for reals to be comparable.
@@ -131,7 +131,7 @@ contains
   end subroutine test_reduces_to_lennard_jones
   
   subroutine test_force_zeros
-    use nrtype, only: dp
+    use num_kind, only: dp
     real(dp), parameter :: mu = 1.5_dp, nu=1.3_dp
     real(dp), parameter :: sigma0 = 1.2_dp, epsilon0 = 0.9_dp
     real(dp), parameter :: kappasigma = 4.4_dp, kappaepsilon=20._dp

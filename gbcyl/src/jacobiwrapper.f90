@@ -4,7 +4,7 @@ module jacobiwrapper
 !! conversions in each module using the jacobi routine. Also the nr module and
 !! the jacobi routine itself remain intact. 
 !!
-use nrtype
+use num_kind
 use nr, only: jacobi_sp => jacobi
 implicit none
 

@@ -1,7 +1,7 @@
 module distribution
 use class_poly_box
 use particle
-use nrtype
+use num_kind
 implicit none
 
 
@@ -43,14 +43,14 @@ subroutine distribution_func(simbox, particles, mask_i, mask_j, maxbin, delr,&
   real(dp), dimension(maxbin), intent(out) :: histogram
   interface
     function distance_func(rij)
-      use nrtype
+      use num_kind
       real(dp) :: distance_func
       real(dp), intent(in) :: rij(3)
     end function
   end interface
   interface 
     function bin_volume_func(r, dr)
-      use nrtype
+      use num_kind
       real(dp) :: bin_volume_func
       real(dp), intent(in) :: r
       real(dp), intent(in) :: dr

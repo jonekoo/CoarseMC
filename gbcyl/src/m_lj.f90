@@ -1,6 +1,6 @@
 !> Implements the Lennard-Jones 12-6 potential and the force derived from it.
 module m_lj
-  use nrtype
+  use num_kind
   use class_parameterizer
   use class_parameter_writer
   use m_sphere_interaction

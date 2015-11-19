@@ -1,7 +1,7 @@
 function ljwall_tensor(k, radiusA, densityA, epsilonratio, &
   sigmaratio, powers, isotropic_coeffs, anisotropy_coeffs) result(local_tensor)
   use cylinder_integrals, only: zhangI, gamma
-  use nrtype, only: dp
+  use num_kind, only: dp
   implicit none
   real(dp), intent(in) :: k, radiusA, densityA, epsilonratio, sigmaratio
   integer, intent(in) :: powers(:)
@@ -51,7 +51,7 @@ function ljwall_tensor(k, radiusA, densityA, epsilonratio, &
     !! Stegun, Handbook of Mathematical Functions.
     real(dp) function gammaxper2(n)
       !use cylinder_integrals, only: gamma
-      use nrtype, only: dp
+      use num_kind, only: dp
       implicit none
       integer, intent(in) :: n
       integer :: j

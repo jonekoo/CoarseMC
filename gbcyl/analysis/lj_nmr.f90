@@ -3,7 +3,7 @@ module lj_nmr
 !!
 !! Everything in this module works in the reduced unit system.
 !!
-use nrtype
+use num_kind
 use m_constants
 use m_rank2_tensor
 use class_poly_box
@@ -16,7 +16,7 @@ implicit none
 
 interface 
   pure function ljlj_local(rij) result(t)
-    use nrtype, only: dp
+    use num_kind, only: dp
     real(dp), intent(in) :: rij
     real(dp) :: t(3, 3)
   end function
@@ -24,7 +24,7 @@ end interface
 
 interface 
   pure function gblj_local(x, z) result(t)
-    use nrtype, only: dp
+    use num_kind, only: dp
     real(dp), intent(in) :: x, z
     real(dp) :: t(3, 3)
   end function
@@ -32,7 +32,7 @@ end interface
 
 interface 
   pure function ljwall_local(r, radius) result(t)
-    use nrtype, only: dp
+    use num_kind, only: dp
     real(dp), intent(in) :: r, radius
     real(dp) :: t(3, 3)
   end function
@@ -51,7 +51,7 @@ pure function gblj_tensor(tensor, simbox, gb_particle, xe_particle) &
   result(local_tensor)
   interface 
     pure function tensor(x, z)
-      use nrtype
+      use num_kind
       real(dp), intent(in) :: x, z
       real(dp) :: tensor(3, 3)
     end function
@@ -108,7 +108,7 @@ end function
 pure function ljlj_tensor(tensor, simbox, xe, another) result(t)
   interface 
     pure function tensor(r)
-      use nrtype
+      use num_kind
       real(dp), intent(in) :: r
       real(dp) :: tensor(3, 3)
     end function
@@ -161,7 +161,7 @@ end function
 pure function ljwall_tensor(tensor, simbox, xe) result(t)
   interface
     pure function tensor(r, cyl_radius)
-      use nrtype
+      use num_kind
       real(dp), intent(in) :: r, cyl_radius
       real(dp) :: tensor(3, 3)
     end function

@@ -1,5 +1,5 @@
 module m_particle
-  use nrtype
+  use num_kind
   use json_module
   use iso_fortran_env
   
@@ -123,7 +123,7 @@ end module m_particle_interaction_lists
 
 
 module m_particlegroup
-  use nrtype
+  use num_kind
   use m_particle
   use json_module
   use m_particle_interaction_lists, only: &

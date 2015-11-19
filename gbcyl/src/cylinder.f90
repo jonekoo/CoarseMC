@@ -1,5 +1,6 @@
 module cylinder
-  use nrtype
+  use num_kind
+  implicit none
 
   real(dp), private, save :: radius_
   real(dp), private, save :: height_

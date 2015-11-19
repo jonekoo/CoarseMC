@@ -6,7 +6,7 @@
 !!
 program analysis
   use state_reader, only: read_configuration
-  use nrtype, only: dp
+  use num_kind, only: dp
   use io, only: ReadParams
   use particlewall, only: initptwall
   use gayberne, only: gayberne_init => init

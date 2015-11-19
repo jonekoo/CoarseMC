@@ -1,5 +1,5 @@
 module gr3dweighted
-use nrtype
+use num_kind, only: dp
 use particle
 use class_poly_box
 implicit none

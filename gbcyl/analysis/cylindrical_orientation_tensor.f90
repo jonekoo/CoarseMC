@@ -6,11 +6,10 @@
 !!
 program analysis
   use class_factory
-  use nrtype, only: dp
+  use num_kind, only: dp
   use particle, only : particledat
   use class_poly_box
   use utils
-!  use orientational_ordering
   use cylindrical_orientation, only: eigens
   implicit none
   !real(dp) :: radius, height

@@ -7,7 +7,7 @@
 program analysis
   use class_factory
   use class_poly_box
-  use nrtype, only: dp
+  use num_kind, only: dp
   use particle, only : particledat
   implicit none
   type(particledat), allocatable :: particles(:)

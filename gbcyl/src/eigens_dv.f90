@@ -1,5 +1,5 @@
 subroutine eigensystem(vectors, values)
-  use nrtype, only: dp
+  use num_kind, only: dp
   use jacobiwrapper, only: jacobi
   implicit none
   real(dp),dimension(3, 3), intent(inout) :: vectors
