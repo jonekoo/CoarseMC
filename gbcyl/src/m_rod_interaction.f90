@@ -1,5 +1,5 @@
 module m_rod_interaction
-  use nrtype
+  use num_kind
   use class_parameter_writer
   implicit none
   

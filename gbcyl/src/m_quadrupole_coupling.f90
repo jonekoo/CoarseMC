@@ -1,5 +1,5 @@
 module m_quadrupole_coupling
-use nrtype
+use num_kind
 use m_constants
 use m_gblj
 use m_shielding, only: sigma
@@ -54,7 +54,7 @@ type(lj_potential) :: lj
 interface 
   pure function xewall_qcoupling(k, radiusA, densityA, epsilonratio, &
     sigmaratio) result(local_tensor)
-    use nrtype, only: dp
+    use num_kind, only: dp
     real(dp), intent(in) :: k, radiusA, densityA, epsilonratio, sigmaratio
     real(dp) :: local_tensor(3, 3)
   end function

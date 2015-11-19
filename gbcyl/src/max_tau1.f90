@@ -5,7 +5,7 @@
 !! parameter and the average distance between the layers.
 subroutine max_tau1(particles, direction, tau1_max, layer_distance)
   use particle
-  use nrtype
+  use num_kind
   use simplemin
   use tau1_negative
   implicit none

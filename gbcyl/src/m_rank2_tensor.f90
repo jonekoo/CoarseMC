@@ -1,5 +1,5 @@
 module m_rank2_tensor
-use nrtype
+use num_kind
 implicit none
 
 type rank2_tensor

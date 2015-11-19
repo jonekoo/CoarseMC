@@ -1,5 +1,5 @@
 module m_shielding
-use nrtype
+use num_kind
 use utils, only: rotate_tensor, cross_product, horner
 use m_gblj
 use m_constants
@@ -67,7 +67,7 @@ type(lj_potential) :: lj
 interface xewall_shielding
   pure function xewall_shielding(k, radiusA, densityA, epsilonratio, &
     sigmaratio) result(local_tensor)
-    use nrtype
+    use num_kind
     real(dp), intent(in) :: k, radiusA, densityA, epsilonratio, sigmaratio
     real(dp) :: local_tensor(3, 3)
   end function
