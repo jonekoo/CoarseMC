@@ -4,23 +4,26 @@
 !! with OpenMP, the domain decomposition algorithm is used for the
 !! particle moves and energy calculations. 
 module m_particlegroup
-  use nrtype
-  use class_poly_box
-  use particle
-  use class_parameterizer
-  use class_parameter_writer
+  use iso_fortran_env, only: dp => REAL64, output_unit
+  use class_poly_box, only: poly_box, minimage, isxperiodic, isyperiodic, &
+       iszperiodic
+  use particle, only: particledat, position, setposition, &
+       moveparticle_2, pair_interaction, single_energy, particlearray_wrapper,&
+       wrapper_delete
+  use class_parameterizer, only: parameterizer, getparameter
+  use class_parameter_writer, only: parameter_writer, writeparameter, &
+       writecomment
   use genvoltrial
-  use utils 
+  use utils, only: splitstr, join, acceptchange
   !$ use omp_lib
-  use class_simplelist
+  use class_simplelist, only: simplelist, new_simplelist, simplelist_update, &
+       simplelist_nbr_cells, flat_index, simplelist_deallocate, &
+       simplelist_nbrmask, simplelist_cell_nbrmask
   include 'rng.inc'
   implicit none  
 
   !> The maximum absolute change of volume in a trial volume update.
   real(dp), save :: maxscaling = 100._dp
-
-  !> The total energy.
-  real(dp), save :: etotal = 0._dp
 
   !> The types of trial volume updates.
   character(len = 200), dimension(:), allocatable, save :: scalingtypes
@@ -49,6 +52,7 @@ module m_particlegroup
   contains
     procedure :: domain_assign
     generic :: assignment(=) => domain_assign
+    final :: domain_delete
   end type
 
 contains
@@ -62,8 +66,8 @@ contains
     allocate(group%particles(size(particles)), source=particles)
     !$ if (.true.) then
     !$ call new_simplelist(group%sl, simbox, group%particles, min_cell_length, &
-    !$& min_boundary_width, is_x_even = isxperiodic(simbox), &
-    !$& is_y_even = isyperiodic(simbox), is_z_even = iszperiodic(simbox))
+    !$& min_boundary_width, is_nx_even = isxperiodic(simbox), &
+    !$& is_ny_even = isyperiodic(simbox), is_nz_even = iszperiodic(simbox))
     !$ else 
     call new_simplelist(group%sl, simbox, group%particles, min_cell_length, &
          min_boundary_width)
@@ -76,13 +80,17 @@ contains
     if(allocated(group%particles)) deallocate(group%particles)
   end subroutine particlegroup_finalize
   
-  impure elemental subroutine domain_assign(dest, src)
-    class(domain), intent(inout) :: dest
+  impure elemental subroutine domain_assign(this, src)
+    class(domain), intent(inout) :: this
     type(domain), intent(in) :: src
-    dest%particlearray_wrapper = src%particlearray_wrapper
-    dest%n_cell = src%n_cell
+    this%particlearray_wrapper = src%particlearray_wrapper
+    this%n_cell = src%n_cell
   end subroutine domain_assign
 
+  impure elemental subroutine domain_delete(this)
+    type(domain), intent(inout) :: this
+    this%n_cell = 0
+  end subroutine domain_delete
   
 !> Initializes the module by getting the module parameters from the
 !! @p reader object.
@@ -107,14 +115,6 @@ subroutine mcsweep_finalize
   if (allocated(scalingtypes)) deallocate(scalingtypes)
   is_initialized = .false.
 end subroutine mcsweep_finalize
-
-!> Returns the total energy of the system.
-real(dp) function get_total_energy()
-  if (.not. is_initialized) then
-     stop 'mc_sweep:get_total_energy: Error: module not initialized!'
-  end if
-  get_total_energy = etotal
-end function get_total_energy
 
 !> Checks and parses the @p scalingtype string to the scalingtypes
 !! array. 
@@ -153,7 +153,6 @@ subroutine mc_sweep_writeparameters(writer)
      joined = ''
   end if
   call writeparameter(writer, 'scaling_type', trim(joined))
-  call writeparameter(writer, 'total_energy', etotal)
 end subroutine mc_sweep_writeparameters
 
 !> Schedules parallel moves of particles using OpenMP with a domain 
@@ -162,15 +161,10 @@ end subroutine mc_sweep_writeparameters
 !! @see e.g. G. Heffelfinger and M. Lewitt. J. Comp. Chem., 17(2):250–265,
 !! 1996.
 !! 
-!! @param simbox is the simulation box in which the particles reside.
-!! @param particles is the array of particles to move.
-!! @param genstates random number generator states. Each thread needs one.
-!! @param sl the cell list presenting the decomposition.
-!! 
 subroutine make_particle_moves(groups, genstates, simbox, temperature, &
      pair_ia, subr_single_energy, dE, n_trials, n_accepted)
   implicit none
-  class(particlegroup_ptr), intent(inout) :: groups(:)
+  type(particlegroup_ptr), intent(inout) :: groups(:)
   type(poly_box), intent(in) :: simbox
   type(rngstate), intent(inout) :: genstates(0:)
   class(pair_interaction), intent(in) :: pair_ia
@@ -178,36 +172,35 @@ subroutine make_particle_moves(groups, genstates, simbox, temperature, &
   real(dp), intent(in) :: temperature
   real(dp), intent(out) :: dE
   integer, intent(out) :: n_accepted, n_trials
-  
   !$ integer :: n_threads
   integer :: thread_id
   !! You may be tempted to make the allocatable arrays automatic, but there's
   !! no performance gained and depending on the system large automatic arrays
   !! may cause a stack overflow.
   real(dp) :: dE_d
-  integer :: ix, iy, iz, jx, jy, jz, n_trials_d, n_accepted_d, i_group
+  integer :: ix, iy, iz, jx, jy, jz, n_trials_d, n_accepted_d, i_group, i
   type(domain), allocatable :: ds(:)
   do i_group = 1, size(groups)
-     call update(groups(i_group)%ptr%sl, simbox, groups(i_group)%ptr%particles)
+     call simplelist_update(groups(i_group)%ptr%sl, simbox, &
+          groups(i_group)%ptr%particles)
   end do
   thread_id = 0
-  !$ n_threads = 1
   dE = 0._dp
-  dE_d = 0._dp
   n_accepted = 0
   n_trials = 0
+  !$ n_threads = 1
   !! Loop over cells. This can be thought of as looping through a 
   !! 2 x 2 x 2 cube of cells.
   !$OMP PARALLEL shared(groups, simbox, genstates, pair_ia)& 
-  !$OMP& private(thread_id, n_threads, n_trials_d, n_accepted_d, ds)&
+  !$OMP& private(thread_id, n_threads, n_trials_d, n_accepted_d, ds, dE_d, &
+  !$OMP& i_group)&
   !$OMP& reduction(+:dE, n_accepted, n_trials) 
   !$ thread_id = omp_get_thread_num()
   allocate(ds(size(groups)))
   do iz=0, min(1, groups(1)%ptr%sl%nz-1)
      do iy=0, min(1, groups(1)%ptr%sl%ny-1)
         do ix=0, min(1, groups(1)%ptr%sl%nx-1)
-           !$OMP DO collapse(3) private(i_group, dE_d)&
-           !$OMP& schedule(dynamic)
+           !$OMP DO collapse(3) schedule(dynamic)
            do jz = iz, groups(1)%ptr%sl%nz - 1, 2
               do jy = iy, groups(1)%ptr%sl%ny - 1, 2
                  do jx = ix, groups(1)%ptr%sl%nx - 1, 2
@@ -219,10 +212,9 @@ subroutine make_particle_moves(groups, genstates, simbox, temperature, &
                     end do
                     !! Move particles
                     do i_group = 1, size(groups)
-                       call domain_move(ds(i_group), &
+                       call domain_move(ds, i_group, &
                             genstates(thread_id:thread_id), simbox, &
-                            temperature, &
-                            [ds(:i_group - 1), ds(i_group + 1:)], pair_ia, &
+                            temperature, pair_ia, &
                             subr_single_energy, dE_d, n_trials=n_trials_d, &
                             n_accepted=n_accepted_d)
                        dE = dE + dE_d
@@ -230,13 +222,18 @@ subroutine make_particle_moves(groups, genstates, simbox, temperature, &
                        n_accepted = n_accepted + n_accepted_d
                     end do
                     !! Synchronize
-                    !! :TODO: Generalize to a sync domain operation.
-                    do i_group = 1, size(groups)   
-                       groups(i_group)%ptr%particles(&
-                            groups(i_group)%ptr%sl%indices(&
-                            1:ds(i_group)%n_cell, jx, jy, jz)) = &
-                            ds(i_group)%arr(1:ds(i_group)%n_cell)
+                    !! :TODO: Generalize to a sync domain operation?
+                    do i_group = 1, size(groups)
+                       !! Cray compiler does not accept this since "An actual
+                       !! argument must be definable when associated with a
+                       !! dummy argument that has intent(out) or intent(inout)."
+                       do i = 1, ds(i_group)%n_cell
+                          call groups(i_group)%ptr%particles(&
+                               groups(i_group)%ptr%sl%indices(i, jx, jy, jz)&
+                               )%downcast_assign(ds(i_group)%arr(i))
+                       end do
                     end do
+                    call domain_delete(ds)
                  end do
               end do
            end do
@@ -248,14 +245,11 @@ subroutine make_particle_moves(groups, genstates, simbox, temperature, &
      end do
      !$OMP BARRIER
   end do
-  !if (allocated(temp_particles)) deallocate(temp_particles)
-  !if (allocated(nbr_mask)) deallocate(nbr_mask)
   !$OMP END PARALLEL
-  etotal = etotal + dE
   do i_group = 1, size(groups)
-     call update(groups(i_group)%ptr%sl, simbox, groups(i_group)%ptr%particles)
+     call simplelist_update(groups(i_group)%ptr%sl, simbox, &
+          groups(i_group)%ptr%particles)
   end do
-!  call update(this%sl, simbox, this%particles)
 end subroutine make_particle_moves
 
 
@@ -268,8 +262,7 @@ function create_domain(this, simbox, jx, jy, jz) result(d)
   integer :: n_local
   allocate(nbr_mask(size(this%particles)), source=.false.)
   d%n_cell = this%sl%counts(jx, jy, jz)
-  call simplelist_nbrmask(this%sl, simbox, jx, jy, jz, &
-       nbr_mask)
+  call simplelist_cell_nbrmask(this%sl, simbox, jx, jy, jz, nbr_mask)
   n_local = count(nbr_mask)
   
   !! Remove particles in jx, jy, jz from mask:
@@ -286,81 +279,67 @@ impure elemental subroutine delete_domain(this)
   this%n_cell = 0
 end subroutine delete_domain
 
-subroutine domain_move(this, genstates, simbox, temperature, nbrs, &
+subroutine domain_move(domains, i_d, genstates, simbox, temperature, &
      pair_ia, subr_single_energy, dE, n_trials, n_accepted)
-  type(domain), intent(inout) :: this
+  type(domain), intent(inout) :: domains(:)
+  integer, intent(in) :: i_d
   type(rngstate), intent(inout) :: genstates(:)
   type(poly_box), intent(in) :: simbox
   real(dp), intent(in) :: temperature
-  type(domain), intent(in) :: nbrs(:)
   class(pair_interaction), intent(in) :: pair_ia
   procedure(single_energy) :: subr_single_energy
   real(dp), intent(out) :: dE
   integer, intent(out), optional :: n_trials, n_accepted
   integer :: j
-  real(dp) :: dE_j
   class(particledat), allocatable :: newparticle
-  class(particledat), allocatable :: oldparticle
-
   integer :: err
   real(dp) :: enew
   real(dp) :: eold
   logical :: isaccepted
-  class(particlearray_wrapper), allocatable :: temp(:)
   n_accepted = 0
   n_trials = 0
-  !! GFortran 6.0.0 (BETA) needs the allocation for the code to work.
-  !! ifort 16.0.0 works without
-  allocate(temp(size(nbrs) + 1), source=[this, nbrs])
-  do j = 1, this%n_cell
-     temp(1)%mask(j) = .false.
-     enew = 0._dp
-     eold = 0._dp
-     dE_j = 0._dp
-     isaccepted = .false.
-     if (allocated(newparticle)) deallocate(newparticle)
-     allocate(newparticle, source=this%arr(j))
-     call move(newparticle, genstates(1))
-     call setposition(newparticle, minimage(simbox, position(newparticle)))
-     if (allocated(oldparticle)) deallocate(oldparticle)
-     allocate(oldparticle, source=this%arr(j))
-     this%arr(j) = newparticle
- 
-     call newparticle%energy(temp, pair_ia, simbox, &
-          subr_single_energy, enew, err)
-   
-     this%arr(j) = oldparticle
+  dE = 0.
+  if (domains(i_d)%n_cell > 0) allocate(newparticle, source=domains(i_d)%arr(1))
+  do j = 1, domains(i_d)%n_cell
+     domains(i_d)%mask(j) = .false.
+     call newparticle%downcast_assign(domains(i_d)%arr(j))
+     call newparticle%move(genstates(1))
+     call setposition(newparticle, minimage(simbox, newparticle%x, &
+          newparticle%y, newparticle%z))
+     call newparticle%energy(domains, pair_ia, simbox, subr_single_energy, &
+          enew, err)
      if(err == 0) then 
-        call oldparticle%energy(temp, pair_ia, simbox, &
-             subr_single_energy, enew, err)
-         call acceptchange(eold, enew, temperature, genstates(1), isaccepted)
+        call domains(i_d)%arr(j)%energy(domains, pair_ia, simbox, &
+             subr_single_energy, eold, err)
+        if (err /= 0) stop
+        call acceptchange(eold, enew, temperature, genstates(1), isaccepted)
         if(isaccepted) then
-           this%arr(j) = newparticle
-           dE_j = enew - eold
+           call domains(i_d)%arr(j)%downcast_assign(newparticle)
+           dE = dE + enew - eold
+           n_accepted = n_accepted + 1
         end if
      end if
-     
-     if (isaccepted) n_accepted = n_accepted + 1
-     n_trials = n_trials + 1
-     
-     dE = dE + dE_j
-     temp(1)%mask(j) = .true.
+     domains(i_d)%mask(j) = .true.
   end do
+  n_trials = n_trials + domains(i_d)%n_cell
 end subroutine domain_move
 
+
+
 subroutine update_volume(simbox, groups, genstate, pair_ia, subr_single_energy,&
-     temperature, pressure, n_trials, n_accepted)
+     temperature, pressure, e_total, n_trials, n_accepted)
   type(poly_box), intent(inout) :: simbox
   type(particlegroup_ptr), intent(inout) :: groups(:)
   type(rngstate), intent(inout) :: genstate
   class(pair_interaction), intent(in) :: pair_ia
   procedure(single_energy) :: subr_single_energy
   real(dp), intent(in) :: temperature, pressure
+  real(dp), intent(out) :: e_total
   integer, intent(out), optional :: n_trials, n_accepted
   integer :: i
   do i = 1, size(scalingtypes)
      call movevol(simbox, groups, scalingtypes(i), genstate, pair_ia, &
-          subr_single_energy, temperature, pressure, n_trials, n_accepted)
+          subr_single_energy, temperature, pressure, e_total, n_trials, n_accepted)
   end do
 end subroutine update_volume
 
@@ -377,7 +356,7 @@ end subroutine update_volume
 !! @param genstate the random number generator state.
 !! 
 subroutine movevol(simbox, groups, scalingtype, genstate, pair_ia, &
-     subr_single_energy, temperature, pressure, n_trials, n_accepted)
+     subr_single_energy, temperature, pressure, e_total, n_trials, n_accepted)
   type(poly_box), intent(inout) :: simbox
   type(particlegroup_ptr), intent(inout) :: groups(:)
   character(len=*), intent(in) :: scalingtype
@@ -385,6 +364,7 @@ subroutine movevol(simbox, groups, scalingtype, genstate, pair_ia, &
   class(pair_interaction), intent(in) :: pair_ia
   procedure(single_energy) :: subr_single_energy
   real(dp), intent(in) :: temperature, pressure
+  real(dp), intent(out) :: e_total
   integer, intent(out), optional :: n_trials, n_accepted
   integer :: nparticles, err
   real(dp) :: Vo, Vn
@@ -403,16 +383,18 @@ subroutine movevol(simbox, groups, scalingtype, genstate, pair_ia, &
   Vo = volume(simbox)
   oldbox = simbox
   
-  !! It seems that total energy may drift if it is not updated here:
+  !! It seems that total energy may drift (WHY?!) if it is not updated here:
   call total_energy(groups, simbox, pair_ia, subr_single_energy, &
-       etotal, err)
+       e_total, err)
   if (err /= 0) stop 'movevol: overlap in old configuration! '//&
        'Should never happen!'
   
   !! Scale coordinates and the simulations box
   scaling = genvoltrial_scale(simbox, maxscaling, genstate, &
        trim(adjustl(scalingtype)))
-  call groups(1)%ptr%scalepositions(oldbox, simbox)
+  do i = 1, size(groups)
+     call groups(i)%ptr%scalepositions(oldbox, simbox)
+  end do
   Vn = volume(simbox)
   
   !! Calculate potential energy in the scaled system.
@@ -421,20 +403,24 @@ subroutine movevol(simbox, groups, scalingtype, genstate, pair_ia, &
   
   if (err /= 0) then
      !! Scale particles back to old coordinates.
-     call groups(1)%ptr%scalepositions(simbox, oldbox)
+     do i = 1, size(groups)
+        call groups(i)%ptr%scalepositions(simbox, oldbox)
+     end do
      simbox = oldbox
   else
      boltzmannn = totenew + pressure * Vn - real(nparticles, dp) * &
           temperature * log(Vn)  
-     boltzmanno = etotal + pressure * Vo - real(nparticles, dp) * &
+     boltzmanno = e_total + pressure * Vo - real(nparticles, dp) * &
           temperature * log(Vo)
      call acceptchange(boltzmanno, boltzmannn, temperature, genstate, &
           isaccepted)
      if (isaccepted) then
-        etotal = totenew
+        e_total = totenew
      else 
         !! Scale particles back to old coordinates
-        call groups(1)%ptr%scalepositions(simbox, oldbox)
+        do i = 1, size(groups)
+           call groups(i)%ptr%scalepositions(simbox, oldbox)
+        end do
         simbox = oldbox
      end if
   end if
@@ -462,80 +448,71 @@ subroutine total_energy(groups, simbox, pair_ia, subr_single_energy, energy, &
   procedure(single_energy) :: subr_single_energy
   real(dp), intent(out) :: energy
   integer, intent(out) :: err
-  integer :: i, j, ix, iy, iz, i_group
-  logical :: mask(size(groups(1)%ptr%particles))
+  integer :: i, ix, iy, iz, i_group
   real(dp) :: energy_j
-  integer :: err_j
-  integer :: helper(size(groups(1)%ptr%particles))
-  integer, allocatable :: temp_helper(:)
-  integer :: n_mask
-  integer :: temp_j
-  type(particledat), allocatable :: temp_particles(:)
   integer :: nbr_cells(3, 27), n_nbr_cells
   integer :: j_group
-  helper = (/(i, i=1, size(groups(1)%ptr%particles))/) !! ifort vectorizes
   energy = 0._dp
   err = 0
-  
-  !$OMP PARALLEL default(shared) reduction(+:energy) reduction(+:err)& 
-  !$OMP& private(energy_j, err_j, i, j, mask, temp_particles, temp_j, temp_helper, n_mask, nbr_cells, n_nbr_cells)
-  allocate(temp_particles(size(groups(1)%ptr%particles)), &
-       temp_helper(size(groups(1)%ptr%particles))) 
+  !$OMP PARALLEL default(shared) reduction(+:energy, err)& 
+  !$OMP& private(energy_j, i, nbr_cells, n_nbr_cells)
   !$OMP DO collapse(3) schedule(dynamic)
   do ix = 0, groups(1)%ptr%sl%nx - 1 
      do iy = 0, groups(1)%ptr%sl%ny - 1
         do iz = 0, groups(1)%ptr%sl%nz - 1
-
-           do i_group = 1, size(groups)
-              !! 1. compute inside ix, iy, iz in i_group
-              call cell_energy(groups(i_group)%ptr, ix, iy, iz, simbox, &
-                   pair_ia, subr_single_energy, energy_j, err)
-              if (err /= 0) exit
-              energy = energy + energy_j
-           end do
-           
-           do i_group = 1, size(groups) - 1
-              !! 2. compute with ix, ix, y in j_group > i_group
-              do j_group = i_group + 1, size(groups)
-                 call cell_pair_energy(groups(i_group)%ptr, ix, iy, iz, &
-                      groups(j_group)%ptr, ix, iy, iz, simbox, pair_ia, &
-                      energy_j, err)
+           if (err == 0) then
+              do i_group = 1, size(groups)
+                 !! 1. compute inside ix, iy, iz in i_group
+                 call cell_energy(groups(i_group)%ptr, ix, iy, iz, simbox, &
+                      pair_ia, subr_single_energy, energy_j, err)
                  if (err /= 0) exit
                  energy = energy + energy_j
               end do
-              if (err /= 0) exit
-           end do
-           
-           !! 3. for all j_group (including i_group) compute where
-           !! ix + nx * iy + nx * ny * iz < jx + jy * nx + jz * nx * ny
-           !! and jx, jy, jz is a neighbour of ix, iy, iz.
-           call simplelist_nbr_cells(groups(i_group)%ptr%sl, ix, iy, iz, &
-                nbr_cells, n_nbr_cells)
-           do i_group = 1, size(groups)
-              do i = 1, n_nbr_cells
-                 if (flat_index(groups(i_group)%ptr%sl, nbr_cells(1, i), &
-                      nbr_cells(2, i), nbr_cells(3, i)) > &
-                      flat_index(groups(i_group)%ptr%sl, ix, iy, iz)) then
-                    do j_group = 1, size(groups)
-                       call cell_pair_energy(groups(i_group)%ptr, ix, iy, iz, &
-                            groups(j_group)%ptr, nbr_cells(1, i), &
-                            nbr_cells(2, i), nbr_cells(3, i), simbox, pair_ia,&
-                            energy_j, err)
-                       if (err /= 0) exit
-                       energy = energy + energy_j
-                    end do
-                 end if
+           end if
+           if (err == 0) then
+              do i_group = 1, size(groups) - 1
+                 !! 2. compute with ix, ix, y in j_group > i_group
+                 do j_group = i_group + 1, size(groups)
+                    call cell_pair_energy(groups(i_group)%ptr, ix, iy, iz, &
+                         groups(j_group)%ptr, ix, iy, iz, simbox, pair_ia, &
+                         energy_j, err)
+                    if (err /= 0) exit
+                    energy = energy + energy_j
+                 end do
                  if (err /= 0) exit
               end do
-              if (err /= 0) exit
+           end if
+           if (err == 0) then
+              !! 3. for all j_group (including i_group) compute where
+              !! ix + nx * iy + nx * ny * iz < jx + jy * nx + jz * nx * ny
+              !! and jx, jy, jz is a neighbour of ix, iy, iz.
+              call simplelist_nbr_cells(groups(i_group)%ptr%sl, ix, iy, iz, &
+                   nbr_cells, n_nbr_cells)
+              do i_group = 1, size(groups)
+                 do i = 1, n_nbr_cells
+                    if (flat_index(groups(i_group)%ptr%sl, nbr_cells(1, i), &
+                         nbr_cells(2, i), nbr_cells(3, i)) > &
+                         flat_index(groups(i_group)%ptr%sl, ix, iy, iz)) then
+                       do j_group = 1, size(groups)
+                          call cell_pair_energy(groups(i_group)%ptr, &
+                               ix, iy, iz, &
+                               groups(j_group)%ptr, nbr_cells(1, i), &
+                               nbr_cells(2, i), nbr_cells(3, i), simbox, &
+                               pair_ia, energy_j, err)
+                          if (err /= 0) exit
+                          energy = energy + energy_j
+                       end do
+                    end if
+                    if (err /= 0) exit
+                 end do
+                 if (err /= 0) exit
+              end do
+           end if
            end do
         end do
      end do
-  end do
-  !$OMP END DO
-  if (allocated(temp_particles)) deallocate(temp_particles)
-  if (allocated(temp_helper)) deallocate(temp_helper)
-  !$OMP END PARALLEL  
+     !$OMP END DO
+     !$OMP END PARALLEL  
 end subroutine total_energy
 
 subroutine cell_energy(this, ix, iy, iz, simbox, pair_ia, subr_single_energy, &
@@ -556,8 +533,8 @@ subroutine cell_energy(this, ix, iy, iz, simbox, pair_ia, subr_single_energy, &
      do j = i + 1, this%sl%counts(ix, iy, iz)
         associate(particlej => this%particles(this%sl%indices(j, ix, iy, iz)))
           rij = minimage(simbox,&
-               [particlej%x - particlei%x, particlej%y - particlei%y,&
-               particlej%z - particlei%z])
+               particlej%x - particlei%x, particlej%y - particlei%y,&
+               particlej%z - particlei%z)
           if (norm2(rij) < pair_ia%get_cutoff()) then
              call pair_ia%pair_potential(particlei, particlej, rij, &
                   energy_ij, err)
@@ -595,8 +572,8 @@ subroutine cell_pair_energy(this, ix, iy, iz, another, jx, jy, jz, simbox, &
        do j = 1, another%sl%counts(jx, jy, jz)
           associate(particlej => another%particles(&
                another%sl%indices(j, jx, jy, jz)))
-            rij = minimage(simbox, [particlej%x - particlei%x, &
-                 particlej%y - particlei%y, particlej%z - particlei%z])
+            rij = minimage(simbox, particlej%x - particlei%x, &
+                 particlej%y - particlei%y, particlej%z - particlei%z)
             if (norm2(rij) < pair_ia%get_cutoff()) then
                call pair_ia%pair_potential(particlei, particlej, rij, &
                     energy_ij, err)
@@ -620,7 +597,7 @@ subroutine scalepositions(this, oldbox, newbox)
   this%particles(:)%x = this%particles(:)%x * getx(newbox) / getx(oldbox)
   this%particles(:)%y = this%particles(:)%y * gety(newbox) / gety(oldbox)
   this%particles(:)%z = this%particles(:)%z * getz(newbox) / getz(oldbox)
-  call update(this%sl, newbox, this%particles)
+  call simplelist_update(this%sl, newbox, this%particles)
 end subroutine scalepositions
 
 end module m_particlegroup
