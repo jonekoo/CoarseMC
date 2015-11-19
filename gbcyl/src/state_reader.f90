@@ -1,8 +1,9 @@
 module state_reader
-  use nrtype, only: dp
+  use iso_fortran_env, only: dp => REAL64, input_unit
   use particle, only: particledat
-
-  integer, parameter :: readunit = 5   
+  implicit none
+  
+  integer, parameter :: readunit = input_unit
 
 
    

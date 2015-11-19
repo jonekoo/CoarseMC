@@ -8,11 +8,10 @@
 !! bins adjustable!
 !!
 program analysis
-  use nrtype, only: dp
+  use iso_fortran_env, only: dp => REAL64
   use particle, only : particledat
-  use class_factory
+  use class_factory, only: factory, factory_readstate
   use class_poly_box
-  use utils
   use gr3dweighted
   use layernormal
   implicit none
@@ -36,15 +35,9 @@ program analysis
       if (.not. allocated(orientations)) then
         allocate(orientations(3, size(particles)))
       end if
-      !write(*, *) size(particles)
       do i = 1, size(particles)
-      !  write(*, *) i, orientation(particles(i)) 
         orientations(1:3, i) = localnormal(simbox, particles, i, cutoff) !orientation(particles(i))
       end do
-      !forall(i = 1:size(particles))
-      !  write(*, *) i, orientation(particles(i)) 
-      !  orientations(1:3, i) = orientation(particles(i))
-      !end forall
       call gr3dweighted1(particles, simbox, maxbin, delr, orientations, histogram, weightedhistogram)  
       write(*, '(100('//fmt_char_dp()//',1X))') weightedhistogram
     end if

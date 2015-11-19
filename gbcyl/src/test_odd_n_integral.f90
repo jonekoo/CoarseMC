@@ -1,6 +1,6 @@
 program test
 use odd_n_integral
-use nrtype
+use iso_fortran_env, only: dp => REAL64
 implicit none
 
 write(*, *) "0! = ", factorial(0)
