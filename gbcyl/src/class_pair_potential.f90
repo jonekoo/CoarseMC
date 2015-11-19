@@ -2,7 +2,7 @@
 !! particles.
 module class_pair_potential
   use iso_fortran_env
-  use nrtype
+  use num_kind
   use m_sphere_interaction
   use m_rod_interaction
   use m_rodsphere_potential
@@ -140,12 +140,10 @@ contains
     type(poly_box), intent(in) :: simbox
     real(dp), intent(out) :: energy
     integer, intent(out) :: err
-    logical :: overlap
     err = 0
     call this%pair_potential(particlei, particlej, &
          minimage(simbox, position(particlej) - position(particlei)), energy, &
          err)
-    if (overlap) err = 1
   end subroutine cpi_pair_potential_2
   
   !> Calculates the interaction energy of a pair of particles. 
@@ -171,6 +169,7 @@ contains
     uj(1) = particlej%ux
     uj(2) = particlej%uy
     uj(3) = particlej%uz
+    err = 0
     if (particlei%rod .and. particlej%rod) then
        call this%p_rod_ia%potential(ui, uj, rij, energy, overlap)
     else if (particlei%rod) then
@@ -181,11 +180,7 @@ contains
        call this%p_sphere_ia%potential(sqrt(dot_product(rij, rij)), &
             energy, overlap)
     end if
-    if (overlap) then
-       err = 1
-    else
-       err = 0
-    end if
+    if (overlap) err = 1
   end subroutine cpi_pair_potential
   
 
