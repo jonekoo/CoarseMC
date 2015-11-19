@@ -8,7 +8,7 @@
 !! bins adjustable!
 !!
 program pair_distribution
-  use nrtype, only: dp
+  use num_kind, only: dp
   use particle, only : particledat
   use class_factory, only: factory_readstate, factory
   use class_poly_box, only: poly_box

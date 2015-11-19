@@ -1,5 +1,5 @@
 module tau1_module
-use nrtype
+use iso_fortran_env, only: dp => REAL64, sp => REAL32
 use particle
 use tau1_negative
 implicit none
@@ -11,7 +11,7 @@ public :: tau1
 interface tau1_routine
   subroutine max_tau1(particles, direction, tau1_max, layer_distance)
     use particle
-    use nrtype
+    use num_kind
     implicit none
     type(particledat), intent(in) :: particles(:)
     real(sp), intent(in) :: direction(3)

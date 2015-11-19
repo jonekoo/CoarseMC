@@ -5,13 +5,13 @@
 !! Usage: program < configuration_file
 !!
 program total_psi6
-  use nrtype, only: dp
+  use num_kind
   use particle, only : particledat
   use orientational_ordering
   use psi6_module, only : psi6_bulk
-  use class_poly_box
-  use utils
-  use class_factory
+  use class_poly_box, only: poly_box
+  use utils, only: fmt_char_dp
+  use class_factory, only: factory, factory_readstate
   implicit none
   type(particledat), allocatable :: particles(:)
   integer :: io_status

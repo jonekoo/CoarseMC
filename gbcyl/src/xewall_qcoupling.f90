@@ -20,7 +20,7 @@
 !!
 function xewall_qcoupling(k, radiusA, densityA, epsilonratio, &
   sigmaratio) result(local_tensor)
-  use nrtype, only: dp
+  use num_kind, only: dp
   use cylinder_integrals, only : ljwall_tensor
   real(dp), intent(in) :: k, radiusA, densityA, epsilonratio, sigmaratio
   real(dp) :: local_tensor(3, 3) 

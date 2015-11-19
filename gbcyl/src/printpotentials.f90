@@ -17,7 +17,7 @@
 !!        smoothly and evenly distributed LJ particles.
 !!
 program printpotentials
-use nrtype
+use num_kind
 use class_pair_potential
 use utils, only : fmt_char_dp
 use m_fileunit
@@ -51,7 +51,6 @@ character(len=3) :: particle_descriptions(4)
 integer :: i, j, k
 integer, parameter :: n = 1000
 real(dp) :: energy
-logical :: overlap
 integer :: err
 type(particledat) :: temp
 

@@ -1,7 +1,7 @@
 !> Implements routines for creating trial Monte Carlo translations and
 !! rotations for uniaxial particles, such as in the Gay-Berne model.
 module particle_mover
-use nrtype
+use num_kind
 use utils
 use class_parameterizer
 use class_parameter_writer

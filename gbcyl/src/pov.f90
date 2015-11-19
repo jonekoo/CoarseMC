@@ -1,8 +1,8 @@
 module pov
-use nrtype
+use num_kind
 use particle
 use class_poly_box
-use utils
+use utils, only: fmt_char_dp
 implicit none
 
 contains

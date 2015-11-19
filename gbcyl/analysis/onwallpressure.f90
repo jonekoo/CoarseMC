@@ -5,7 +5,7 @@ use class_poly_box
 use class_parameterizer
 use m_fileunit
 use particlewall
-use nrtype
+use num_kind
 use utils
 implicit none
 type(factory) :: coordinatereader

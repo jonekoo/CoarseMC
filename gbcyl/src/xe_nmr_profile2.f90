@@ -1,5 +1,5 @@
 program xe_nmr_profile2
-  use nrtype, only: dp
+  use num_kind, only: dp
   use particle, only : particledat
   use orientational_ordering
   use class_poly_box

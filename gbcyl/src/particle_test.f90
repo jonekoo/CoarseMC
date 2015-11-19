@@ -1,7 +1,7 @@
 module particle_test
 use ftnunit
 use particle
-use nrtype
+use num_kind
 use mtmod
 implicit none
 

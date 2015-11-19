@@ -9,7 +9,7 @@ use m_fileunit
 use class_simplelist, poly_nbrlist => simplelist
 use class_pair_potential, only: create_conditional_interaction, pp_init
 use particlewall, only: particlewall_potential, particlewall_init
-use nrtype
+use num_kind
 use mc_engine, only: create_groups
 use utils
 implicit none
@@ -26,7 +26,6 @@ integer, parameter :: ndlz = 3
 real(dp), dimension(ndlz) :: dLzs = (/0.001_dp, 0.003_dp, 0.01_dp/)
 real(dp) :: dlz
 integer :: i
-logical :: overlap = .false.
 character(len=3) :: idchar = '0'
 character(len=1) :: direction = 'z'
 type(poly_nbrlist) :: nbrlist

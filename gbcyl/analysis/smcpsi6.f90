@@ -10,12 +10,11 @@
 program smcpsi6
 use particle
 use class_poly_box
-use utils
-use nrtype
-!use class_cylformatter
-use class_factory
+use utils, only: fmt_char_dp
+use num_kind
+use class_factory, only: factory, factory_readstate
 use layernormal
-use class_poly_box
+use class_poly_box, only: poly_box
 use psi6_module
 implicit none
 
@@ -23,7 +22,6 @@ real(dp), parameter :: sigma0 = 1._dp
 type(particledat), allocatable :: particles(:)
 real(dp) :: cutoff
 integer :: io_status
-!type(cylformatter) :: cf
 real(dp) :: p2
 real(dp), dimension(3) :: direction
 type(poly_box) :: simbox
@@ -31,7 +29,6 @@ type(factory) :: afactory
 integer, parameter :: stdin = 5
 !! The loop goes through all configurations fed to standard input of this 
 !! program.
-!cf = new_cylformatter()
 cutoff = 2._dp * sigma0
 do  
   call factory_readstate(afactory, stdin, simbox, particles, io_status)

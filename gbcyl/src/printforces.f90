@@ -1,5 +1,5 @@
 program printforces
-use nrtype
+use num_kind
 use class_pair_potential
 use utils, only : fmt_char_dp
 use m_fileunit
@@ -35,7 +35,6 @@ real(dp) :: r, rij(3)
 real(dp) :: rmax
 real(dp) :: f(3)
 real(dp) :: energy
-logical :: overlap
 integer :: err
 
 class(pair_interaction), allocatable :: pair_ia

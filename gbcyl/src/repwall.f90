@@ -6,7 +6,7 @@
 !! sigwall=contact distance between the particle and the wall
 
 function repwall(xa,rc,sigwall)
-use nrtype
+use num_kind
 use nr, only : rf,rd
 implicit none
 real(dp), intent(in) :: xa,rc,sigwall
@@ -18,7 +18,7 @@ real(dp) :: Ek,Kk,coeff
 real(sp) :: cc,q
   interface 
   function horner(a,n,x) 
-    use nrtype
+    use num_kind
     real(dp), dimension(:), intent(in) :: a
     integer, intent(in) :: n 
     real(dp), intent(in) :: x

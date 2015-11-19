@@ -12,7 +12,7 @@ use class_poly_box !! for simulation box handling.
 use class_parameterizer !! for reading parameters.
 use m_fileunit !! to get a free output unit.
 use class_pair_potential !! for forces
-use nrtype !! for real kind=dp.
+use num_kind !! for real kind=dp.
 use utils !! for formatting output for real kind=dp.
 implicit none
 type(factory) :: coordinatereader

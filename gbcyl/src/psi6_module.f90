@@ -1,7 +1,7 @@
 module psi6_module
 use particle
 use class_poly_box
-use nrtype
+use num_kind
 implicit none
 
 

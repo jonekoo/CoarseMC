@@ -6,7 +6,7 @@
 !!
 program remove_every_2nd
   use class_factory
-  use nrtype, only: dp
+  use num_kind, only: dp
   use particle, only : particledat
   use class_poly_box
   implicit none

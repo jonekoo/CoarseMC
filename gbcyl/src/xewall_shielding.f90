@@ -19,7 +19,7 @@
 !!
 function xewall_shielding(k, radiusA, densityA, epsilonratio, &
   sigmaratio) result(local_tensor)
-  use nrtype, only: dp
+  use num_kind, only: dp
   use cylinder_integrals, only : ljwall_tensor
   implicit none
   real(dp), intent(in) :: k, radiusA, densityA, epsilonratio, sigmaratio

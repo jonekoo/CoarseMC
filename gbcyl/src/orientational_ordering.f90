@@ -1,5 +1,5 @@
 module orientational_ordering
-  use nrtype
+  use num_kind
   use particle, only: particledat, orientation
   use utils, only: eigensystem
   implicit none

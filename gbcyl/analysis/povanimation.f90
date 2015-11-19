@@ -6,7 +6,7 @@
 !!
 program analysis
   use class_factory
-  use nrtype, only: dp
+  use num_kind
   use particle, only : particledat
   use pov
   use m_fileunit

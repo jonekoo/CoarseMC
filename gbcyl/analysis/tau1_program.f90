@@ -4,7 +4,7 @@
 !! Usage: program < configrationfile
 !!
 program tau1_program
-  use nrtype
+  use num_kind
   use particle, only : particledat
   use tau1_module, only: tau1_routine
   use orientational_ordering, only: orientation_parameter

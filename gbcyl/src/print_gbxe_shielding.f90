@@ -2,7 +2,7 @@ program print_gbxe_shielding
 use m_shielding, only: init_shielding, gbxe_shielding_local
 use m_fileunit
 use class_parameterizer
-use nrtype
+use num_kind
 use utils
 implicit none
 integer, parameter :: res = 600

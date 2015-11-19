@@ -1,5 +1,6 @@
 module simplemin
-use nrtype
+use num_kind
+implicit none
 
 contains
 
@@ -11,7 +12,7 @@ function simple_min(a, b, func, resolution, xmin)
   real(sp) :: simple_min
   interface
     function func(x)
-      use nrtype
+      use num_kind
       implicit none
       real(sp), intent(in) :: x
       real(sp) :: func

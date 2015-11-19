@@ -8,11 +8,10 @@
 !!
 module particlewall
   use particle, only: particledat, position, orientation 
-  use nrtype
+  use num_kind
   use class_poly_box
   use class_parameterizer
   use class_parameter_writer
-  use nrtype
   use ljcylinder
   implicit none
     

@@ -1,5 +1,5 @@
 module tau1_negative
-use nrtype
+use num_kind
 implicit none
 
 public :: tau1_n

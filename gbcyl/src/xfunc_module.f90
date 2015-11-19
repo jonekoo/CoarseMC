@@ -3,7 +3,7 @@ implicit none
 contains
   function rho(p) 
   use particle
-  use nrtype
+  use num_kind
   implicit none
   real(dp) :: rho
   type(particledat), intent(in) :: p

@@ -1,5 +1,5 @@
 program xe_nmr_profile
-  use nrtype, only: dp
+  use num_kind, only: dp
   use particle, only : particledat
   use orientational_ordering, only: orientation_parameter, eigens, &
        cycle_largest_to_3rd

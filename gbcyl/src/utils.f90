@@ -1,5 +1,5 @@
 module utils
-  use nrtype
+  use num_kind
   include 'rng.inc'
   implicit none
   intrinsic index
@@ -8,7 +8,7 @@ module utils
      !> Computes the eigenvectors and eigenvalues @p values of @p matrix.
      !! @p matrix is replaced by the eigenvectors on output.
      subroutine eigensystem(matrix, values)
-       use nrtype, only: dp
+       use num_kind, only: dp
        implicit none
        real(dp), intent(inout) :: matrix(3, 3)
        real(dp), intent(out) :: values(3)
@@ -130,7 +130,7 @@ end function
 !! through angle @p angle. 
 !!
 !! Author Juho Lintuvuori.
-!! Modified by Jouni Karjalainen to use nrtype dp and intrinsic dot_product
+!! Modified by Jouni Karjalainen to kind parameter dp and intrinsic dot_product
 !!
 !! The angle is defined counterclockwise when looking at the direction of 
 !! (nx, ny, nz).

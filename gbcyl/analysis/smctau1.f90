@@ -9,17 +9,17 @@
 program smctau1
 
 !! These are needed for the types read from configuration files
-use particle
-use class_poly_box
+use particle, only: particledat
+use class_poly_box, only: poly_box
 
 !! For printing
-use utils 
+use utils, only: fmt_char_dp
 
 !! For type definitions
-use nrtype
+use num_kind
 
 !! For reading configurations from disk
-use class_factory
+use class_factory, only: factory, factory_readstate
 
 !! To determine the normal of the layers
 use layernormal

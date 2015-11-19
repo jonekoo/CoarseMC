@@ -1,5 +1,5 @@
 module pt
-  use nrtype
+  use num_kind
   use mpi
   use particle 
   use class_poly_box
