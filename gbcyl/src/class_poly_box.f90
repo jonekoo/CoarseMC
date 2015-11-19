@@ -1,9 +1,9 @@
 !> Implements routines related to the simulation cell/box, such as
 !! minimum image calculations.
 module class_poly_box
-use nrtype
+use num_kind
 use utils
-use iso_fortran_env
+use iso_fortran_env, only: error_unit
 implicit none
 
 public :: poly_box
@@ -41,7 +41,7 @@ interface new_box
 end interface
 
 interface minimage
-  module procedure pbox_minimage
+  module procedure pbox_minimage, pbox_minimagexyz
 end interface
 
 interface mindistance
@@ -354,5 +354,36 @@ pure function pbox_minimage(simbox, r) result(mi)
      end if
   end if
 end function pbox_minimage
+
+!> Returns the minimum image vector in @p simbox corresponding to @p r.
+pure function pbox_minimagexyz(simbox, x, y, z) result(mi)
+  real(dp), dimension(3) :: mi
+  type(poly_box), intent(in) :: simbox
+  real(dp), intent(in) :: x, y, z
+  !! Make periodic transformations
+  mi = [x, y, z]
+  if (simbox%xperiodic) then
+     if (mi(1) < -0.5 * simbox%lx) then
+        mi(1) = mi(1)+simbox%lx 
+     else if(mi(1) >= 0.5 * simbox%lx) then
+        mi(1) = mi(1) - simbox%lx
+     end if
+  end if
+  if (simbox%yperiodic) then
+     if (mi(2) < -0.5 * simbox%ly) then
+        mi(2) = mi(2) + simbox%ly 
+     else if(mi(2) >= 0.5 * simbox%ly) then
+        mi(2) = mi(2) - simbox%ly
+     end if
+  end if
+  if (simbox%zperiodic) then
+     !! This is faster than the solution above:
+     if (mi(3) < -0.5 * simbox%lz) then
+        mi(3) = mi(3) + simbox%lz 
+     else if(mi(3) >= 0.5 * simbox%lz) then
+        mi(3) = mi(3) - simbox%lz
+     end if
+  end if
+end function pbox_minimagexyz
 
 end module
