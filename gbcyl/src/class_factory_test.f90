@@ -4,7 +4,7 @@ use ftnunit
 use class_poly_box
 use particle
 use class_factory
-use nrtype
+use num_kind
 implicit none
 
 contains

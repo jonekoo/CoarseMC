@@ -1,7 +1,7 @@
 !> Implements functions to write parameters to a file in a consistent
 !! format readable by parameterizer instances.
 module class_parameter_writer
-use nrtype
+use num_kind
 use utils
 implicit none
 

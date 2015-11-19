@@ -8,7 +8,7 @@
 !! @param[in] direction the direction of indexing.
 !!
 subroutine bin_indices(particles, xfunc, bin_width, indices, offset, direction)
-use nrtype
+use num_kind
 use particle, only: particledat
 implicit none
 type(particledat), dimension(:), intent(in) :: particles
@@ -17,7 +17,7 @@ real(dp), intent(in), optional :: offset
 integer, intent(in), optional :: direction 
 interface 
   function xfunc(prtcl)
-  use nrtype
+  use num_kind
   use particle
   implicit none
   real(dp) :: xfunc 

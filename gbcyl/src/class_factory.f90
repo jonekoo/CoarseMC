@@ -5,9 +5,10 @@
 !! defines the structure of the coordinate file but leaves details of
 !! writing and reading to the particle and simulation box modules.
 module class_factory
+  use num_kind
   use particle, only: particledat, readparticle, writeparticle
   use class_poly_box, only: poly_box, pbox_read, pbox_write
-  use utils
+  use utils, only: fmt_char_dp, fmt_char_int
   implicit none
   
   character(len=14), parameter :: beginmark = '#configuration'

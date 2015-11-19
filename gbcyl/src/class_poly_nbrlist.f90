@@ -4,7 +4,7 @@ module class_poly_nbrlist
   use verlet
   use class_simplelist
   use particle
-  use nrtype
+  use num_kind
   use class_poly_box
   use class_parameter_writer
   use class_parameterizer

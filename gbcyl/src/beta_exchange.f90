@@ -3,7 +3,7 @@
 !!
 module beta_exchange
 use mpi
-use nrtype
+use num_kind
 use utils
 include 'rng.inc'
 implicit none

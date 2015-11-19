@@ -1,7 +1,7 @@
 !> Implements functions for reading parameters from a file. Conforms to
 !! the same format as the module class_parameter_writer. 
 module class_parameterizer
-use nrtype
+use num_kind
 use m_fileunit
 implicit none
 private
