@@ -214,7 +214,7 @@ subroutine mce_init(id, n_tasks)
   call factory_readstate(coordinatereader, coordinateunit, simbox, &
        particles, ios)
   if (0 /= ios) then 
-    write(error_unit, *) 'ERROR ', ios,' reading ', statefile,  
+    write(error_unit, *) 'ERROR ', ios,' reading ', statefile
     stop
   end if
   close(coordinateunit)
@@ -496,8 +496,10 @@ subroutine runproductiontasks
       if (ios /= 0) then
          write(error_unit, *) 'Warning: runproductiontasks failed opening ' //&
               'beta_exchange.stats'
-      call write_stats(be_unit)
-      close(be_unit)
+      else
+         call write_stats(be_unit)
+         close(be_unit)
+      end if
       call reset_counters
     end if
     close(pwunit)
