@@ -113,7 +113,7 @@ end interface
 
 contains
 
-  subroutine particledat_downcast_assign(this, a_particle, err)
+  pure subroutine particledat_downcast_assign(this, a_particle, err)
     class(particledat), intent(inout) :: this
     class(particledat), intent(in) :: a_particle
     integer, intent(out), optional :: err
