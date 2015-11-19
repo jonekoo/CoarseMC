@@ -2,7 +2,7 @@
 !! input and output.
 module mc_engine
   use m_particlegroup, only: make_particle_moves, update_volume, &
-       get_total_energy, mc_sweep_writeparameters, mcsweep_finalize, &
+       total_energy, mc_sweep_writeparameters, mcsweep_finalize, &
        mcsweep_init, get_maxscaling, set_maxscaling, particlegroup, &
        particlegroup_ptr
   use class_factory, only: factory, factory_readstate, factory_writestate
@@ -18,7 +18,8 @@ module mc_engine
        beta_exchange_init => init, be_finalize => finalize, try_beta_exchanges
   use class_pair_potential, only: create_conditional_interaction, pp_init, &
        pp_writeparameters
-  use iso_fortran_env, only: dp => REAL64, error_unit
+  use num_kind
+  use iso_fortran_env, only: error_unit, output_unit
   use particlewall, only: particlewall_potential, particlewall_init, &
        particlewall_writeparameters
   !$ use omp_lib
@@ -60,6 +61,8 @@ module mc_engine
   !> The simulation temperature.
   real(dp), save :: temperature = -1._dp
 
+  !> The total energy.
+  real(dp), save :: etotal = 0._dp
   
   !> The simulation pressure. Only meaningful in a constant-pressure
   !! simulation.
@@ -123,6 +126,7 @@ subroutine mce_init(id, n_tasks)
   type(parameterizer) :: parameterreader
   integer :: thread_id = 0, n_threads = 1
   type(particledat), allocatable :: particles(:)
+  integer :: err
   
   write(idchar, '(I9)') id 
   idchar = trim(adjustl(idchar))
@@ -130,8 +134,8 @@ subroutine mce_init(id, n_tasks)
   parameterinputfile='inputparameters.'//trim(adjustl(idchar))
   parameterreader = new_parameterizer(parameterinputfile, iostat=ios)
   if (ios/=0) then
-    write(*,*) 'Could not open ' // trim(adjustl(parameterinputfile)) // &
-         '. Stopping.'
+     write(error_unit, *) 'ERROR: Could not open ' // &
+          trim(adjustl(parameterinputfile))
     stop
   end if
   !$ n_threads = omp_get_max_threads()
@@ -141,15 +145,16 @@ subroutine mce_init(id, n_tasks)
   call getparameter(parameterreader, 'seed', seed)
   if (seed < 0) then 
     call system_clock(seed)
-    write(*, *) "Seeding RNG with system clock."
+    write(error_unit, *) "Warning: Seeding RNG with system clock."
   end if
   if (seed < 0) then
-    write(*, *) "system_clock query failed, using default seed 1234567."
-    seed = 1234567 
+     write(error_unit, *) &
+          "Warning: system_clock query failed, using default seed 1234567."
+     seed = 1234567 
   end if
   call init(mts(thread_id), seed)
 
-  !$ write(*, *) 'Running with ', n_threads, ' threads.'
+  !$ write(output_unit, *) 'Running with ', n_threads, ' threads.'
 
   !! Give different random number streams to each OpenMP thread inside a
   !! MPI task.
@@ -177,14 +182,14 @@ subroutine mce_init(id, n_tasks)
   call getparameter(parameterreader, 'restartperiod', restartperiod)
   call getparameter(parameterreader, 'temperature', temperature)
   if (temperature < 0._dp) then
-     write(error_unit, *) 'mc_engine:'//&
-          'trying to set a negative temperature, stopping.'
+     write(error_unit, *) 'ERROR: mc_engine '//&
+          'tried to set a negative temperature.'
      stop  
   end if
   call getparameter(parameterreader, 'pressure', pressure)
   if (pressure < 0._dp) then
-     write(error_unit, *) 'mc_engine:'//&
-          'trying to set a negative pressure, stopping.'
+     write(error_unit, *) 'ERROR: mc_engine '//&
+          'tried to set a negative pressure.'
      stop  
   end if
 
@@ -209,7 +214,7 @@ subroutine mce_init(id, n_tasks)
   call factory_readstate(coordinatereader, coordinateunit, simbox, &
        particles, ios)
   if (0 /= ios) then 
-    write(*, *) 'Error ', ios,' reading ', statefile, ' Stopping.' 
+    write(error_unit, *) 'ERROR ', ios,' reading ', statefile,  
     stop
   end if
   close(coordinateunit)
@@ -222,12 +227,18 @@ subroutine mce_init(id, n_tasks)
   open(file=statefile, unit=coordinateunit, action='WRITE', &
        position='APPEND', status='UNKNOWN', form='formatted', iostat=ios)
   if (0 /= ios) then
-    write(*, *) 'mce_init: Failed opening ', statefile, & 
-         ' for writing. Stopping.'
-    stop
+     write(error_unit, *) 'ERROR: mce_init: Failed opening ', statefile, & 
+          ' for writing.'
+     stop
+  end if
+  call total_energy(groups, simbox, pair_ia, particlewall_potential, etotal, &
+       err)
+  if (err /= 0) then
+     write(error_unit, *) 'ERROR: mce_init: total_energy returned err = ', err
+     stop
   end if
   call makerestartpoint
-end subroutine 
+end subroutine mce_init
 
 
 subroutine create_groups(simbox, particles, groups)
@@ -292,20 +303,27 @@ subroutine sweep(simbox, groups, genstates, isweep)
   type(mt_state), intent(inout) :: genstates(0:)
   integer, intent(in) :: isweep
   real(dp) :: beta, dE
-  integer :: n_trials, n_accepted
+  integer :: n_trials, n_accepted, err
+  dE = 0.
   call make_particle_moves(groups, genstates, simbox, temperature, & 
-          pair_ia, particlewall_potential, dE, n_trials, n_accepted)
+       pair_ia, particlewall_potential, dE, n_trials, n_accepted)
+  
+  write(output_unit, *) "etotal + dE = ", etotal, " + ", dE, " = ", etotal + dE
+  call total_energy(groups, simbox, pair_ia, particlewall_potential, etotal, &
+       err)
+  write(output_unit, *) "etotal updated = ", etotal
   nmovetrials = nmovetrials + n_trials
   nacceptedmoves = nacceptedmoves + n_accepted
   call update_volume(simbox, groups, genstates(0), pair_ia, &
-       particlewall_potential, temperature, pressure, &
+       particlewall_potential, temperature, pressure, etotal, &
        n_trials, n_accepted)
   nscalingtrials = nscalingtrials + n_trials
   nacceptedscalings = nacceptedscalings + n_accepted
   call check_simbox(simbox)
   if (mod(isweep, pt_period) == 0) then
      beta = 1._dp / temperature
-     call try_beta_exchanges(beta, get_total_energy(), 3, genstates(0)) 
+     call try_beta_exchanges(beta, etotal + pressure * volume(simbox), 3, &
+          genstates(0)) 
      temperature = 1._dp / beta
   end if
 end subroutine sweep
@@ -332,7 +350,8 @@ subroutine mce_writeparameters(writer)
   call writeparameter(writer, 'pressure', pressure)
   call writeparameter(writer, 'temperature', temperature)
   call writeparameter(writer, 'volume', volume(simbox))
-  call writeparameter(writer, 'enthalpy', get_total_energy() + &
+  call writeparameter(writer, 'total_energy', etotal)
+  call writeparameter(writer, 'enthalpy', etotal + &
        volume(simbox) * pressure)
   call writeparameter(writer, 'move_ratio', moveratio)
   call writeparameter(writer, 'scaling_ratio', scalingratio)
@@ -408,8 +427,8 @@ subroutine makerestartpoint
   parameterfile = 'restartparameters.'//idchar
   open(UNIT=parameterunit, FILE=parameterfile, action='WRITE',&
        status='REPLACE', DELIM='QUOTE', iostat=ios)
-  if (ios /= 0) write(*, *) 'makerestartpoint: Warning: Failed opening', &
-  parameterfile
+  if (ios /= 0) write(error_unit, *) 'Warning: ' // &
+       'makerestartpoint failed opening', parameterfile
   pwriter = new_parameter_writer(parameterunit)
   call mce_writeparameters(pwriter)
   close(parameterunit)
@@ -419,8 +438,8 @@ subroutine makerestartpoint
   configurationfile = 'restartconfiguration.'//idchar
   open(file=configurationfile, unit=configurationunit, &
        action='WRITE', status='REPLACE', iostat=ios)
-  if (ios /= 0) write(*, *) 'makerestartpoint: Warning: Failed opening', &
-       configurationfile
+  if (ios /= 0) write(error_unit, *) 'Warning: ' // &
+       'makerestartpoint failed opening', configurationfile
   call writestate(restartwriter, configurationunit, simbox, groups)
   close(configurationunit)
 end subroutine
@@ -437,7 +456,7 @@ subroutine writestate(writer, unit, simbox, groups)
           source=groups(1)%ptr%particles)
   else
      allocate(particles(size(groups(1)%ptr%particles) + &
-          size(groups(1)%ptr%particles)), &
+          size(groups(2)%ptr%particles)), &
           source=[groups(1)%ptr%particles, groups(2)%ptr%particles])
   end if
   call factory_writestate(writer, unit, simbox, particles)  
@@ -459,10 +478,11 @@ subroutine runproductiontasks
     !! Record simulation parameters.
     parameterfile = 'parameters.'//trim(adjustl(idchar))
     pwunit = fileunit_getfreeunit()
-    open(UNIT=pwunit, FILE=parameterfile, action='WRITE', position='APPEND',&
+    open(UNIT=pwunit, FILE=parameterfile, action='WRITE', position='APPEND', &
          DELIM='QUOTE', IOSTAT=ios) 
     if (ios /= 0) then
-      write(*, *) 'runproductiontasks: error opening', parameterfile
+       write(error_unit, *) 'ERROR: runproductiontasks failed opening', &
+            parameterfile
       stop
     end if
     writer = new_parameter_writer(pwunit)
@@ -472,13 +492,15 @@ subroutine runproductiontasks
     if (trim(adjustl(idchar)) == "0") then
       be_unit = fileunit_getfreeunit()
       open(unit=be_unit, file="beta_exchange.stats", action="WRITE", &
-           position="APPEND")
+           position="APPEND", iostat=ios)
+      if (ios /= 0) then
+         write(error_unit, *) 'Warning: runproductiontasks failed opening ' //&
+              'beta_exchange.stats'
       call write_stats(be_unit)
       close(be_unit)
       call reset_counters
     end if
     close(pwunit)
-
     call resetcounters
   end if
 end subroutine
@@ -508,8 +530,8 @@ subroutine updatemaxvalues
      !! Adjust translation
      newdximax = newmaxvalue(nmovetrials, nacceptedmoves, moveratio, newdximax)
      
-     !! Update the minimum cell side length of the cell list because the maximum
-     !! translation has changed: 
+     !! Update the minimum cell side length of the cell list because the
+     !! maximum translation has changed: 
      
      !! This should adjust rotations < pi/2 to move the particle end as much as
      !! a random translation. 4.4 is the assumed molecule length-to-breadth 
