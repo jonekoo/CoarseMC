@@ -1,7 +1,7 @@
 !> Implements a cell list for computation of short-ranged non-bonded
 !! interactions between particles.
 module class_simplelist
-use nrtype
+use num_kind, only: dp
 use particle
 use class_poly_box
 implicit none
@@ -9,17 +9,14 @@ private
 
 public :: new_simplelist
 public :: simplelist_deallocate
-public :: update
+public :: simplelist_update
 public :: simplelist_nbrmask
+public :: simplelist_cell_nbrmask
 public :: simplelist_allocate
 public :: simplelist
 public :: cell_index
 public :: simplelist_nbr_cells
 public :: flat_index
-
-interface update
-  module procedure simplelist_update
-end interface
 
 !> Stores the cell list. 
 type simplelist
@@ -29,22 +26,18 @@ type simplelist
    real(dp) :: min_boundary_width
    integer :: nx, ny, nz
    real(dp) :: lx, ly, lz
-   logical :: is_x_even = .false., is_y_even = .false., is_z_even = .false.
+   logical :: is_nx_even = .false., is_ny_even = .false., is_nz_even = .false.
    integer, allocatable, dimension(:,:,:,:) :: indices
    integer, allocatable, dimension(:,:,:) :: counts
    integer, allocatable, dimension(:,:) :: coords
    real(dp), allocatable, dimension(:,:) :: xyzlist
 end type simplelist
 
-interface simplelist_nbrmask
-  module procedure simplelist_nbrmask, simplelist_cell_nbrmask
-end interface
-
 contains
 
 !> Constructs a new cell list @p sl for @p particles in @p simbox.
-!! @p min_length is the minimum cell side length. @p is_x_even,
-!! @p is_y_even and @p is_z_even define if an even number of cells is
+!! @p min_length is the minimum cell side length. @p is_nx_even,
+!! @p is_ny_even and @p is_nz_even define if an even number of cells is
 !! wanted in x, y, and/or z-directions. @p threshold is the minimum
 !! change in the position of a particle that can take place in either
 !! the x, y, or z-direction before the cell list is updated. The update
@@ -56,19 +49,19 @@ contains
 !! different directions. 
 !! 
   subroutine new_simplelist(sl, simbox, particles, min_length, &
-       min_boundary_width, is_x_even, is_y_even, is_z_even)
+       min_boundary_width, is_nx_even, is_ny_even, is_nz_even)
   type(poly_box), intent(in) :: simbox
   type(particledat), intent(in) :: particles(:)
   real(dp), intent(in) :: min_length
   real(dp), intent(in) :: min_boundary_width
-  logical, intent(in), optional :: is_x_even, is_y_even, is_z_even
+  logical, intent(in), optional :: is_nx_even, is_ny_even, is_nz_even
   type(simplelist), intent(out) :: sl
   sl%cached_box = simbox
   sl%min_length = min_length
   sl%min_boundary_width = min_boundary_width
-  if(present(is_x_even)) sl%is_x_even = is_x_even
-  if(present(is_y_even)) sl%is_y_even = is_y_even
-  if(present(is_z_even)) sl%is_z_even = is_z_even
+  if(present(is_nx_even)) sl%is_nx_even = is_nx_even
+  if(present(is_ny_even)) sl%is_ny_even = is_ny_even
+  if(present(is_nz_even)) sl%is_nz_even = is_nz_even
   call calculate_dimensions(sl, simbox)
   call simplelist_allocate(sl, size(particles))
   !! :TODO: Could make the indices list size parameterizable or optimizable
@@ -86,9 +79,7 @@ subroutine simplelist_allocate(sl, n)
   allocate(sl%xyzlist(n, 3))
 end subroutine simplelist_allocate
 
-!> Sets the dimensions and the number of cells in @p sl based on
-!! @p simbox dimensions and the attributes is_even_x, is_even_y,
-!! is_even_z and min_length of @p sl.
+!> Sets the dimensions and the number of cells in @p sl.
 subroutine calculate_dimensions(sl, simbox)
   type(simplelist), intent(inout) :: sl
   type(poly_box), intent(in) :: simbox
@@ -97,9 +88,9 @@ subroutine calculate_dimensions(sl, simbox)
   sl%ny = max(int(gety(simbox) / sl%min_length), 1)
   sl%nz = max(int(getz(simbox) / sl%min_length), 1)
 
-  if (sl%is_x_even) sl%nx = (sl%nx / 2) * 2
-  if (sl%is_y_even) sl%ny = (sl%ny / 2) * 2
-  if (sl%is_z_even) sl%nz = (sl%nz / 2) * 2
+  if (sl%is_nx_even) sl%nx = (sl%nx / 2) * 2
+  if (sl%is_ny_even) sl%ny = (sl%ny / 2) * 2
+  if (sl%is_nz_even) sl%nz = (sl%nz / 2) * 2
 
   if (sl%nx < 3) sl%nx = 1
   if (sl%ny < 3) sl%ny = 1
@@ -208,10 +199,9 @@ end subroutine cell_index
 
 !> Sets @p mask(j) true if @p particles(j) is a neighbour of
 !! @p particles(@p i) in the @p simbox.
-pure subroutine simplelist_nbrmask(sl, simbox, particles, i, mask)
+pure subroutine simplelist_nbrmask(sl, simbox, i, mask)
   type(simplelist), intent(in) :: sl
   type(poly_box), intent(in) :: simbox
-  type(particledat), dimension(:), intent(in) :: particles
   integer, intent(in) :: i 
   logical, intent(out) :: mask(:)
   integer :: ix,iy,iz !! cell indices of particle i
