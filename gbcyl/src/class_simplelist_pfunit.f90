@@ -3,7 +3,7 @@ use pfunit
 use particle
 use class_poly_box
 use class_simplelist
-use nrtype
+use num_kind
 implicit none
 
 contains
@@ -22,7 +22,7 @@ subroutine test_new_simplelist
     particles(i)%z = i*(-minlength*0.25_dp)
   end do
   !! Create new list 
-  call new_simplelist(sl, simbox, particles, minlength)
+  call new_simplelist(sl, simbox, particles, minlength, min_boundary_width=0._dp)
   !! Tests for lists contents
   call AssertEqual(n, sl%counts(0,0,0), "Number of particle indices in the&
   & cell 1,1,1 does not match the total particle number.")
@@ -38,7 +38,7 @@ subroutine test_new_simplelist
     particles(i)%y = i*(minlength-1e-9)*0.25_dp
     particles(i)%z = i*(minlength-1e-9)*0.25_dp
   end do
-  call new_simplelist(sl, simbox, particles, minlength)
+  call new_simplelist(sl, simbox, particles, minlength, min_boundary_width=0._dp)
   call AssertEqual(2, sl%counts(2,2,2), "More or less than two particles ended up in&
   & the cell 2,2,2")
   call AssertEqual(1, sl%counts(3,3,3), "More or less than one particle ended up in&
@@ -53,7 +53,7 @@ subroutine test_new_simplelist
 
   !! Cases where the creation might break:
   !! 1. Only one cell in some dimension
-  call new_simplelist(sl, simbox, particles, minlength)
+  call new_simplelist(sl, simbox, particles, minlength, min_boundary_width=0._dp)
   call AssertEqual(n, sl%counts(0,0,0), "Number of particle indices in the&
   & cell 1,1,1 does not match the total particle number.")
   call AssertEqual((/1,2,3/), sl%indices(1:3,0,0,0), "Some particles did not&
@@ -86,7 +86,7 @@ subroutine test_updateall
   particles(2)%y=0.5_dp*minlength
   particles(2)%z=0.5_dp*minlength
   !! Make a list of eight cells
-  call new_simplelist(sl, simbox, particles, minlength)
+  call new_simplelist(sl, simbox, particles, minlength, min_boundary_width=0._dp)
   call AssertEqual(n,sum(sl%counts), "Count of particle indices in cell list&
   & does not match particle count.")
   call AssertEqual(1,sl%counts(0,0,0), "More or less than one particle in cell&
@@ -97,7 +97,7 @@ subroutine test_updateall
   particles(1)%y=-0.5_dp*minlength
   !! Move second particle to (2,2,1)
   particles(2)%z=-0.5_dp*minlength
-  call update(sl, simbox, particles)
+  call simplelist_update(sl, simbox, particles)
   !! Check positions.
   call AssertEqual(n,sum(sl%counts), "Count of particle indices in cell list&
   & does not match particle count after update.")
@@ -131,17 +131,17 @@ subroutine test_nbrmask
   particles(3)%x=-1.5_dp*minlength
   particles(3)%y=-0.5_dp*minlength
   particles(3)%z=0.5*minlength
-  call new_simplelist(sl, simbox,particles, minlength)
+  call new_simplelist(sl, simbox,particles, minlength, min_boundary_width=0._dp)
   call AssertEqual((/4,4,4/), shape(sl%counts), "The list has wrong dimensions.")
-  call simplelist_nbrmask(sl,simbox,particles,1, mask)
+  call simplelist_nbrmask(sl,simbox, 1, mask)
   call AssertFalse(mask(1), "Periodicity test failed for particle 1")
   call AssertTrue(mask(2), "Periodicity test failed for particle 1")
   call AssertFalse(mask(3), "Periodicity test failed for particle 1")
-  call simplelist_nbrmask(sl,simbox,particles,2, mask)
+  call simplelist_nbrmask(sl,simbox, 2, mask)
   call AssertTrue(mask(1), "Periodicity test failed for particle 2")
   call AssertFalse(mask(2), "Periodicity test failed for particle 2")
   call AssertTrue(mask(3), "Periodicity test failed for particle 2")
-  call simplelist_nbrmask(sl,simbox,particles,3, mask)
+  call simplelist_nbrmask(sl,simbox, 3, mask)
   call AssertFalse(mask(1), "Periodicity test failed for particle 3")
   call AssertTrue(mask(2), "Periodicity test failed for particle 3")
   call AssertFalse(mask(3), "Periodicity test failed for particle 3")
