@@ -220,17 +220,17 @@ pure subroutine moveparticle_2(this, genstates, simbox, temperature, nbrs, &
   call newparticle%move(genstates(0))
   call setposition(newparticle, minimage(simbox, position(newparticle)))
   allocate(oldparticle, source=this)
-  this = newparticle
+  call this%downcast_assign(newparticle)
  
   call this%energy(nbrs, pair_ia, simbox, subr_single_energy, enew, err)
   
-  this = oldparticle
+  call this%downcast_assign(oldparticle)
   if(err == 0) then 
      call this%energy(nbrs, pair_ia, simbox, subr_single_energy, &
           enew, err)
      call acceptchange(eold, enew, temperature, genstates(0), isaccepted)
      if(isaccepted) then
-        this = newparticle
+        call this%downcast_assign(newparticle)
         dE = enew - eold
      end if
   end if
