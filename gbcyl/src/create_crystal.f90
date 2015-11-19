@@ -1,4 +1,5 @@
 program create_crystal
+  use utils, only: splitstr, join
   use m_crystal
   use particle
   use class_factory
