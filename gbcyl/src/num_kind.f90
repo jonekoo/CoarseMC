@@ -1,6 +1,5 @@
-MODULE nrtype
-  INTEGER, PARAMETER :: SP = KIND(1.0)
-  INTEGER, PARAMETER :: DP = KIND(1.0D0)
-  INTEGER, PARAMETER :: SPC = KIND((1.0,1.0))
-  INTEGER, PARAMETER :: DPC = KIND((1.0D0,1.0D0))
-END MODULE nrtype
+MODULE num_kind
+  use iso_fortran_env, only: sp => REAL32, dp => REAL64
+  integer, parameter :: spc = kind((1.0_sp, 1.0_sp))
+  integer, parameter :: dpc = kind((1.0_dp, 1.0_dp))
+END MODULE num_kind
