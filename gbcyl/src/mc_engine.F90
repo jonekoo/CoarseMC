@@ -3,8 +3,8 @@
 module mc_engine
   use m_particlegroup, only: make_particle_moves, update_volume, &
        total_energy, mc_sweep_writeparameters, mcsweep_finalize, &
-       mcsweep_init, get_maxscaling, set_maxscaling, particlegroup, &
-       particlegroup_ptr
+       get_maxscaling, set_maxscaling, particlegroup, particlegroup_ptr, &
+       mc_sweep_to_json, particlegroup_init
   use class_factory, only: factory, factory_readstate, factory_writestate
   use mt_stream
   use m_fileunit
@@ -13,7 +13,7 @@ module mc_engine
   use class_parameter_writer
   use particle, only: pair_interaction, particledat
   use particle_mover, only: particlemover_init, particlemover_writeparameters,&
-       get_max_translation, getmaxmoves, setmaxmoves
+       get_max_translation, getmaxmoves, setmaxmoves, particlemover_to_json
   use beta_exchange, only: write_stats, reset_counters, &
        beta_exchange_init => init, be_finalize => finalize, try_beta_exchanges
   use class_pair_potential, only: create_conditional_interaction, pp_init, &
@@ -21,8 +21,10 @@ module mc_engine
   use num_kind
   use iso_fortran_env, only: error_unit, output_unit
   use particlewall, only: particlewall_potential, particlewall_init, &
-       particlewall_writeparameters
+       particlewall_writeparameters, particlewall_to_json
+  use utils, only: splitstr, join
   !$ use omp_lib
+  use json_module
   implicit none
   
   !> The number of equilibration MC sweeps in the simulation.  Equilibration
@@ -105,7 +107,8 @@ module mc_engine
   type(particlegroup_ptr), allocatable, save :: groups(:)
   type(poly_box), save :: simbox
 
-  class(pair_interaction), allocatable :: pair_ia
+  character(len=20), allocatable, save :: group_names(:)
+  class(pair_interaction), allocatable, save :: pair_interactions(:, :)
   
 contains
   
@@ -124,87 +127,40 @@ subroutine mce_init(id, n_tasks)
   character(len=80) :: parameterinputfile
 
   type(parameterizer) :: parameterreader
-  integer :: thread_id = 0, n_threads = 1
   type(particledat), allocatable :: particles(:)
   integer :: err
+  character(len=50) :: temp
+  logical :: found
   
   write(idchar, '(I9)') id 
   idchar = trim(adjustl(idchar))
   isrestart = .false.
-  parameterinputfile='inputparameters.'//trim(adjustl(idchar))
+  parameterinputfile = 'inputparameters.' // trim(adjustl(idchar))
   parameterreader = new_parameterizer(parameterinputfile, iostat=ios)
-  if (ios/=0) then
+  if (ios /= 0) then
      write(error_unit, *) 'ERROR: Could not open ' // &
           trim(adjustl(parameterinputfile))
     stop
   end if
-  !$ n_threads = omp_get_max_threads()
-  allocate(mts(0:n_threads - 1))
-  call set_mt19937
-  call new(mts(thread_id))
-  call getparameter(parameterreader, 'seed', seed)
-  if (seed < 0) then 
-    call system_clock(seed)
-    write(error_unit, *) "Warning: Seeding RNG with system clock."
-  end if
-  if (seed < 0) then
-     write(error_unit, *) &
-          "Warning: system_clock query failed, using default seed 1234567."
-     seed = 1234567 
-  end if
-  call init(mts(thread_id), seed)
+  call mce_readparameters(parameterreader)
+  call delete(parameterreader)
 
-  !$ write(output_unit, *) 'Running with ', n_threads, ' threads.'
+  call json_initialize()
 
-  !! Give different random number streams to each OpenMP thread inside a
-  !! MPI task.
-  !$OMP PARALLEL DO
-  !$ do thread_id = 1, n_threads-1
-    if (id + n_tasks * thread_id > 0) then 
-      call create_stream(mts(0), mts(thread_id), id + n_tasks * thread_id)
-    end if
-  !$ end do
-  !$OMP END PARALLEL DO
+  call mce_init_rng(id, n_tasks)
 
-  call getparameter(parameterreader, 'n_equilibration_sweeps', &
-  nequilibrationsweeps)
-  call getparameter(parameterreader, 'n_production_sweeps', &
-  nproductionsweeps)
-  call getparameter(parameterreader, 'production_period', &
-  productionperiod)
-  call getparameter(parameterreader, 'i_sweep', isweep)
-  call getparameter(parameterreader, 'move_adjusting_period', &
-       moveadjustperiod)
-  call getparameter(parameterreader, 'move_ratio', moveratio)
-  call getparameter(parameterreader, 'scaling_ratio', scalingratio)
-  call getparameter(parameterreader, 'pt_period', pt_period)
-  call getparameter(parameterreader, 'pt_adjusting_period', ptadjustperiod)
-  call getparameter(parameterreader, 'restartperiod', restartperiod)
-  call getparameter(parameterreader, 'temperature', temperature)
   if (temperature < 0._dp) then
      write(error_unit, *) 'ERROR: mc_engine '//&
           'tried to set a negative temperature.'
      stop  
   end if
-  call getparameter(parameterreader, 'pressure', pressure)
+  call beta_exchange_init(1._dp / temperature)
+
   if (pressure < 0._dp) then
      write(error_unit, *) 'ERROR: mc_engine '//&
           'tried to set a negative pressure.'
      stop  
   end if
-
-  call getparameter(parameterreader, 'nmovetrials', nmovetrials)
-  call getparameter(parameterreader, 'nscalingtrials', nscalingtrials)
-  call getparameter(parameterreader, 'nacceptedscalings', nacceptedscalings)
-
-  !! Initialize modules.
-  call pp_init(parameterreader)
-  allocate(pair_ia, source=create_conditional_interaction())
-  call particlewall_init(parameterreader)
-  call particlemover_init(parameterreader)
-  call mcsweep_init(parameterreader)
-  call beta_exchange_init(1._dp / temperature)
-  call delete(parameterreader)
 
   !! Read geometry
   coordinateunit = fileunit_getfreeunit()
@@ -218,8 +174,10 @@ subroutine mce_init(id, n_tasks)
     stop
   end if
   close(coordinateunit)
-
-  call create_groups(simbox, particles, groups)
+  group_names = ["gb", "lj"]
+  call create_interactions(pair_interactions, group_names)
+  call create_groups(parameterreader, simbox, particles, group_names, &
+       pair_interactions, groups)
  
   !! Open output for geometries
   coordinateunit = fileunit_getfreeunit()
@@ -231,8 +189,8 @@ subroutine mce_init(id, n_tasks)
           ' for writing.'
      stop
   end if
-  call total_energy(groups, simbox, pair_ia, particlewall_potential, etotal, &
-       err)
+  call total_energy(groups, simbox, pair_interactions(1,1), &
+       particlewall_potential, etotal, err)
   if (err /= 0) then
      write(error_unit, *) 'ERROR: mce_init: total_energy returned err = ', err
      stop
@@ -241,31 +199,132 @@ subroutine mce_init(id, n_tasks)
 end subroutine mce_init
 
 
-subroutine create_groups(simbox, particles, groups)
+subroutine mce_readparameters(parameterreader)
+  type(parameterizer), intent(in) :: parameterreader
+    
+  call getparameter(parameterreader, 'n_equilibration_sweeps', &
+       nequilibrationsweeps)
+  call getparameter(parameterreader, 'n_production_sweeps', &
+       nproductionsweeps)
+  call getparameter(parameterreader, 'production_period', &
+       productionperiod)
+  call getparameter(parameterreader, 'i_sweep', isweep)
+  call getparameter(parameterreader, 'move_adjusting_period', &
+       moveadjustperiod)
+  call getparameter(parameterreader, 'move_ratio', moveratio)
+  call getparameter(parameterreader, 'scaling_ratio', scalingratio)
+  call getparameter(parameterreader, 'pt_period', pt_period)
+  call getparameter(parameterreader, 'pt_adjusting_period', ptadjustperiod)
+  call getparameter(parameterreader, 'restartperiod', restartperiod)
+  call getparameter(parameterreader, 'temperature', temperature)
+  call getparameter(parameterreader, 'pressure', pressure)
+  call getparameter(parameterreader, 'seed', seed)
+  call getparameter(parameterreader, 'nmovetrials', nmovetrials)
+  call getparameter(parameterreader, 'nscalingtrials', nscalingtrials)
+  call getparameter(parameterreader, 'nacceptedscalings', nacceptedscalings)
+
+    !! Initialize modules.
+  call pp_init(parameterreader)
+  call particlewall_init(parameterreader)
+  call particlemover_init(parameterreader)
+  call particlegroup_init(parameterreader)
+end subroutine mce_readparameters
+
+
+subroutine mce_from_json(json_val)
+  type(json_value), pointer, intent(in) :: json_val    
+  call json_get(json_val, 'n_equilibration_sweeps', &
+       nequilibrationsweeps)
+  call json_get(json_val, 'n_production_sweeps', &
+       nproductionsweeps)
+  call json_get(json_val, 'production_period', &
+       productionperiod)
+  call json_get(json_val, 'i_sweep', isweep)
+  call json_get(json_val, 'move_adjusting_period', &
+       moveadjustperiod)
+  call json_get(json_val, 'move_ratio', moveratio)
+  call json_get(json_val, 'scaling_ratio', scalingratio)
+  call json_get(json_val, 'pt_period', pt_period)
+  call json_get(json_val,  'pt_adjusting_period', ptadjustperiod)
+  call json_get(json_val, 'restartperiod', restartperiod)
+  call json_get(json_val, 'temperature', temperature)
+  call json_get(json_val, 'pressure', pressure)
+  call json_get(json_val, 'seed', seed)
+  call json_get(json_val, 'nmovetrials', nmovetrials)
+  call json_get(json_val, 'nscalingtrials', nscalingtrials)
+  call json_get(json_val, 'nacceptedscalings', nacceptedscalings)
+
+  !! Initialize modules.
+  call particlewall_init(json_val)
+  call particlemover_init(json_val)
+  call particlegroup_init(json_val)
+end subroutine mce_from_json
+
+
+subroutine mce_init_rng(id, n_tasks)
+  integer, intent(in) :: id, n_tasks
+  integer :: thread_id = 0, n_threads = 1
+  !$ n_threads = omp_get_max_threads()
+  
+  allocate(mts(0:n_threads - 1))
+  call set_mt19937
+  call new(mts(thread_id))
+  if (seed < 0) then 
+     call system_clock(seed)
+     write(error_unit, *) "Warning: Seeding RNG with system clock."
+  end if
+  if (seed < 0) then
+     write(error_unit, *) &
+          "Warning: system_clock query failed, using default seed 1234567."
+     seed = 1234567 
+  end if
+  call init(mts(thread_id), seed)
+  
+  !$ write(output_unit, *) 'Running with ', n_threads, ' threads.'
+  
+  !! Give different random number streams to each OpenMP thread inside a
+  !! MPI task.
+  !$OMP PARALLEL DO
+  !$ do thread_id = 1, n_threads-1
+  if (id + n_tasks * thread_id > 0) then 
+     call create_stream(mts(0), mts(thread_id), id + n_tasks * thread_id)
+  end if
+  !$ end do
+  !$OMP END PARALLEL DO  
+end subroutine mce_init_rng
+
+
+subroutine create_groups(reader, simbox, particles, group_names, &
+     pair_interactions, groups)
+  class(parameterizer), intent(inout) :: reader
   type(poly_box), intent(in) :: simbox
   type(particledat), intent(in) :: particles(:)
+  character(len=*), intent(in) :: group_names(:)
+  class(pair_interaction), intent(in) :: pair_interactions(:, :)
   type(particlegroup_ptr), allocatable, intent(out) :: groups(:)
-  integer :: n_rods
-  n_rods = count(particles%rod)
-  if (size(particles) == n_rods .or. n_rods == 0) then
-     allocate(groups(1))
-     allocate(groups(1)%ptr, source=particlegroup(simbox, particles, &
-          min_cell_length=pair_ia%get_cutoff() + &
-          2 * get_max_translation(), &
-          min_boundary_width=2 * get_max_translation()))
-  else
-     allocate(groups(2))
-     allocate(groups(1)%ptr, source=particlegroup(simbox, &
-          pack(particles, particles%rod), &
-          min_cell_length=pair_ia%get_cutoff() + &
-          2 * get_max_translation(), &
-          min_boundary_width=2 * get_max_translation()))
-     allocate(groups(2)%ptr, source=particlegroup(simbox, &
-          pack(particles, .not. particles%rod), &
-          min_cell_length=pair_ia%get_cutoff() + &
-          2 * get_max_translation(), &
-          min_boundary_width=2 * get_max_translation()))
-  end if
+  character(len=20) :: group_type
+  integer :: i
+  real(dp) :: max_cutoff
+  max_cutoff = pair_interactions(1, 1)%get_cutoff()
+  allocate(groups(size(group_names)))
+  do i = 1, size(group_names)
+     if (group_names(i) == 'gb') then
+        allocate(groups(i)%ptr, source=particlegroup(simbox, &
+             pack(particles, particles%rod), &
+             min_cell_length=max_cutoff + &
+             2 * get_max_translation(), &
+             min_boundary_width=2 * get_max_translation()))
+     else if (group_names(i) == 'lj') then
+        allocate(groups(i)%ptr, source=particlegroup(simbox, &
+             pack(particles, .not. particles%rod), &
+             min_cell_length=max_cutoff + &
+             2 * get_max_translation(), &
+             min_boundary_width=2 * get_max_translation()))
+     else
+        write(error_unit, *) 'ERROR: unknown group type ' // &
+             trim(adjustl(group_type))
+     end if
+  end do
 end subroutine create_groups
 
 
@@ -306,15 +365,14 @@ subroutine sweep(simbox, groups, genstates, isweep)
   integer :: n_trials, n_accepted, err
   dE = 0.
   call make_particle_moves(groups, genstates, simbox, temperature, & 
-       pair_ia, particlewall_potential, dE, n_trials, n_accepted)
-  
+       pair_interactions(1,1), particlewall_potential, dE, n_trials, n_accepted)
   write(output_unit, *) "etotal + dE = ", etotal, " + ", dE, " = ", etotal + dE
-  call total_energy(groups, simbox, pair_ia, particlewall_potential, etotal, &
-       err)
+  call total_energy(groups, simbox, pair_interactions(1,1), &
+       particlewall_potential, etotal, err)
   write(output_unit, *) "etotal updated = ", etotal
   nmovetrials = nmovetrials + n_trials
   nacceptedmoves = nacceptedmoves + n_accepted
-  call update_volume(simbox, groups, genstates(0), pair_ia, &
+  call update_volume(simbox, groups, genstates(0), pair_interactions(1,1), &
        particlewall_potential, temperature, pressure, etotal, &
        n_trials, n_accepted)
   nscalingtrials = nscalingtrials + n_trials
@@ -336,6 +394,8 @@ end subroutine sweep
 !!
 subroutine mce_writeparameters(writer)
   type(parameter_writer), intent(inout) :: writer
+  character(len=:), allocatable :: temp
+  integer :: i
   call writecomment(writer, 'mc engine parameters')
   call writeparameter(writer, 'n_equilibration_sweeps', &
   nequilibrationsweeps)
@@ -371,12 +431,106 @@ subroutine mce_writeparameters(writer)
   else
      call writeparameter(writer, 'current_scaling_ratio', 'nan')
   end if
-  !call energy_writeparameters(writer)
+  if (allocated(temp)) deallocate(temp)
+  write(*, *) group_names, size(group_names)
+  !allocate(character(len=size(group_names) * 20) :: temp)
+
+  !call join(group_names, ',', temp)
+  !call writeparameter(writer, 'groups', trim(adjustl(temp)))
+  !do i = 1, size(groups)
+     !select type (groups(i)%particles)
+     !type is (rod)
+     !   call writeparameter(writer, trim(adjustl(group_names(i))) // '_type', &
+     !        'rod')
+     !type is (point)
+     !   call writeparameter(writer, trim(adjustl(group_names(i))) // '_type', &
+     !        'rod')
+     !class default
+     !   write(error_unit, *) 'ERROR: mce_writeparameters: unknown particle type'
+     !end select
+     !if (all(groups(i)%ptr%particles%rod)) then
+     !   call writeparameter(writer, trim(adjustl(group_names(i))) // '_type', &
+     !        'rod')
+     !else if (all(.not. groups(i)%ptr%particles%rod)) then
+     !   call writeparameter(writer, trim(adjustl(group_names(i))) // '_type', &
+     !        'point')
+     !else
+     !   write(error_unit, *) 'ERROR: unknown particle type'
+     !end if
+  !end do
   call pp_writeparameters(writer)
   call particlewall_writeparameters(writer)
   call particlemover_writeparameters(writer)
   call mc_sweep_writeparameters(writer)
 end subroutine
+
+subroutine mce_tojson(json_val)
+  type(json_value), pointer, intent(out) :: json_val
+  integer :: i
+  type(json_value), pointer :: json_child, group_name, pair_ia_json
+  call json_create_object(json_val, 'mc_engine')
+  !call writecomment(writer, 'mc engine parameters')
+  
+  call json_add(json_val, 'n_equilibration_sweeps', &
+  nequilibrationsweeps)
+  call json_add(json_val, 'n_production_sweeps', nproductionsweeps)
+  call json_add(json_val, 'i_sweep', isweep)
+  call json_add(json_val, 'production_period', productionperiod)
+  call json_add(json_val, 'move_adjusting_period', moveadjustperiod)
+  call json_add(json_val, 'pt_period', pt_period)
+  call json_add(json_val, 'pt_adjusting_period', ptadjustperiod)
+  call json_add(json_val, 'restartperiod', restartperiod)
+  call json_add(json_val, 'seed', seed)
+  call json_add(json_val, 'pressure', pressure)
+  call json_add(json_val, 'temperature', temperature)
+  call json_add(json_val, 'volume', volume(simbox))
+  call json_add(json_val, 'total_energy', etotal)
+  call json_add(json_val, 'enthalpy', etotal + &
+       volume(simbox) * pressure)
+  call json_add(json_val, 'move_ratio', moveratio)
+  call json_add(json_val, 'scaling_ratio', scalingratio)
+  call json_add(json_val, 'nmovetrials', nmovetrials)
+  call json_add(json_val, 'nacceptedmoves', nacceptedmoves)
+  if (nmovetrials > 0) then
+     call json_add(json_val, 'current_move_ratio', &
+          real(nacceptedmoves, dp)/real(nmovetrials, dp))
+  else
+     call json_add(json_val, 'current_move_ratio', 'nan')
+  end if
+  call json_add(json_val, 'nscalingtrials', nscalingtrials)
+  call json_add(json_val, 'nacceptedscalings', nacceptedscalings)
+  if (nscalingtrials > 0) then
+     call json_add(json_val, 'current_scaling_ratio', &
+          real(nacceptedscalings, dp)/real(nscalingtrials, dp))
+  else
+     call json_add(json_val, 'current_scaling_ratio', 'nan')
+  end if
+  
+  !! Write group names.
+  call json_create_array(json_child, 'groups')
+  do i = 1, size(group_names)
+     call json_create_string(group_name, group_names(i), '')
+     call json_add(json_child, group_name)
+  end do
+  call json_add(json_val, json_child)
+  
+  !! Write pair interaction names.
+  !call json_create_array(pair_ia_json, 'pair_interactions')
+  !do j = 1, size(pair_interactions, 2) 
+  !   do i = 1, size(pair_interactions, 1)
+  !      call json_create_string(interaction_name, &
+  !           pair_interactions(i, j)%get_type(), '')
+  !      call json_add(pair_ia_json, interaction_name)
+  !   end do
+  !end do
+
+  call json_create_object(pair_ia_json, 'pair_interactions')
+  call pair_interactions(1, 1)%to_json(pair_ia_json)
+  call json_add(json_val, pair_ia_json) 
+  call particlewall_to_json(json_val)
+  call particlemover_to_json(json_val)
+  call mc_sweep_to_json(json_val)
+end subroutine mce_tojson
 
 
 !> Runs the simulation. 
@@ -390,8 +544,9 @@ subroutine run
          if (mod(isweep, moveadjustperiod) == 0) then
             call updatemaxvalues
             do i = 1, size(groups)
-               groups(i)%ptr%sl%min_length = pair_ia%get_cutoff() + &
-                    2._dp * get_max_translation()
+               groups(i)%ptr%sl%min_length = &
+                    pair_interactions(1,1)%get_cutoff() + 2._dp * &
+                    get_max_translation()
             end do
          end if
       end if
@@ -421,6 +576,8 @@ subroutine makerestartpoint
   character(len=80) :: parameterfile
   character(len=80) :: configurationfile
   integer :: ios
+  type(json_value), pointer :: restart_json
+  restart_json => null()
 
   !! Write parameters to a restartfile
   parameterunit = fileunit_getfreeunit()
@@ -431,6 +588,11 @@ subroutine makerestartpoint
        'makerestartpoint failed opening', parameterfile
   pwriter = new_parameter_writer(parameterunit)
   call mce_writeparameters(pwriter)
+
+  call mce_tojson(restart_json)
+  call json_print(restart_json, 'restart.json')
+  call json_destroy(restart_json)
+  
   close(parameterunit)
 
   !! Write configurations to a restartfile
@@ -571,12 +733,23 @@ end function newmaxvalue
 !> Check that @p simbox is large enough if it is periodic.
 subroutine check_simbox(simbox)
   type(poly_box), intent(in) :: simbox
-  if (simbox%xperiodic .and. getx(simbox) < 2._dp * pair_ia%get_cutoff()) &
+  if (simbox%xperiodic .and. getx(simbox) < 2._dp * &
+       pair_interactions(1,1)%get_cutoff()) &
        stop 'Simulation box too small!'
-  if (simbox%yperiodic .and. gety(simbox) < 2._dp * pair_ia%get_cutoff()) &
+  if (simbox%yperiodic .and. gety(simbox) < 2._dp * &
+       pair_interactions(1,1)%get_cutoff()) &
        stop 'Simulation box too small!'
-  if (simbox%zperiodic .and. getz(simbox) < 2._dp * pair_ia%get_cutoff()) &
+  if (simbox%zperiodic .and. getz(simbox) < 2._dp * &
+       pair_interactions(1,1)%get_cutoff()) &
        stop 'Simulation box too small!'
 end subroutine
+
+
+subroutine create_interactions(pair_ias, group_names)
+  class(pair_interaction), intent(inout), allocatable :: pair_ias(:, :)
+  character(len=*), intent(in) :: group_names(:)
+  allocate(pair_ias(size(group_names), size(group_names)), &
+       source=create_conditional_interaction())
+end subroutine create_interactions
 
 end module
