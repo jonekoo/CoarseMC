@@ -1,11 +1,12 @@
 !> Implements the basic functions needed to handle data for simple, 
 !! uniaxial particles such as in the Gay-Berne potential.
 module particle
+  use iso_fortran_env, only: error_unit, output_unit, dp => REAL64
   use utils, only: fmt_char_dp, acceptchange
   use class_poly_box, only: poly_box, minimage
   include 'rng.inc'
   use particle_mover, only: transmove, rotate
-  use iso_fortran_env, only: error_unit, output_unit, dp => REAL64
+  use json_module
   implicit none
   
   !> Holds data of a uniaxial particle, e.g. Gay-Berne 
@@ -83,6 +84,7 @@ type, abstract :: pair_interaction
    procedure(pair_potential), deferred :: pair_potential
    procedure(pair_force), deferred :: pair_force
    procedure(get_cutoff), deferred :: get_cutoff
+   procedure(to_json), deferred :: to_json
 end type pair_interaction
 
 abstract interface
@@ -109,6 +111,12 @@ abstract interface
      class(pair_interaction), intent(in) :: this
      real(dp) :: res
    end function get_cutoff
+
+   subroutine to_json(this, json_val)
+     import pair_interaction, json_value
+     class(pair_interaction), intent(in) :: this
+     type(json_value), pointer, intent(inout) :: json_val
+   end subroutine to_json
 end interface
 
 contains
