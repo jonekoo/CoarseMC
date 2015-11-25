@@ -1,46 +1,61 @@
 !> Implements routines for creating trial Monte Carlo translations and
 !! rotations for uniaxial particles, such as in the Gay-Berne model.
 module particle_mover
-use num_kind
-use utils
-use class_parameterizer
-use class_parameter_writer
-include 'rng.inc'
-implicit none
+  use iso_fortran_env, only: error_unit
+  use num_kind
+  use utils
+  use class_parameterizer
+  use class_parameter_writer
+  use json_module
+  include 'rng.inc'
+  implicit none
   
-!> The maximum angle for a trial rotation.
-real(dp), save :: max_rotation = -1._dp
-
-!> The maximum change in position for a trial translation.
-real(dp), save :: max_translation = -1._dp
-
-!> True when this module has been initialized.
-logical, save :: is_initialized = .false.
-
-!> Initializes the module. 
-interface particlemover_init
-  module procedure particlemover_init1, particlemover_init2
-end interface
-
+  !> The maximum angle for a trial rotation.
+  real(dp), save :: max_rotation = -1._dp
+  
+  !> The maximum change in position for a trial translation.
+  real(dp), save :: max_translation = -1._dp
+  
+  !> True when this module has been initialized.
+  logical, save :: is_initialized = .false.
+  
+  !> Initializes the module. 
+  interface particlemover_init
+     module procedure particlemover_init_parameterizer, particlemover_init2, &
+          particlemover_from_json
+  end interface particlemover_init
+  
 contains
 
+  subroutine particlemover_from_json(json_val)
+    type(json_value), pointer, intent(in) :: json_val
+    call json_get(json_val, 'max_translation', max_translation)
+    call json_get(json_val, 'max_rotation', max_rotation)
+    call particlemover_init_common
+  end subroutine particlemover_from_json
+  
+  subroutine particlemover_init_parameterizer(reader)
+    type(parameterizer), intent(in) :: reader
+    call getparameter(reader, 'max_translation', max_translation)
+    call getparameter(reader, 'max_rotation', max_rotation)
+    call particlemover_init_common
+  end subroutine particlemover_init_parameterizer
+  
   !> Initializes this module using a parameterizer object.
   !! 
   !! @param reader the parameterizer object which gives (reads) the parameters
   !! to this module.
   !! 
-  subroutine particlemover_init1(reader)
-    type(parameterizer), intent(in) :: reader
-    call getparameter(reader, 'max_translation', max_translation)
-    call getparameter(reader, 'max_rotation', max_rotation)
-    if(max_translation < 0._dp) stop 'No max_translation given. Stopping.'
+  subroutine particlemover_init_common
+    if(max_translation < 0._dp) stop 'ERROR: max_translation < 0'
     if(max_rotation < 0._dp) then
        !! Set rotation to move end of molecule about as much as translation.
        max_rotation = 2._dp * asin(max_translation / 4.4_dp)
-       write(*, *) 'init_particle: Assuming molecule length is 4.4.'
+       write(error_unit, *) 'Warning: max_rotation < 0. Assuming molecule ' //&
+       'length is 4.4 and setting max_rotation = ', max_rotation
     end if
     is_initialized = .true.
-  end subroutine particlemover_init1
+  end subroutine particlemover_init_common
 
   !> Initializes the module by setting the maximum translation and
   !! rotation to @p distance and @p angle, respectively. 
@@ -50,7 +65,7 @@ contains
     real(dp), intent(in) :: angle
     max_rotation = angle
     max_translation = distance
-    is_initialized = .true.
+    call particlemover_init_common
   end subroutine
 
   !> Writes the module parameters. Output unit and format are defined
@@ -60,6 +75,13 @@ contains
     call writecomment(writer, 'Particle moving parameters')
     call writeparameter(writer, 'max_translation', max_translation)
     call writeparameter(writer, 'max_rotation', max_rotation)    
+  end subroutine
+
+  !> Writes the module parameters to json object @p json_val.
+  subroutine particlemover_to_json(json_val)
+    type(json_value), pointer, intent(in) :: json_val
+    call json_add(json_val, 'max_translation', max_translation)
+    call json_add(json_val, 'max_rotation', max_rotation)    
   end subroutine
 
   !> Creates a new position @p xn, @p yn, @p zn from @p xo, @p yo, @p zo by
