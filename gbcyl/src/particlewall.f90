@@ -13,6 +13,7 @@ module particlewall
   use class_parameterizer
   use class_parameter_writer
   use ljcylinder
+  use json_module
   implicit none
     
   !> The relative strength of attractive term as compared to the
@@ -56,7 +57,7 @@ module particlewall
 
   !> Initializes the module.
   interface particlewall_init
-     module procedure particlewall_init1
+     module procedure particlewall_init1, particlewall_from_json
   end interface
 
 contains 
@@ -84,6 +85,32 @@ contains
       !! Use the new parameters epswall_lj and epswall
       call getparameter(reader, 'epswall_LJ', epswall_lj)
       call getparameter(reader, 'epswall', eps)
+    end if 
+  end subroutine
+
+  !> Initializes the module with parameters read by @p reader.
+  subroutine particlewall_from_json(json_val)
+    type(json_value), pointer, intent(in) :: json_val
+    real(dp) :: Kw_LJ = 5.48819_dp, Kw = 8._dp
+    logical :: found
+    call json_get(json_val, 'alpha_A', alpha_a) 
+    call json_get(json_val, 'alpha_B', alpha_b) 
+    call json_get(json_val, 'LJ_dist', LJdist) 
+    call json_get(json_val, 'is_uniform_alignment', isuniformalignment)
+    call json_get(json_val, 'sigwall', sig)
+    call json_get(json_val, 'alpha_LJ', alpha_lj)
+    call json_get(json_val, 'sigwall_LJ', sigwall_lj)
+    call json_get(json_val, 'wall_density', wall_density, found)
+    if (.not. found) then
+      !! Try to read old parameters
+      call json_get(json_val, 'Kw', Kw)
+      eps = Kw / 8._dp
+      call json_get(json_val, 'Kw_LJ', Kw_LJ)
+      epswall_lj = Kw_LJ / (Kw * (sigwall_lj/sig)**3) 
+    else
+      !! Use the new parameters epswall_lj and epswall
+      call json_get(json_val, 'epswall_LJ', epswall_lj)
+      call json_get(json_val, 'epswall', eps)
     end if 
   end subroutine
 
@@ -128,6 +155,28 @@ contains
     call writeparameter(writer, 'alpha_LJ', alpha_lj)
     call writeparameter(writer, 'sigwall_LJ', sigwall_lj)
     call writeparameter(writer, 'epswall_LJ', epswall_lj)
+  end subroutine
+
+
+  !> Writes the parameters of this module with the format and output
+  !! unit defined by @p writer.
+  subroutine particlewall_to_json(json_val)
+    type(json_value), intent(inout), pointer :: json_val
+    
+    call json_add(json_val, 'wall_density', wall_density)
+
+    call json_add(json_val, 'rodwall', 'ljdimer-wall')
+    call json_add(json_val, 'alpha_A', alpha_a) 
+    call json_add(json_val, 'alpha_B', alpha_b) 
+    call json_add(json_val, 'LJ_dist', LJdist) 
+    call json_add(json_val, 'is_uniform_alignment', isuniformalignment)
+    call json_add(json_val, 'sigwall', sig)
+    call json_add(json_val, 'epswall', eps)
+
+    call json_add(json_val, 'pointwall', 'ljcylinder')
+    call json_add(json_val, 'alpha_LJ', alpha_lj)
+    call json_add(json_val, 'sigwall_LJ', sigwall_lj)
+    call json_add(json_val, 'epswall_LJ', epswall_lj)
   end subroutine
 
 
