@@ -1,6 +1,7 @@
 module m_sphere_interaction
   use num_kind
   use class_parameter_writer
+  use json_module, only: json_value
   implicit none
   
   type, abstract :: sphere_interaction
@@ -8,9 +9,10 @@ module m_sphere_interaction
      procedure(sphere_potential), deferred :: potential
      procedure(sphere_force), deferred :: force
      procedure(sphere_writeparameters), deferred :: writeparameters
+     procedure(to_json), deferred :: to_json
   end type sphere_interaction
 
-  interface
+  abstract interface
      pure subroutine sphere_potential(this, r, energy, overlap)
        import sphere_interaction, dp
        class(sphere_interaction), intent(in) :: this
@@ -31,6 +33,12 @@ module m_sphere_interaction
        class(sphere_interaction), intent(in) :: this
        type(parameter_writer), intent(inout) :: writer
      end subroutine sphere_writeparameters
+
+     subroutine to_json(this, json_val)
+       import sphere_interaction, json_value
+       class(sphere_interaction), intent(in) :: this
+       type(json_value), pointer, intent(inout) :: json_val
+     end subroutine to_json
   end interface
   
 
