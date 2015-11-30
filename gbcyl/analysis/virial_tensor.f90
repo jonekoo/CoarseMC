@@ -33,8 +33,7 @@ read(*, *) idchar
 reader = new_parameterizer('inputparameters.'//trim(adjustl(idchar)), &
      logfile="virial_tensor_log."//trim(adjustl(idchar)))
 !! Initialize the modules needed
-call pp_init(reader)
-allocate(pair_ia, source=create_conditional_interaction())
+allocate(pair_ia, source=conditional_pair_interaction(reader))
 call getparameter(reader, 'temperature', temperature)
 call getparameter(reader, 'r_cutoff', cutoff)
 coordinateunit = fileunit_getfreeunit()

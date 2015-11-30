@@ -44,8 +44,7 @@ read(*, *) idchar
 !! Read inputparameters
 reader = new_parameterizer('inputparameters.'//trim(adjustl(idchar)), &
      logfile = "printpotentials_log."//trim(adjustl(idchar)))
-call pp_init(reader)
-allocate(pair_ia, source=create_conditional_interaction())
+allocate(pair_ia, source=conditional_pair_interaction(reader))
 
 call getparameter(reader, 'is_wall_on', is_wall_on)
 if (is_wall_on) then
