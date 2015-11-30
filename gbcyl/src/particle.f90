@@ -6,7 +6,8 @@ module particle
   use class_poly_box, only: poly_box, minimage
   include 'rng.inc'
   use particle_mover, only: transmove, rotate
-  use json_module
+  use json_module, only: json_value
+  use class_parameter_writer, only: parameter_writer
   implicit none
   
   !> Holds data of a uniaxial particle, e.g. Gay-Berne 
@@ -85,6 +86,7 @@ type, abstract :: pair_interaction
    procedure(pair_force), deferred :: pair_force
    procedure(get_cutoff), deferred :: get_cutoff
    procedure(to_json), deferred :: to_json
+   procedure(writeparameters), deferred :: writeparameters
 end type pair_interaction
 
 abstract interface
@@ -117,6 +119,12 @@ abstract interface
      class(pair_interaction), intent(in) :: this
      type(json_value), pointer, intent(inout) :: json_val
    end subroutine to_json
+
+   subroutine writeparameters(this, writer)
+     import pair_interaction, parameter_writer
+     class(pair_interaction), intent(in) :: this
+     type(parameter_writer), intent(inout) :: writer
+   end subroutine writeparameters
 end interface
 
 contains
