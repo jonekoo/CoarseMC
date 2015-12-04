@@ -14,6 +14,7 @@ module particlewall
   use class_parameter_writer
   use ljcylinder
   use json_module
+  use m_json_wrapper, only: get_parameter
   implicit none
     
   !> The relative strength of attractive term as compared to the
@@ -91,27 +92,16 @@ contains
   !> Initializes the module with parameters read by @p reader.
   subroutine particlewall_from_json(json_val)
     type(json_value), pointer, intent(in) :: json_val
-    real(dp) :: Kw_LJ = 5.48819_dp, Kw = 8._dp
-    logical :: found
-    call json_get(json_val, 'alpha_A', alpha_a) 
-    call json_get(json_val, 'alpha_B', alpha_b) 
-    call json_get(json_val, 'LJ_dist', LJdist) 
-    call json_get(json_val, 'is_uniform_alignment', isuniformalignment)
-    call json_get(json_val, 'sigwall', sig)
-    call json_get(json_val, 'alpha_LJ', alpha_lj)
-    call json_get(json_val, 'sigwall_LJ', sigwall_lj)
-    call json_get(json_val, 'wall_density', wall_density, found)
-    if (.not. found) then
-      !! Try to read old parameters
-      call json_get(json_val, 'Kw', Kw)
-      eps = Kw / 8._dp
-      call json_get(json_val, 'Kw_LJ', Kw_LJ)
-      epswall_lj = Kw_LJ / (Kw * (sigwall_lj/sig)**3) 
-    else
-      !! Use the new parameters epswall_lj and epswall
-      call json_get(json_val, 'epswall_LJ', epswall_lj)
-      call json_get(json_val, 'epswall', eps)
-    end if 
+    call get_parameter(json_val, 'alpha_A', alpha_a, error_lb=0._dp) 
+    call get_parameter(json_val, 'alpha_B', alpha_b, error_lb=0._dp) 
+    call get_parameter(json_val, 'LJ_dist', LJdist, error_lb=0._dp) 
+    call get_parameter(json_val, 'is_uniform_alignment', isuniformalignment)
+    call get_parameter(json_val, 'sigwall', sig, error_lb=0._dp)
+    call get_parameter(json_val, 'alpha_LJ', alpha_lj, error_lb=0._dp)
+    call get_parameter(json_val, 'sigwall_LJ', sigwall_lj, error_lb=0._dp)
+    call get_parameter(json_val, 'wall_density', wall_density, error_lb=0._dp)
+    call get_parameter(json_val, 'epswall_LJ', epswall_lj, error_lb=0._dp)
+    call get_parameter(json_val, 'epswall', eps, error_lb=0._dp)
   end subroutine
 
 

@@ -7,6 +7,7 @@ module particle_mover
   use class_parameterizer
   use class_parameter_writer
   use json_module
+  use m_json_wrapper, only: get_parameter
   include 'rng.inc'
   implicit none
   
@@ -29,8 +30,9 @@ contains
 
   subroutine particlemover_from_json(json_val)
     type(json_value), pointer, intent(in) :: json_val
-    call json_get(json_val, 'max_translation', max_translation)
-    call json_get(json_val, 'max_rotation', max_rotation)
+    call get_parameter(json_val, 'max_translation', max_translation, &
+         error_lb=0._dp)
+    call get_parameter(json_val, 'max_rotation', max_rotation, error_lb=0._dp)
     call particlemover_init_common
   end subroutine particlemover_from_json
   
