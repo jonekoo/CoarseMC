@@ -3,7 +3,9 @@ module m_lj
   use num_kind
   use class_parameterizer
   use class_parameter_writer
-  use m_sphere_interaction
+  use m_sphere_interaction, only: sphere_interaction
+  use json_module
+  use m_json_wrapper, only: get_parameter
   implicit none
   
   !> Initializes the module.
@@ -22,10 +24,11 @@ module m_lj
      procedure :: potential => lj1
      procedure :: force => lj_force
      procedure :: writeparameters => lj_writeparameters
+     procedure :: to_json => lj_to_json
   end type lj_potential
   
   interface lj_potential
-     module procedure lj_init_parameters, lj_init_wt_reader
+     module procedure lj_init_parameters, lj_init_wt_reader, lj_from_json
   end interface lj_potential
   
   
@@ -48,6 +51,14 @@ contains
     call getparameter(reader, 'lj_epsilon_0', this%epsilon_0)
   end function lj_init_wt_reader
   
+  !> Initialize the module using parameters given by @p reader.
+  function lj_from_json(json_val) result(this)
+    type(json_value), pointer, intent(in) :: json_val
+    type(lj_potential) :: this
+    call get_parameter(json_val, 'lj_sigma_0', this%sigma_0, error_lb=0._dp)
+    call get_parameter(json_val, 'lj_epsilon_0', this%epsilon_0, error_lb=0._dp)
+  end function lj_from_json
+  
   !> Write the module parameters using the output unit and format defined
   !! by @p writer.
   subroutine lj_writeparameters(this, writer)
@@ -57,6 +68,16 @@ contains
     call writeparameter(writer, 'lj_sigma_0', this%sigma_0)
     call writeparameter(writer, 'lj_epsilon_0', this%epsilon_0)
   end subroutine lj_writeparameters
+  
+  !> Write the module parameters using the output unit and format defined
+  !! by @p writer.
+  subroutine lj_to_json(this, json_val)
+    class(lj_potential), intent(in) :: this
+    type(json_value), pointer, intent(inout) :: json_val
+    call json_add(json_val, 'type', 'lj')
+    call json_add(json_val, 'lj_sigma_0', this%sigma_0)
+    call json_add(json_val, 'lj_epsilon_0', this%epsilon_0)
+  end subroutine lj_to_json
   
   !> Returns the LJ 12-6 potential with the parameterization set with
   !! lj_init and a given internuclear vector @p rij.

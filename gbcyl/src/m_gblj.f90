@@ -9,75 +9,77 @@
 !!      Phys. Rev. E, 54(1):559, 1996.
 !! 
 module m_gblj
-use num_kind
-use class_parameterizer
-use class_parameter_writer
-use m_rodsphere_potential
-implicit none
+  use num_kind
+  use class_parameterizer
+  use class_parameter_writer
+  use m_rodsphere_potential
+  use json_module
+  use m_json_wrapper, only: get_parameter
+  implicit none
+  
+  public :: gblj_init
+  public :: gblj_writeparameters
+  public :: gblj_potential
+  public :: gblj_force
+  public :: gblj_get_sigma_0
+  public :: gblj_r
+  public :: test_defaults
+  
+  private
+  
+  
+  type, extends(rodsphere_potential) :: gblj_potential
+     
+     !> Well-depth when the LJ particle is on the side of the GB particle.
+     real(dp) :: epsilon_0 = 1.55
+     
+     !> The distance at which the GB-LJ potential crosses zero when the LJ
+     !! particle is on the side of the GB particle.
+     real(dp) :: sigma_0 = 0.8 !! 3.6_dp / sigma0_aengstroms
+     
+     !> Used for fine-tuning the relation of the potential energies for
+     !! different LJ particle positions with respect to the GB particle.
+     real(dp) :: mu = 0.35
+     
+     !> The ratio of well-depths when the LJ particle is at the end (ee) or
+     !! on the side (es) of the GB particle:
+     real(dp) :: ee_to_es = 0.16
+     
+     !> The ratio of contact distances when LJ is at the end (se) or on the
+     !! side (ss) of the GB particle:
+     real(dp) :: se_to_ss = 3.32
+     
+     real(dp) :: chisigma
+     real(dp) :: chiepsilon
+     
+     !> Sets the GB-LJ distance at which the particles overlap.
+     real(dp) :: hardcore = 0.3
+   contains
+     
+     procedure :: init_internal => gblj_init_internal
+     procedure :: potential => gblj_value
+     procedure :: sigma => gblj_sigma
+     procedure :: epsilon => gblj_epsilon
+     procedure :: force => gblj_force
+     procedure :: grad_sigma => gblj_grad_sigma
+     procedure :: grad_eps => gblj_grad_eps
+     procedure :: r => gblj_r
+     procedure :: grad_r => gblj_grad_r
+     procedure :: writeparameters => gblj_writeparameters
+     procedure :: to_json => gblj_to_json
+  end type gblj_potential
 
-public :: gblj_init
-public :: gblj_writeparameters
-public :: gblj_potential
-public :: gblj_force
-public :: gblj_get_sigma_0
-public :: gblj_r
-public :: test_defaults
-
-private
 
 
-type, extends(rodsphere_potential) :: gblj_potential
-
-!> Well-depth when the LJ particle is on the side of the GB particle.
-real(dp) :: epsilon_0 = 1.55
-
-!> The distance at which the GB-LJ potential crosses zero when the LJ
-!! particle is on the side of the GB particle.
-real(dp) :: sigma_0 = 0.8 !! 3.6_dp / sigma0_aengstroms
-
-!> Used for fine-tuning the relation of the potential energies for
-!! different LJ particle positions with respect to the GB particle.
-real(dp) :: mu = 0.35
-
-!> The ratio of well-depths when the LJ particle is at the end (ee) or
-!! on the side (es) of the GB particle:
-real(dp) :: ee_to_es = 0.16
-   
-!> The ratio of contact distances when LJ is at the end (se) or on the
-!! side (ss) of the GB particle:
-real(dp) :: se_to_ss = 3.32
-
-real(dp) :: chisigma
-real(dp) :: chiepsilon
-
-!> Sets the GB-LJ distance at which the particles overlap.
-real(dp) :: hardcore = 0.3
+  !> Initializes the module.
+  interface gblj_potential
+     module procedure gblj_readparameters, gblj_init, gblj_from_json
+  end interface gblj_potential
+  
 contains
+  
 
-procedure :: init_internal => gblj_init_internal
-procedure :: potential => gblj_value
-procedure :: sigma => gblj_sigma
-procedure :: epsilon => gblj_epsilon
-procedure :: force => gblj_force
-procedure :: grad_sigma => gblj_grad_sigma
-procedure :: grad_eps => gblj_grad_eps
-procedure :: r => gblj_r
-procedure :: grad_r => gblj_grad_r
-procedure :: writeparameters => gblj_writeparameters
-
-end type
-
-
-
-!> Initializes the module.
-interface gblj_potential
-   module procedure gblj_readparameters, gblj_init
-end interface
-
-contains
-
-
-!> Initializes the module using a @p reader object, which is
+!> Creates the gblj_potential using a @p reader object, which is
 !! responsible for reading the parameters e.g. from a file.
 !! Parameters not given by @p reader are replaced by previously
 !! set / default values.
@@ -93,6 +95,20 @@ function gblj_readparameters(reader) result(pot)
   call getparameter(reader, 'gblj_se_to_ss', pot%se_to_ss)
   call getparameter(reader, 'gblj_mu', pot%mu)
   call getparameter(reader, 'gblj_hardcore', pot%hardcore)
+  call pot%init_internal()
+end function
+
+!> Creates a gblj_potential from parameters in @p json_val.
+function gblj_from_json(json_val) result(pot)
+  type(json_value), pointer, intent(in) :: json_val
+  type(gblj_potential) :: pot
+  call get_parameter(json_val, 'gblj_epsilon_0', pot%epsilon_0, error_lb=0._dp)
+  call get_parameter(json_val, 'gblj_sigma_0', pot%sigma_0, error_lb=0._dp)
+  call get_parameter(json_val, 'gblj_ee_to_es', pot%ee_to_es, error_lb=0._dp)
+  call get_parameter(json_val, 'gblj_se_to_ss', pot%se_to_ss, error_lb=0._dp)
+  call get_parameter(json_val, 'gblj_mu', pot%mu, error_lb=0._dp)
+  call get_parameter(json_val, 'gblj_hardcore', pot%hardcore, error_lb=0._dp, &
+       warn_ub=pot%sigma_0)
   call pot%init_internal()
 end function
 
@@ -129,7 +145,6 @@ function gblj_init(gblj_epsilon_0, gblj_sigma_0, gblj_ee_to_es, &
   call pot%init_internal()
 end function
 
-
 !> Calculates and saves chisigma and chiepsilon for later use.
 subroutine gblj_init_internal(this)
   class(gblj_potential), intent(inout) :: this
@@ -152,6 +167,19 @@ subroutine gblj_writeparameters(this, writer)
   call writeparameter(writer, 'gblj_se_to_ss', this%se_to_ss)
   call writeparameter(writer, 'gblj_hardcore', this%hardcore)
 end subroutine
+
+
+subroutine gblj_to_json(this, json_val)
+  class(gblj_potential), intent(in) :: this
+  type(json_value), pointer, intent(inout) :: json_val
+  call json_add(json_val, 'type', 'gblj_potential')
+  call json_add(json_val, 'gblj_epsilon_0', this%epsilon_0)
+  call json_add(json_val, 'gblj_sigma_0', this%sigma_0)
+  call json_add(json_val, 'gblj_mu', this%mu)
+  call json_add(json_val, 'gblj_ee_to_es', this%ee_to_es)
+  call json_add(json_val, 'gblj_se_to_ss', this%se_to_ss)
+  call json_add(json_val, 'gblj_hardcore', this%hardcore)
+end subroutine gblj_to_json
 
 
 !> Calculates the interaction energy of a GB particle (i) and a Lennard-Jones

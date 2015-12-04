@@ -10,6 +10,8 @@ module m_gayberne
   use class_parameterizer
   use class_parameter_writer
   use m_rod_interaction
+  use json_module
+  use m_json_wrapper, only: get_parameter
   implicit none
 
   type, extends(rod_interaction) :: gayberne 
@@ -64,11 +66,12 @@ module m_gayberne
      procedure :: potentialf
      procedure :: sigma
      procedure :: writeparameters => gb_writeparameters
+     procedure :: to_json => gb_to_json
   end type gayberne
 
   !> Initializes the type
   interface gayberne
-     module procedure initparameterizer, initold
+     module procedure initparameterizer, initold, gb_from_json
   end interface gayberne
   
   !> The interface for the well-depth function in the GB potential.
@@ -102,6 +105,24 @@ contains
     call getparameter(reader, 'gb_hardcore', this%hardcore)
     call init_common(this)
   end function initparameterizer
+
+  !> Constructs a gayberne potential using the json in @p json_val.
+  !! 
+  function gb_from_json(json_val) result(this)
+    type(json_value), pointer, intent(in) :: json_val
+    type(gayberne) :: this 
+    call get_parameter(json_val, 'gb_kappa_sigma', this%kappasigma, &
+         error_lb=0._dp)
+    call get_parameter(json_val, 'gb_kappa_epsilon', this%kappaepsilon, &
+         error_lb=0._dp)
+    call get_parameter(json_val, 'gb_mu', this%mu, error_lb=0._dp)
+    call get_parameter(json_val, 'gb_nu', this%nu, error_lb=0._dp)
+    call get_parameter(json_val, 'gb_sigma_0', this%sigma0, error_lb=0._dp)
+    call get_parameter(json_val, 'gb_epsilon_0', this%epsilon0, error_lb=0._dp)
+    call get_parameter(json_val, 'gb_hardcore', this%hardcore, error_lb=0._dp, &
+         warn_ub=this%sigma0)
+    call init_common(this)
+  end function gb_from_json
 
   subroutine init_common(this)
     type(gayberne), intent(inout) :: this
@@ -181,6 +202,22 @@ contains
   end subroutine gb_writeparameters
 
 
+  !> Write the parameters of this module to the output unit and format
+  !! defined by @p writer.
+  subroutine gb_to_json(this, json_val)
+    class(gayberne), intent(in) :: this
+    type(json_value), pointer, intent(inout) :: json_val
+    call json_add(json_val, 'type', 'gayberne')
+    call json_add(json_val, 'gb_kappa_sigma', this%kappasigma)
+    call json_add(json_val, 'gb_kappa_epsilon', this%kappaepsilon)
+    call json_add(json_val, 'gb_mu', this%mu)
+    call json_add(json_val, 'gb_nu', this%nu)
+    call json_add(json_val, 'gb_sigma_0', this%sigma0)
+    call json_add(json_val, 'gb_epsilon_0', this%epsilon0)    
+    call json_add(json_val, 'gb_hardcore', this%hardcore)
+  end subroutine gb_to_json
+
+  
   !> Calculates the Gay-Berne potential for two particles. If @p overlap
   !! is true, the potential is zero.
   !!

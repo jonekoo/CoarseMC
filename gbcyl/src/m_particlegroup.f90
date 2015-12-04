@@ -20,6 +20,8 @@ module m_particlegroup
        simplelist_nbr_cells, flat_index, simplelist_deallocate, &
        simplelist_nbrmask, simplelist_cell_nbrmask
   include 'rng.inc'
+  use json_module
+  use m_json_wrapper, only: get_parameter
   implicit none  
 
   !> The maximum absolute change of volume in a trial volume update.
@@ -55,6 +57,10 @@ module m_particlegroup
     final :: domain_delete
   end type
 
+  interface particlegroup_init
+     module procedure mcsweep_from_json, mcsweep_init
+  end interface particlegroup_init
+  
 contains
 
   function create_particlegroup(simbox, particles, min_cell_length, &
@@ -110,6 +116,14 @@ subroutine mcsweep_init(reader)
   is_initialized = .true.
 end subroutine mcsweep_init
 
+subroutine mcsweep_from_json(json_val)
+  type(json_value), pointer, intent(in) :: json_val
+  allocate(scalingtypes(0))
+  call get_parameter(json_val, 'scaling_types', scalingtypes) 
+  call get_parameter(json_val, 'max_scaling', maxscaling, error_lb=0._dp)
+  is_initialized = .true.
+end subroutine mcsweep_from_json
+
 !> Finalizes the module state.
 subroutine mcsweep_finalize
   if (allocated(scalingtypes)) deallocate(scalingtypes)
@@ -155,6 +169,26 @@ subroutine mc_sweep_writeparameters(writer)
   call writeparameter(writer, 'scaling_type', trim(joined))
 end subroutine mc_sweep_writeparameters
 
+!> Writes the parameters and observables of this module and its
+!! dependencies. The @p writer defines the format and output unit..
+subroutine mc_sweep_to_json(json_val)
+  type(json_value), intent(inout), pointer :: json_val
+  type(json_value), pointer :: temp
+  type(json_value), pointer :: str
+  integer :: i
+  if (allocated(scalingtypes)) then
+     call json_add(json_val, 'max_scaling', maxscaling)
+     call json_create_array(temp, 'scaling_types')
+     do i = 1, size(scalingtypes)
+        call json_create_string(str, scalingtypes(i), '')
+        call json_add(temp, str)
+     end do
+     call json_add(json_val, temp)
+  else
+     stop 'ERROR: scalingtypes not allocated!'
+  end if
+end subroutine mc_sweep_to_json
+
 !> Schedules parallel moves of particles using OpenMP with a domain 
 !! decomposition algorithm. 
 !!
@@ -163,7 +197,6 @@ end subroutine mc_sweep_writeparameters
 !! 
 subroutine make_particle_moves(groups, genstates, simbox, temperature, &
      pair_ia, subr_single_energy, dE, n_trials, n_accepted)
-  implicit none
   type(particlegroup_ptr), intent(inout) :: groups(:)
   type(poly_box), intent(in) :: simbox
   type(rngstate), intent(inout) :: genstates(0:)
@@ -188,6 +221,7 @@ subroutine make_particle_moves(groups, genstates, simbox, temperature, &
   dE = 0._dp
   n_accepted = 0
   n_trials = 0
+  if (size(groups) == 0) return
   !$ n_threads = 1
   !! Loop over cells. This can be thought of as looping through a 
   !! 2 x 2 x 2 cube of cells.
@@ -454,6 +488,7 @@ subroutine total_energy(groups, simbox, pair_ia, subr_single_energy, energy, &
   integer :: j_group
   energy = 0._dp
   err = 0
+  if (size(groups) == 0) return
   !$OMP PARALLEL default(shared) reduction(+:energy, err)& 
   !$OMP& private(energy_j, i, nbr_cells, n_nbr_cells)
   !$OMP DO collapse(3) schedule(dynamic)
