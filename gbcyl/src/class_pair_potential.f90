@@ -3,9 +3,9 @@
 module class_pair_potential
   use iso_fortran_env
   use num_kind
-  use m_sphere_interaction
-  use m_rod_interaction
-  use m_rodsphere_potential
+  use m_sphere_interaction, only: sphere_interaction
+  use m_rod_interaction, only: rod_interaction
+  use m_rodsphere_potential, only: rodsphere_potential
   use m_gayberne
   use m_gblj
   use m_lj
@@ -13,6 +13,8 @@ module class_pair_potential
   use class_poly_box, only: poly_box, minimage
   use class_parameterizer
   use class_parameter_writer
+  use json_module
+  use m_json_wrapper, only: get_parameter
   implicit none
   
   type, extends(pair_interaction) :: conditional_pair_interaction
@@ -24,25 +26,31 @@ module class_pair_potential
      procedure :: pair_potential => cpi_pair_potential
      procedure :: pair_force => cpi_pair_force
      procedure :: get_cutoff => cpi_get_cutoff
+     procedure :: to_json => cpi_to_json
+     procedure :: writeparameters => pp_writeparameters
   end type conditional_pair_interaction
 
-  type(conditional_pair_interaction), save, private :: prototype
-  logical, save, private :: is_initialized = .false.
+  !type(conditional_pair_interaction), save, private :: prototype
+  !logical, save, private :: is_initialized = .false.
 
   interface assignment(=)
      module procedure assign
   end interface assignment(=)
+
+  interface conditional_pair_interaction
+     module procedure create_cpi_parameterizer, cpi_from_json
+  end interface conditional_pair_interaction
   
 contains
 
-  function create_conditional_interaction() result(res)
-    type(conditional_pair_interaction) :: res
-    if (is_initialized) then
-       res = prototype
-    else
-       stop 'class_pair_potential not initialized!'
-    end if
-  end function create_conditional_interaction
+  !function create_conditional_interaction() result(res)
+  !  type(conditional_pair_interaction) :: res
+  !  if (is_initialized) then
+  !     res = prototype
+  !  else
+  !     stop 'class_pair_potential not initialized!'
+  !  end if
+  !end function create_conditional_interaction
   
   subroutine assign(lhs, rhs)
     type(conditional_pair_interaction), intent(out) :: lhs
@@ -62,9 +70,10 @@ contains
   !! 
   !! @param[in] reader the object responsible for reading the parameters.
   !! 
-  subroutine pp_init(reader)
+  function create_cpi_parameterizer(reader) result(prototype)
     type(parameterizer), intent(in) :: reader
-    !allocate(gayberne :: p_rod_ia)
+    type(conditional_pair_interaction) :: prototype
+
     character(len=20) :: rod_type_str, sphere_type_str, rodsphere_type_str
     rod_type_str = 'gayberne'
     call getparameter(reader, 'r_cutoff', prototype%cutoff)
@@ -95,8 +104,56 @@ contains
        stop 1
     end if
 
-    is_initialized = .true.
-  end subroutine pp_init
+  end function create_cpi_parameterizer
+  
+  !> Creates the conditional_pair_interaction @p this based on the given json
+  !! in @p json_val.
+  !! 
+  function cpi_from_json(json_val) result(this)
+    type(json_value), pointer, intent(in) :: json_val
+    type(conditional_pair_interaction) :: this
+    character(kind=CK, len=:), allocatable :: rod_type_str, sphere_type_str, &
+         rodsphere_type_str
+    type(json_value), pointer :: rod_ia_json, sphere_ia_json, &
+         rodsphere_ia_json
+    logical :: found
+    call get_parameter(json_val, 'r_cutoff', this%cutoff, error_lb=0._dp)
+
+    call json_get(json_val, 'rod_ia', rod_ia_json, found)
+    if (found) then
+       call json_get(rod_ia_json, 'type', rod_type_str, found)
+       if (.not. found) then
+          stop 'ERROR: rod_ia type not found.'
+       else if (trim(adjustl(rod_type_str)) == 'gayberne') then
+          allocate(this%p_rod_ia, source=gayberne(rod_ia_json))
+       else
+          write(error_unit, *) 'Error: unknown rod_potential', rod_type_str
+          stop 1
+       end if
+    else
+       call json_print(json_val, error_unit)
+       stop 'ERROR: rod_ia not found in json.' 
+    end if
+    call json_get(json_val, 'sphere_ia', sphere_ia_json)
+    call json_get(sphere_ia_json, 'type', sphere_type_str)
+    if (trim(adjustl(sphere_type_str)) == 'lj') then
+       allocate(this%p_sphere_ia, source=lj_potential(sphere_ia_json))
+    else
+       write(error_unit, *) 'Error: unknown sphere_potential', sphere_type_str
+       stop 1
+    end if
+
+    call json_get(json_val, 'rodsphere', rodsphere_ia_json)
+    call json_get(rodsphere_ia_json, 'type', rodsphere_type_str)
+    if(trim(adjustl(rodsphere_type_str)) == 'gblj_potential') then
+       allocate(this%p_rodsphere, source=gblj_potential(rodsphere_ia_json))
+    else
+       write(error_unit, *) 'Error: unknown rodsphere_potential', &
+            rodsphere_type_str
+       stop 1
+    end if
+
+  end function cpi_from_json
   
   !> Hands the parameter @p writer over to the dependencies of this
   !! module.
@@ -104,33 +161,61 @@ contains
   !! @param[in] writer the object responsible for formatting the output and
   !! handling the file. 
   !!
-  subroutine pp_writeparameters(writer)
+  subroutine pp_writeparameters(this, writer)
+    class(conditional_pair_interaction), intent(in) :: this
     type(parameter_writer), intent(inout) :: writer
-    call writeparameter(writer, 'r_cutoff', prototype%cutoff)
-    select type (p => prototype%p_rod_ia)
+    call writeparameter(writer, 'r_cutoff', this%cutoff)
+    select type (p => this%p_rod_ia)
     type is (gayberne)
        call writeparameter(writer, 'rod_potential', 'gayberne')
     class default
        call writecomment(writer, 'Warning: rod_potential not recognized.')
     end select
-    call prototype%p_rod_ia%writeparameters(writer)
+    call this%p_rod_ia%writeparameters(writer)
 
-    select type (p => prototype%p_sphere_ia)
+    select type (p => this%p_sphere_ia)
     type is (lj_potential)
        call writeparameter(writer, 'sphere_potential', 'lj')
     class default
        call writecomment(writer, 'Warning: sphere_potential not recognized.')
     end select
-    call prototype%p_sphere_ia%writeparameters(writer)
+    call this%p_sphere_ia%writeparameters(writer)
 
-    select type (p => prototype%p_rodsphere)
+    select type (p => this%p_rodsphere)
     type is (gblj_potential)
        call writeparameter(writer, 'rodsphere_potential', 'gblj')
     class default
        call writecomment(writer, 'Warning: rodsphere_potential not recognized.')
     end select
-    call prototype%p_rodsphere%writeparameters(writer)
+    call this%p_rodsphere%writeparameters(writer)
   end subroutine pp_writeparameters
+  
+
+  !> Hands the parameter @p writer over to the dependencies of this
+  !! module.
+  !! 
+  !! @param[in] writer the object responsible for formatting the output and
+  !! handling the file. 
+  !!
+  subroutine cpi_to_json(this, json_val)
+    class(conditional_pair_interaction), intent(in) :: this
+    type(json_value), pointer, intent(inout) :: json_val
+    type(json_value), pointer :: rod_ia_json, sphere_ia_json, rodsphere_ia_json
+    call json_add(json_val, 'type', 'conditional_pair_interaction')
+    call json_add(json_val, 'r_cutoff', this%cutoff)
+    
+    call json_create_object(rod_ia_json, 'rod_ia')
+    call this%p_rod_ia%to_json(rod_ia_json)
+    call json_add(json_val, rod_ia_json)
+
+    call json_create_object(sphere_ia_json, 'sphere_ia')
+    call this%p_sphere_ia%to_json(sphere_ia_json)
+    call json_add(json_val, sphere_ia_json)
+
+    call json_create_object(rodsphere_ia_json, 'rodsphere')
+    call this%p_rodsphere%to_json(rodsphere_ia_json)
+    call json_add(json_val, rodsphere_ia_json)
+  end subroutine cpi_to_json
   
 
   pure subroutine cpi_pair_potential_2(this, particlei, particlej, &
