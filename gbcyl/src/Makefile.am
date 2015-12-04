@@ -16,7 +16,6 @@ bin_PROGRAMS = \
   cylhist2 \
   configurationconverter \
   cylindrical_layerorientation \
-  pressurezz \
   virial_tensor \
   doublezsize \
   onwallpressure \
@@ -34,6 +33,8 @@ bin_PROGRAMS = \
   print_xeslab_shielding \
   create_crystal \
   default_parameters
+#  pressurezz 
+
 
 ## Scripts to install
 dist_bin_SCRIPTS = \
@@ -59,9 +60,15 @@ model_src = \
   class_parameterizer.f90 \
   class_parameter_writer.f90 \
   class_poly_box.f90 \
+  json_module.F90 \
+  process_not_found.inc \
+  check_parameter.inc \
+  m_json_wrapper.f90 \
   particle_mover.f90 \
   particle.f90 \
   class_factory.f90
+
+m_json_wrapper.$(OBJEXT) : m_json_wrapper.f90 check_parameter.inc process_not_found.inc
 
 energy_src = \
   m_rod_interaction.f90 \
@@ -462,17 +469,17 @@ doublezsize_SOURCES = \
   m_fileunit.f90 \
   doublezsize.f90
 
-pressurezz_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  ${energy_src} \
-  genvoltrial.f90 \
-  m_particlegroup.f90 \
-  beta_exchange.f90 \
-  mc_engine.f90 \
-  pressurezz.f90
+#pressurezz_SOURCES = \
+#  num_kind.f90 \
+#  utils.f90 \
+#  m_fileunit.f90 \
+#  ${model_src} \
+#  ${energy_src} \
+#  genvoltrial.f90 \
+#  m_particlegroup.f90 \
+#  beta_exchange.f90 \
+#  mc_engine.f90 \
+#  pressurezz.f90
 
 virial_tensor_SOURCES = \
   num_kind.f90 \
