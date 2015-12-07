@@ -151,6 +151,7 @@ contains
     call json_parse(filename, json_val)
     if (json_failed()) then
        call json_print_error_message(error_unit)
+       stop
     end if
     !call json_check_for_errors(status_ok, error_msg)
     !if (.not. status_ok) then
@@ -321,11 +322,13 @@ end subroutine mce_from_json
 subroutine mce_init_rng(id, n_tasks)
   integer, intent(in) :: id, n_tasks
   integer :: thread_id = 0, n_threads = 1
+  type(mt_state) :: temp_mts
   !$ n_threads = omp_get_max_threads()
   
   allocate(mts(0:n_threads - 1))
   call set_mt19937
-  call new(mts(thread_id))
+  !call new(mts(thread_id))
+  call new(temp_mts)
   if (seed < 0) then 
      call system_clock(seed)
      write(error_unit, *) "Warning: Seeding RNG with system clock."
@@ -335,7 +338,9 @@ subroutine mce_init_rng(id, n_tasks)
           "Warning: system_clock query failed, using default seed 1234567."
      seed = 1234567 
   end if
-  call init(mts(thread_id), seed)
+  !call init(mts(thread_id), seed)
+  call init(temp_mts, seed)
+  mts(0) = temp_mts
   
   !$ write(output_unit, *) 'Running with ', n_threads, ' threads.'
   
@@ -344,10 +349,10 @@ subroutine mce_init_rng(id, n_tasks)
   !$OMP PARALLEL DO
   !$ do thread_id = 1, n_threads-1
   if (id + n_tasks * thread_id > 0) then 
-     call create_stream(mts(0), mts(thread_id), id + n_tasks * thread_id)
+     call create_stream(temp_mts, mts(thread_id), id + n_tasks * thread_id)
   end if
   !$ end do
-  !$OMP END PARALLEL DO  
+  !$OMP END PARALLEL DO
 end subroutine mce_init_rng
 
 
@@ -816,4 +821,4 @@ subroutine create_interactions_json(json_val, group_names, pair_ias)
   end if
 end subroutine create_interactions_json
 
-end module
+end module mc_engine
