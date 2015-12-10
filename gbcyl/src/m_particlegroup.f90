@@ -8,8 +8,8 @@ module m_particlegroup
   use class_poly_box, only: poly_box, minimage, isxperiodic, isyperiodic, &
        iszperiodic
   use particle, only: particledat, position, setposition, &
-       moveparticle_2, pair_interaction, single_energy, particlearray_wrapper,&
-       wrapper_delete
+       moveparticle_2, pair_interaction, pair_interaction_ptr, single_energy, &
+       particlearray_wrapper, wrapper_delete
   use class_parameterizer, only: parameterizer, getparameter
   use class_parameter_writer, only: parameter_writer, writeparameter, &
        writecomment
@@ -196,11 +196,11 @@ end subroutine mc_sweep_to_json
 !! 1996.
 !! 
 subroutine make_particle_moves(groups, genstates, simbox, temperature, &
-     pair_ia, subr_single_energy, dE, n_trials, n_accepted)
+     pair_ias, subr_single_energy, dE, n_trials, n_accepted)
   type(particlegroup_ptr), intent(inout) :: groups(:)
   type(poly_box), intent(in) :: simbox
   type(rngstate), intent(inout) :: genstates(0:)
-  class(pair_interaction), intent(in) :: pair_ia
+  type(pair_interaction_ptr), intent(in) :: pair_ias(:, :)
   procedure(single_energy) :: subr_single_energy
   real(dp), intent(in) :: temperature
   real(dp), intent(out) :: dE
@@ -248,7 +248,7 @@ subroutine make_particle_moves(groups, genstates, simbox, temperature, &
                     do i_group = 1, size(groups)
                        call domain_move(ds, i_group, &
                             genstates(thread_id:thread_id), simbox, &
-                            temperature, pair_ia, &
+                            temperature, pair_ias, &
                             subr_single_energy, dE_d, n_trials=n_trials_d, &
                             n_accepted=n_accepted_d)
                        dE = dE + dE_d
@@ -314,13 +314,13 @@ impure elemental subroutine delete_domain(this)
 end subroutine delete_domain
 
 subroutine domain_move(domains, i_d, genstates, simbox, temperature, &
-     pair_ia, subr_single_energy, dE, n_trials, n_accepted)
+     pair_ias, subr_single_energy, dE, n_trials, n_accepted)
   type(domain), intent(inout) :: domains(:)
   integer, intent(in) :: i_d
   type(rngstate), intent(inout) :: genstates(:)
   type(poly_box), intent(in) :: simbox
   real(dp), intent(in) :: temperature
-  class(pair_interaction), intent(in) :: pair_ia
+  type(pair_interaction_ptr), intent(in) :: pair_ias(:, :)
   procedure(single_energy) :: subr_single_energy
   real(dp), intent(out) :: dE
   integer, intent(out), optional :: n_trials, n_accepted
@@ -340,10 +340,10 @@ subroutine domain_move(domains, i_d, genstates, simbox, temperature, &
      call newparticle%move(genstates(1))
      call setposition(newparticle, minimage(simbox, newparticle%x, &
           newparticle%y, newparticle%z))
-     call newparticle%energy(domains, pair_ia, simbox, subr_single_energy, &
-          enew, err)
+     call newparticle%energy(domains, pair_ias(:, i_d), simbox, &
+          subr_single_energy, enew, err)
      if(err == 0) then 
-        call domains(i_d)%arr(j)%energy(domains, pair_ia, simbox, &
+        call domains(i_d)%arr(j)%energy(domains, pair_ias(:, i_d), simbox, &
              subr_single_energy, eold, err)
         if (err /= 0) stop
         call acceptchange(eold, enew, temperature, genstates(1), isaccepted)
@@ -360,20 +360,21 @@ end subroutine domain_move
 
 
 
-subroutine update_volume(simbox, groups, genstate, pair_ia, subr_single_energy,&
-     temperature, pressure, e_total, n_trials, n_accepted)
+subroutine update_volume(simbox, groups, genstate, pair_ias, &
+     subr_single_energy, temperature, pressure, e_total, n_trials, n_accepted)
   type(poly_box), intent(inout) :: simbox
   type(particlegroup_ptr), intent(inout) :: groups(:)
   type(rngstate), intent(inout) :: genstate
-  class(pair_interaction), intent(in) :: pair_ia
+  type(pair_interaction_ptr), intent(in) :: pair_ias(:, :)
   procedure(single_energy) :: subr_single_energy
   real(dp), intent(in) :: temperature, pressure
   real(dp), intent(out) :: e_total
   integer, intent(out), optional :: n_trials, n_accepted
   integer :: i
   do i = 1, size(scalingtypes)
-     call movevol(simbox, groups, scalingtypes(i), genstate, pair_ia, &
-          subr_single_energy, temperature, pressure, e_total, n_trials, n_accepted)
+     call movevol(simbox, groups, scalingtypes(i), genstate, pair_ias, &
+          subr_single_energy, temperature, pressure, e_total, n_trials, &
+          n_accepted)
   end do
 end subroutine update_volume
 
@@ -389,13 +390,13 @@ end subroutine update_volume
 !!        the system volume.
 !! @param genstate the random number generator state.
 !! 
-subroutine movevol(simbox, groups, scalingtype, genstate, pair_ia, &
+subroutine movevol(simbox, groups, scalingtype, genstate, pair_ias, &
      subr_single_energy, temperature, pressure, e_total, n_trials, n_accepted)
   type(poly_box), intent(inout) :: simbox
   type(particlegroup_ptr), intent(inout) :: groups(:)
   character(len=*), intent(in) :: scalingtype
   type(rngstate), intent(inout) :: genstate
-  class(pair_interaction), intent(in) :: pair_ia
+  type(pair_interaction_ptr), intent(in) :: pair_ias(:, :)
   procedure(single_energy) :: subr_single_energy
   real(dp), intent(in) :: temperature, pressure
   real(dp), intent(out) :: e_total
@@ -418,7 +419,7 @@ subroutine movevol(simbox, groups, scalingtype, genstate, pair_ia, &
   oldbox = simbox
   
   !! It seems that total energy may drift (WHY?!) if it is not updated here:
-  call total_energy(groups, simbox, pair_ia, subr_single_energy, &
+  call total_energy(groups, simbox, pair_ias, subr_single_energy, &
        e_total, err)
   if (err /= 0) stop 'movevol: overlap in old configuration! '//&
        'Should never happen!'
@@ -432,7 +433,7 @@ subroutine movevol(simbox, groups, scalingtype, genstate, pair_ia, &
   Vn = volume(simbox)
   
   !! Calculate potential energy in the scaled system.
-  call total_energy(groups, simbox, pair_ia, subr_single_energy, &
+  call total_energy(groups, simbox, pair_ias, subr_single_energy, &
        totenew, err)
   
   if (err /= 0) then
@@ -474,11 +475,11 @@ end subroutine movevol
 !! cell-by-cell for the @p particles in the cell list @p sl. @p simbox
 !! is the simulation cell. If any two particles are too close to each
 !! other, @p overlap is true. 
-subroutine total_energy(groups, simbox, pair_ia, subr_single_energy, energy, &
+subroutine total_energy(groups, simbox, pair_ias, subr_single_energy, energy, &
      err)
   type(particlegroup_ptr), intent(inout) :: groups(:)
   type(poly_box), intent(in) :: simbox
-  class(pair_interaction), intent(in) :: pair_ia
+  type(pair_interaction_ptr), intent(in) :: pair_ias(:, :)
   procedure(single_energy) :: subr_single_energy
   real(dp), intent(out) :: energy
   integer, intent(out) :: err
@@ -499,7 +500,8 @@ subroutine total_energy(groups, simbox, pair_ia, subr_single_energy, energy, &
               do i_group = 1, size(groups)
                  !! 1. compute inside ix, iy, iz in i_group
                  call cell_energy(groups(i_group)%ptr, ix, iy, iz, simbox, &
-                      pair_ia, subr_single_energy, energy_j, err)
+                      pair_ias(i_group, i_group)%ptr, subr_single_energy, &
+                      energy_j, err)
                  if (err /= 0) exit
                  energy = energy + energy_j
               end do
@@ -509,8 +511,8 @@ subroutine total_energy(groups, simbox, pair_ia, subr_single_energy, energy, &
                  !! 2. compute with ix, ix, y in j_group > i_group
                  do j_group = i_group + 1, size(groups)
                     call cell_pair_energy(groups(i_group)%ptr, ix, iy, iz, &
-                         groups(j_group)%ptr, ix, iy, iz, simbox, pair_ia, &
-                         energy_j, err)
+                         groups(j_group)%ptr, ix, iy, iz, simbox, &
+                         pair_ias(i_group, j_group)%ptr, energy_j, err)
                     if (err /= 0) exit
                     energy = energy + energy_j
                  end do
@@ -533,7 +535,7 @@ subroutine total_energy(groups, simbox, pair_ia, subr_single_energy, energy, &
                                ix, iy, iz, &
                                groups(j_group)%ptr, nbr_cells(1, i), &
                                nbr_cells(2, i), nbr_cells(3, i), simbox, &
-                               pair_ia, energy_j, err)
+                               pair_ias(i_group, j_group)%ptr, energy_j, err)
                           if (err /= 0) exit
                           energy = energy + energy_j
                        end do

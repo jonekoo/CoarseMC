@@ -243,7 +243,7 @@ contains
             ' for writing.'
        stop
     end if
-    call total_energy(groups, simbox, pair_interactions(1, 1)%ptr, &
+    call total_energy(groups, simbox, pair_interactions, &
          particlewall_potential, etotal, err)
     if (err /= 0) then
        write(error_unit, *) 'ERROR: mce_init: total_energy returned err = ', err
@@ -434,15 +434,15 @@ subroutine sweep(simbox, groups, genstates, isweep)
   integer :: n_trials, n_accepted, err
   dE = 0.
   call make_particle_moves(groups, genstates, simbox, temperature, & 
-       pair_interactions(1, 1)%ptr, particlewall_potential, dE, n_trials, &
+       pair_interactions, particlewall_potential, dE, n_trials, &
        n_accepted)
   write(output_unit, *) "etotal + dE = ", etotal, " + ", dE, " = ", etotal + dE
-  call total_energy(groups, simbox, pair_interactions(1, 1)%ptr, &
+  call total_energy(groups, simbox, pair_interactions, &
        particlewall_potential, etotal, err)
   write(output_unit, *) "etotal updated = ", etotal
   nmovetrials = nmovetrials + n_trials
   nacceptedmoves = nacceptedmoves + n_accepted
-  call update_volume(simbox, groups, genstates(0), pair_interactions(1, 1)%ptr,&
+  call update_volume(simbox, groups, genstates(0), pair_interactions,&
        particlewall_potential, temperature, pressure, etotal, n_trials, &
        n_accepted)
   nscalingtrials = nscalingtrials + n_trials
@@ -841,7 +841,6 @@ subroutine create_interactions_json(json_val, group_names, pair_ias)
         do i = 1, size(pair_ias, 1)
            call json_get_child(pair_ia_json, i + (j - 1) * size(pair_ias, 1), &
                 pair_ia_element)
-           !call json_print(pair_ia_element)
            allocate(pair_ias(i, j)%ptr, &
                 source=conditional_pair_interaction(pair_ia_element))
         end do

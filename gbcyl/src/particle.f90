@@ -213,14 +213,14 @@ end subroutine particledat_assign
 !! change in energy of the system and @p isaccepted == .true. if the
 !! move was accepted. 
 pure subroutine moveparticle_2(this, genstates, simbox, temperature, nbrs, &
-     pair_ia, subr_single_energy, dE, n_trials, n_accepted)
+     pair_ias, subr_single_energy, dE, n_trials, n_accepted)
   class(particledat), intent(inout) :: this
   !! Could be type(particlearray_wrapper) if beneficial:
   class(particlearray_wrapper), intent(in) :: nbrs(:) 
   type(poly_box), intent(in) :: simbox
   real(dp), intent(in) :: temperature
   type(rngstate), intent(inout) :: genstates(0:)
-  class(pair_interaction), intent(in) :: pair_ia
+  type(pair_interaction_ptr), intent(in) :: pair_ias(:)
   procedure(single_energy) :: subr_single_energy
   real(dp), intent(out) :: dE
   integer, intent(out) :: n_trials, n_accepted
@@ -242,11 +242,11 @@ pure subroutine moveparticle_2(this, genstates, simbox, temperature, nbrs, &
   allocate(oldparticle, source=this)
   call this%downcast_assign(newparticle)
  
-  call this%energy(nbrs, pair_ia, simbox, subr_single_energy, enew, err)
+  call this%energy(nbrs, pair_ias, simbox, subr_single_energy, enew, err)
   
   call this%downcast_assign(oldparticle)
   if(err == 0) then 
-     call this%energy(nbrs, pair_ia, simbox, subr_single_energy, &
+     call this%energy(nbrs, pair_ias, simbox, subr_single_energy, &
           enew, err)
      call acceptchange(eold, enew, temperature, genstates(0), isaccepted)
      if(isaccepted) then
@@ -264,11 +264,11 @@ pure subroutine moveparticle_2(this, genstates, simbox, temperature, nbrs, &
 end subroutine moveparticle_2
 
 
-pure subroutine particle_potential(this, nbrs, pair_ia, simbox, &
+pure subroutine particle_potential(this, nbrs, pair_ias, simbox, &
      subr_single_energy, energy, err)
   class(particledat), intent(in) :: this
   class(particlearray_wrapper), intent(in) :: nbrs(:)
-  class(pair_interaction), intent(in) :: pair_ia
+  type(pair_interaction_ptr), intent(in) :: pair_ias(:)
   type(poly_box), intent(in) :: simbox
   procedure(single_energy) :: subr_single_energy
   real(dp), intent(out) :: energy
@@ -281,8 +281,8 @@ pure subroutine particle_potential(this, nbrs, pair_ia, simbox, &
   integer :: i_nbr
   energy = 0
   err = 0
-  rcutoff = pair_ia%get_cutoff()
   do i_nbr = 1, size(nbrs)
+     rcutoff = pair_ias(i_nbr)%ptr%get_cutoff()
      if (err /= 0) exit
      !! Select the calculated interactions by cutoff already here
      if (allocated(rijs)) deallocate(rijs)
@@ -310,8 +310,8 @@ pure subroutine particle_potential(this, nbrs, pair_ia, simbox, &
 
      do i = 1, size(nbrs(i_nbr)%arr)
         if (cutoff_mask(i)) then
-           call pair_ia%pair_potential(this, nbrs(i_nbr)%arr(i), rijs(:, i), &
-                e, err)
+           call pair_ias(i_nbr)%ptr%pair_potential(this, nbrs(i_nbr)%arr(i), &
+                rijs(:, i), e, err)
            if (err /= 0) then
               energy = huge(energy)
               return
