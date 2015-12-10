@@ -127,6 +127,10 @@ abstract interface
    end subroutine writeparameters
 end interface
 
+type pair_interaction_ptr
+   class(pair_interaction), pointer :: ptr => null()
+end type pair_interaction_ptr
+
 contains
 
   pure subroutine particledat_downcast_assign(this, a_particle, err)
