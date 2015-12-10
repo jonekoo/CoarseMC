@@ -2,7 +2,8 @@ dist_doc_DATA = README DoxygenLayout.xml
 
 include $(top_srcdir)/aminclude.am
 
-SUBDIRS = cephes
+SUBDIRS = claf90
+SUBDIRS += cephes 
 SUBDIRS += BLAS lapack/lapack_routine lapack
 SUBDIRS += mt_stream_f90-1.11 ftnunit src data
 

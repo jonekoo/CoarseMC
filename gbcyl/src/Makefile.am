@@ -54,7 +54,8 @@ ldadd_mtstream = ${top_builddir}/mt_stream_f90-1.11/libmt_stream.la
 
 AM_FCFLAGS = \
 -I${top_builddir}/mt_stream_f90-1.11 \
--I${top_builddir}/mt_stream_f90-1.11/f_jump_ahead_coeff
+-I${top_builddir}/mt_stream_f90-1.11/f_jump_ahead_coeff \
+-I${top_builddir}/claf90
 
 model_src = \
   class_parameterizer.f90 \
@@ -95,6 +96,8 @@ AM_FCFLAGS += -I$(top_builddir)/cephes/cmath
 bin_PROGRAMS += test_hyp2f1 test_zhangI
 test_hyp2f1_SOURCES =  m_hyp2f1_negint.f90 test_hyp2f1.f90
 test_zhangI_SOURCES = num_kind.f90 utils.f90 m_hyp2f1_negint.f90 cylinder_integrals.f90 test_zhangI.f90 ljwall_cephes.f90
+
+ptgbcyl_LDADD = $(LDADD) ${top_builddir}/claf90/libclaf.la
 
 common_src = \
   num_kind.f90 \

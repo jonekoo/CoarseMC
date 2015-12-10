@@ -49,8 +49,18 @@ AC_ARG_ENABLE([mttests],
 esac], [mttests=false])
 AM_CONDITIONAL([MT_TESTS], [test x$mttests = xtrue])
 
+AC_ARG_ENABLE([claftests],
+[ --enable-claftests Turn on claf90 tests.],
+[case "${enableval}" in
+  yes) claftests=true ;;
+  no) claftests=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-claftests]) ;;
+esac], [claftests=false])
+AM_CONDITIONAL([CLAF_TESTS], [test x$claftests = xtrue])
+
 AC_CONFIG_FILES([
 Makefile
+claf90/Makefile
 mt_stream_f90-1.11/Makefile
 cephes/Makefile
 ftnunit/Makefile
