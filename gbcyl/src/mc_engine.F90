@@ -11,7 +11,7 @@ module mc_engine
   use class_poly_box, only: poly_box, volume, getx, gety, getz
   use class_parameterizer
   use class_parameter_writer
-  use particle, only: pair_interaction, particledat
+  use particle, only: pair_interaction, particledat, pair_interaction_ptr
   use particle_mover, only: particlemover_init, particlemover_writeparameters,&
        get_max_translation, getmaxmoves, setmaxmoves, particlemover_to_json
   use beta_exchange, only: write_stats, reset_counters, &
@@ -72,13 +72,17 @@ module mc_engine
   
   !> Output unit and filename for writing parameters.
   integer, save :: pwunit
-  
+
   !> The input and output unit used for reading and writing the geometry of 
   !! molecules and the simulation box.
   integer, save :: coordinateunit
   
   !> The (MPI) id of this process formatted to a character.
   character(len = 9), save :: idchar
+
+  !> Output file name for parameters.
+  character(len=:), allocatable, save :: fn_parameters_out
+  character(len=:), allocatable, save :: fn_parameters_restart
   
   !> The random number generator states.
   type(mt_state), allocatable, save :: mts(:)
@@ -108,7 +112,7 @@ module mc_engine
   type(poly_box), save :: simbox
 
   character(len=20), allocatable, save :: group_names(:)
-  class(pair_interaction), allocatable, save :: pair_interactions(:, :)
+  type(pair_interaction_ptr), allocatable, save :: pair_interactions(:, :)
 
   interface mce_init
      module procedure mce_init_parameterizer
@@ -123,7 +127,6 @@ contains
     type(parameterizer) :: parameterreader
     integer :: ios
     write(idchar, '(I9)') id 
-    idchar = trim(adjustl(idchar))
     parameterinputfile = 'inputparameters.' // trim(adjustl(idchar))
     parameterreader = new_parameterizer(parameterinputfile, iostat=ios)
     if (ios /= 0) then
@@ -139,16 +142,20 @@ contains
   end subroutine mce_init_parameterizer
 
   
-  subroutine mce_init_json(id, n_tasks, filename)
+  subroutine mce_init_json(id, n_tasks, parameter_infile, parameter_outfile, &
+       parameter_restartfile)
     integer, intent(in) :: id, n_tasks    
-    character(len=*), intent(in) :: filename
+    character(len=*), intent(in) :: parameter_infile
+    character(len=*), intent(in) :: parameter_outfile
+    character(len=*), intent(in) :: parameter_restartfile
     type(json_file) :: json
     type(json_value), pointer :: json_val
     logical :: status_ok
     character(len=:), allocatable :: error_msg
+    fn_parameters_out = parameter_outfile
+    fn_parameters_restart = parameter_restartfile
     write(idchar, '(I9)') id 
-    !call json%load_file(filename=filename)
-    call json_parse(filename, json_val)
+    call json_parse(parameter_infile, json_val)
     if (json_failed()) then
        call json_print_error_message(error_unit)
        stop
@@ -236,7 +243,7 @@ contains
             ' for writing.'
        stop
     end if
-    call total_energy(groups, simbox, pair_interactions(1,1), &
+    call total_energy(groups, simbox, pair_interactions(1, 1)%ptr, &
          particlewall_potential, etotal, err)
     if (err /= 0) then
        write(error_unit, *) 'ERROR: mce_init: total_energy returned err = ', err
@@ -361,12 +368,12 @@ subroutine create_groups(simbox, particles, group_names, &
   type(poly_box), intent(in) :: simbox
   type(particledat), intent(in) :: particles(:)
   character(len=*), intent(in) :: group_names(:)
-  class(pair_interaction), intent(in) :: pair_interactions(:, :)
+  type(pair_interaction_ptr), intent(in) :: pair_interactions(:, :)
   type(particlegroup_ptr), allocatable, intent(out) :: groups(:)
   character(len=20) :: group_type
   integer :: i
   real(dp) :: max_cutoff
-  max_cutoff = pair_interactions(1, 1)%get_cutoff()
+  max_cutoff = pair_interactions(1, 1)%ptr%get_cutoff()
   allocate(groups(size(group_names)))
   do i = 1, size(group_names)
      if (group_names(i) == 'gb') then
@@ -427,16 +434,17 @@ subroutine sweep(simbox, groups, genstates, isweep)
   integer :: n_trials, n_accepted, err
   dE = 0.
   call make_particle_moves(groups, genstates, simbox, temperature, & 
-       pair_interactions(1,1), particlewall_potential, dE, n_trials, n_accepted)
+       pair_interactions(1, 1)%ptr, particlewall_potential, dE, n_trials, &
+       n_accepted)
   write(output_unit, *) "etotal + dE = ", etotal, " + ", dE, " = ", etotal + dE
-  call total_energy(groups, simbox, pair_interactions(1,1), &
+  call total_energy(groups, simbox, pair_interactions(1, 1)%ptr, &
        particlewall_potential, etotal, err)
   write(output_unit, *) "etotal updated = ", etotal
   nmovetrials = nmovetrials + n_trials
   nacceptedmoves = nacceptedmoves + n_accepted
-  call update_volume(simbox, groups, genstates(0), pair_interactions(1,1), &
-       particlewall_potential, temperature, pressure, etotal, &
-       n_trials, n_accepted)
+  call update_volume(simbox, groups, genstates(0), pair_interactions(1, 1)%ptr,&
+       particlewall_potential, temperature, pressure, etotal, n_trials, &
+       n_accepted)
   nscalingtrials = nscalingtrials + n_trials
   nacceptedscalings = nacceptedscalings + n_accepted
   call check_simbox(simbox)
@@ -493,7 +501,7 @@ subroutine mce_writeparameters(writer)
   end if
   do j = 1, size(pair_interactions, 2)
      do i = 1, size(pair_interactions, 1)
-        call pair_interactions(i, j)%writeparameters(writer)
+        call pair_interactions(i, j)%ptr%writeparameters(writer)
      end do
   end do
   call particlewall_writeparameters(writer)
@@ -504,7 +512,8 @@ end subroutine
 subroutine mce_tojson(json_val)
   type(json_value), pointer, intent(out) :: json_val
   integer :: i, j
-  type(json_value), pointer :: json_child, group_name, pair_ia_json
+  type(json_value), pointer :: json_child, group_name, pair_ia_json, &
+       pair_ia_element
   call json_create_object(json_val, 'mc_engine')
   !call writecomment(writer, 'mc engine parameters')
   
@@ -550,20 +559,12 @@ subroutine mce_tojson(json_val)
   end do
   call json_add(json_val, json_child)
   
-  !! Write pair interaction names.
-  !call json_create_array(pair_ia_json, 'pair_interactions')
-  !do j = 1, size(pair_interactions, 2) 
-  !   do i = 1, size(pair_interactions, 1)
-  !      call json_create_string(interaction_name, &
-  !           pair_interactions(i, j)%get_type(), '')
-  !      call json_add(pair_ia_json, interaction_name)
-  !   end do
-  !end do
-
-  call json_create_object(pair_ia_json, 'pair_interactions')
+  call json_create_array(pair_ia_json, 'pair_interactions')
   do j = 1, size(pair_interactions, 2)
      do i = 1, size(pair_interactions, 1)
-        call pair_interactions(i, j)%to_json(pair_ia_json)
+        call json_create_object(pair_ia_element, '')
+        call pair_interactions(i, j)%ptr%to_json(pair_ia_element)
+        call json_add(pair_ia_json, pair_ia_element)
      end do
   end do
   call json_add(json_val, pair_ia_json) 
@@ -585,7 +586,7 @@ subroutine run
             call updatemaxvalues
             do i = 1, size(groups)
                groups(i)%ptr%sl%min_length = &
-                    pair_interactions(1,1)%get_cutoff() + 2._dp * &
+                    pair_interactions(1, 1)%ptr%get_cutoff() + 2._dp * &
                     get_max_translation()
             end do
          end if
@@ -621,7 +622,7 @@ subroutine makerestartpoint
 
   !! Write parameters to a restartfile
   parameterunit = fileunit_getfreeunit()
-  parameterfile = 'restartparameters.'//idchar
+  parameterfile = 'restartparameters.' // trim(adjustl(idchar))
   open(UNIT=parameterunit, FILE=parameterfile, action='WRITE',&
        status='REPLACE', DELIM='QUOTE', iostat=ios)
   if (ios /= 0) write(error_unit, *) 'Warning: ' // &
@@ -630,7 +631,7 @@ subroutine makerestartpoint
   call mce_writeparameters(pwriter)
 
   call mce_tojson(restart_json)
-  call json_print(restart_json, 'restart.json')
+  call json_print(restart_json, fn_parameters_restart)
   call json_destroy(restart_json)
   
   close(parameterunit)
@@ -677,6 +678,8 @@ subroutine runproductiontasks
   type(parameter_writer) :: writer
   type(factory) :: coordinatewriter
   integer :: be_unit
+  type(json_value), pointer :: output_json
+  integer :: u_output_json
   if (mod(isweep, productionperiod) == 0) then
     !! Record snapshot of molecules and geometry.
     call writestate(coordinatewriter, coordinateunit, simbox, groups)
@@ -694,6 +697,20 @@ subroutine runproductiontasks
     writer = new_parameter_writer(pwunit)
     call mce_writeparameters(writer)
 
+    !! Write json output
+    u_output_json = fileunit_getfreeunit()
+    open(UNIT=u_output_json, file=fn_parameters_out, action='WRITE', &
+         position='APPEND', DELIM='QUOTE', IOSTAT=ios)
+    if (ios /= 0) then
+       write(error_unit, *) 'ERROR: runproductiontasks failed opening ', &
+            fn_parameters_out
+       stop
+    end if
+    call mce_tojson(output_json)
+    call json_print(output_json, u_output_json)
+    close(u_output_json)
+    call json_destroy(output_json)
+        
     !! Write beta_exchange statistics:
     if (trim(adjustl(idchar)) == "0") then
       be_unit = fileunit_getfreeunit()
@@ -783,7 +800,7 @@ subroutine check_simbox(simbox)
   do j = 1, size(pair_interactions, 2)
      do i = 1, size(pair_interactions, 1)
         largest_cutoff = max(largest_cutoff, &
-             pair_interactions(i, j)%get_cutoff())
+             pair_interactions(i, j)%ptr%get_cutoff())
      end do
   end do
   if (simbox%xperiodic .and. getx(simbox) < 2._dp * largest_cutoff) &
@@ -798,22 +815,37 @@ end subroutine
 subroutine create_interactions_parameterizer(reader, group_names, &
      pair_ias)
   type(parameterizer), intent(in) :: reader
-  class(pair_interaction), intent(inout), allocatable :: pair_ias(:, :)
+  type(pair_interaction_ptr), intent(inout), allocatable :: pair_ias(:, :)
   character(len=*), intent(in) :: group_names(:)
-  allocate(pair_ias(size(group_names), size(group_names)), &
-       source=conditional_pair_interaction(reader))
+  integer :: i, j
+  allocate(pair_ias(size(group_names), size(group_names)))
+  do j = 1, size(pair_ias, 2)
+     do i = 1, size(pair_ias, 1)
+        allocate(pair_ias(i, j)%ptr, &
+             source=conditional_pair_interaction(reader))
+     end do
+  end do
 end subroutine create_interactions_parameterizer
 
 subroutine create_interactions_json(json_val, group_names, pair_ias)
   type(json_value), pointer, intent(in) :: json_val
   character(len=*), intent(in) :: group_names(:)
-  class(pair_interaction), intent(inout), allocatable :: pair_ias(:, :)
-  type(json_value), pointer :: pair_ia_json
+  type(pair_interaction_ptr), intent(inout), allocatable :: pair_ias(:, :)
+  type(json_value), pointer :: pair_ia_json, pair_ia_element
   logical :: found
+  integer :: i, j
   call json_get(json_val, 'pair_interactions', pair_ia_json, found)
   if (found) then
-     allocate(pair_ias(size(group_names), size(group_names)), &
-          source=conditional_pair_interaction(pair_ia_json))
+     allocate(pair_ias(size(group_names), size(group_names)))
+     do j = 1, size(pair_ias, 2)
+        do i = 1, size(pair_ias, 1)
+           call json_get_child(pair_ia_json, i + (j - 1) * size(pair_ias, 1), &
+                pair_ia_element)
+           !call json_print(pair_ia_element)
+           allocate(pair_ias(i, j)%ptr, &
+                source=conditional_pair_interaction(pair_ia_element))
+        end do
+     end do
   else
      write(error_unit, *) 'ERROR: pair_interactions not found in json:'
      call json_print(json_val, error_unit)
