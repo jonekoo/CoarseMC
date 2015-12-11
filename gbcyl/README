@@ -43,7 +43,7 @@ command make FCFLAGS=[your options without the interprocedural optimization]
 
 Example with ifort:
 
-./configure --prefix=yourinstallationpath FC=mpif90 FCFLAGS=-ipo
+./configure --prefix=yourinstallationpath FC=mpif90 FCFLAGS="-ipo -standard-semantics"
 (cd mt_stream-1.11 && make FCFLAGS=-ip)
 make
 make install
@@ -76,9 +76,11 @@ to run the program and have the program output files.
 
 
 
-Example of running with 8 cores. The specific way to run the program will 
-probably depend on the system you are working at
+Example of a parallel tempering run with 8 replicas and two OpenMP threads for
+domain decomposition. The specific way to run the program will probably depend
+on the system you are working at
 
+export $OMP_NUM_THREADS=2
 mpirun -np 8 ./ptgbcyl
 
 
