@@ -40,6 +40,8 @@ module particle
      procedure :: pair_energy
      procedure :: to_stdout
      procedure :: move => particledat_move
+     procedure :: orientation => orientation
+     procedure :: position => position
   end type particledat
   
   interface   
@@ -343,7 +345,7 @@ end subroutine pair_energy
 !> Returns the position of @p aparticle as a vector.
 pure function position(aparticle)
   real(dp), dimension(3) :: position
-  type(particledat), intent(in) :: aparticle
+  class(particledat), intent(in) :: aparticle
   position = (/aparticle%x, aparticle%y, aparticle%z/)
 end function position
 
@@ -351,7 +353,7 @@ end function position
 !! be a unit vector.
 pure function orientation(aparticle) 
   real(dp), dimension(3) :: orientation
-  type(particledat), intent(in) :: aparticle
+  class(particledat), intent(in) :: aparticle
   orientation = (/aparticle%ux, aparticle%uy, aparticle%uz/)
 end function orientation
 
