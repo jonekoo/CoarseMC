@@ -110,6 +110,8 @@ common_src = \
 parallel_src = \
   beta_exchange.f90 \
   m_particlegroup.f90 \
+  m_gb_interaction.f90 \
+  m_interaction_factory.f90 \
   mc_engine.f90 
 
 ## Below: Listings of source files needed by programs

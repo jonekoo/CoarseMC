@@ -25,6 +25,7 @@ module mc_engine
   !$ use omp_lib
   use json_module
   use m_json_wrapper, only: get_parameter
+  use m_interaction_factory, only: create_pair_interaction
   implicit none
   
   !> The number of equilibration MC sweeps in the simulation.  Equilibration
@@ -842,7 +843,7 @@ subroutine create_interactions_json(json_val, group_names, pair_ias)
            call json_get_child(pair_ia_json, i + (j - 1) * size(pair_ias, 1), &
                 pair_ia_element)
            allocate(pair_ias(i, j)%ptr, &
-                source=conditional_pair_interaction(pair_ia_element))
+                source=create_pair_interaction(pair_ia_element))
         end do
      end do
   else
