@@ -67,7 +67,9 @@ model_src = \
   m_json_wrapper.f90 \
   particle_mover.f90 \
   particle.f90 \
-  class_factory.f90
+  m_point.f90 \
+  m_rod.f90 \
+  class_factory.f90 
 
 m_json_wrapper.$(OBJEXT) : m_json_wrapper.f90 check_parameter.inc process_not_found.inc
 
@@ -99,15 +101,14 @@ test_zhangI_SOURCES = num_kind.f90 utils.f90 m_hyp2f1_negint.f90 cylinder_integr
 
 ptgbcyl_LDADD = $(LDADD) ${top_builddir}/claf90/libclaf.la
 
-common_src = \
+utils_src = \
   num_kind.f90 \
   rng.inc \
   utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  genvoltrial.f90 
+  m_fileunit.f90
 
 parallel_src = \
+  genvoltrial.f90 \
   beta_exchange.f90 \
   m_particlegroup.f90 \
   m_gb_interaction.f90 \
@@ -117,7 +118,8 @@ parallel_src = \
 ## Below: Listings of source files needed by programs
 
 ptgbcyl_SOURCES = \
-  $(common_src) \
+  $(utils_src) \
+  $(model_src) \
   $(energy_src) \
   $(parallel_src) \
   gbcyl.f90 
@@ -125,7 +127,8 @@ ptgbcyl_SOURCES = \
 default_parameters_LDADD = $(ptgbcyl_LDADD)
 
 default_parameters_SOURCES = \
-  ${common_src} \
+  ${utils_src} \
+  ${model_src} \
   ${energy_src} \
   ${parallel_src} \
   default_parameters.f90
