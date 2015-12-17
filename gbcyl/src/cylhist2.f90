@@ -26,7 +26,7 @@ program cylhist
   use tau1_negative
   use histogram
   use utils
-  use class_factory
+  use m_particle_factory
   use class_poly_box
   use psi6_module
   use layernormal

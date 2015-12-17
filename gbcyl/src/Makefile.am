@@ -69,7 +69,7 @@ model_src = \
   particle.f90 \
   m_point.f90 \
   m_rod.f90 \
-  class_factory.f90 
+  m_particle_factory.f90 
 
 m_json_wrapper.$(OBJEXT) : m_json_wrapper.f90 check_parameter.inc process_not_found.inc
 
@@ -540,6 +540,8 @@ driver_SOURCES = \
   rng.inc mtfort90.f90 \
   utils.f90 \
   class_parameter_writer.f90 \
+  json_module.F90 \
+  m_json_wrapper.f90 \
   m_rodsphere_potential.f90 \
   m_gblj.f90 \
   m_rod_interaction.f90 \
@@ -553,6 +555,7 @@ driver_SOURCES = \
   class_pair_potential.f90 \
   class_simplelist.f90 \
   class_simplelist_pfunit.f90 \
+  utils_pfunit.f90 \
   driver.F90  
 
 

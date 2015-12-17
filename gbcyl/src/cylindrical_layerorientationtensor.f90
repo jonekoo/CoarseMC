@@ -5,7 +5,7 @@
 !! calls to analysis routines and prints the results to files. 
 !!
 program analysis
-  use class_factory
+  use m_particle_factory
   use num_kind, only: dp
   use particle, only : particledat
   use class_poly_box
@@ -31,7 +31,8 @@ program analysis
       !call orientation_parameter(particles, size(particles), p2, director)
       !write(*, '( 4('// fmt_char_dp() //',1X))') p2, director
       call eigens(simbox, particles, size(particles), values, vectors)
-      write(*, '(12('//fmt_char_dp()//',1X))') values(1:3), vectors(1:3, 1), vectors(1:3, 2), vectors(1:3, 3) 
+      write(*, '(12('//fmt_char_dp()//',1X))') values(1:3), vectors(1:3, 1), &
+           vectors(1:3, 2), vectors(1:3, 3) 
     end if
   end do
 end program analysis

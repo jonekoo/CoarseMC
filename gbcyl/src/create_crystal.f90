@@ -2,7 +2,7 @@ program create_crystal
   use utils, only: splitstr, join
   use m_crystal
   use particle
-  use class_factory
+  use m_particle_factory
   use class_poly_box
   use iso_fortran_env
   implicit none

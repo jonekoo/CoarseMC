@@ -27,7 +27,7 @@ program cylhist
   use xfunc_module, only: xfunc => rho
   use histogram
   use utils
-  use class_factory, only: factory, factory_readstate
+  use m_particle_factory, only: factory, factory_readstate
   use class_poly_box
   use psi6_module
   use layernormal
