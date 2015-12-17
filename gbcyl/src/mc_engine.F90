@@ -5,13 +5,15 @@ module mc_engine
        total_energy, mc_sweep_writeparameters, mcsweep_finalize, &
        get_maxscaling, set_maxscaling, particlegroup, particlegroup_ptr, &
        mc_sweep_to_json, particlegroup_init
-  use class_factory, only: factory, factory_readstate, factory_writestate
+  use m_particle_factory, only: factory, factory_readstate, &
+       factory_writestate, read_group
   use mt_stream
   use m_fileunit
   use class_poly_box, only: poly_box, volume, getx, gety, getz
   use class_parameterizer
   use class_parameter_writer
-  use particle, only: pair_interaction, particledat, pair_interaction_ptr
+  use particle, only: pair_interaction, particledat, pair_interaction_ptr, &
+       particlearray_wrapper
   use particle_mover, only: particlemover_init, particlemover_writeparameters,&
        get_max_translation, getmaxmoves, setmaxmoves, particlemover_to_json
   use beta_exchange, only: write_stats, reset_counters, &
@@ -203,6 +205,8 @@ contains
     type(factory) :: coordinatereader
     type(particledat), allocatable :: particles(:)
     integer :: err
+    type(particlearray_wrapper), allocatable :: temp_groups(:)
+    integer :: i
     
     call mce_init_rng(id, n_tasks)
     
@@ -218,19 +222,27 @@ contains
             'tried to set a negative pressure.'
        stop  
     end if
-    
-    !! Read geometry
-    coordinateunit = fileunit_getfreeunit()
+
     statefile = 'inputconfiguration.'//trim(adjustl(idchar))
-    open(file=statefile, unit=coordinateunit, action='READ', status='OLD',&
-         iostat=ios)
-    call factory_readstate(coordinatereader, coordinateunit, simbox, &
-         particles, ios)
-    if (0 /= ios) then 
-       write(error_unit, *) 'ERROR ', ios,' reading ', statefile
-       stop
+
+    !! Read geometry
+    if (.false.) then
+       allocate(temp_groups(size(group_names)))
+       do i = 1, size(group_names)
+          call read_group(statefile, group_names(i), temp_groups(i))
+       end do
+    else
+       coordinateunit = fileunit_getfreeunit()
+       open(file=statefile, unit=coordinateunit, action='READ', status='OLD',&
+            iostat=ios)
+       call factory_readstate(coordinatereader, coordinateunit, simbox, &
+            particles, ios)
+       if (0 /= ios) then 
+          write(error_unit, *) 'ERROR ', ios,' reading ', statefile
+          stop
+       end if
+       close(coordinateunit)
     end if
-    close(coordinateunit)
     call create_groups(simbox, particles, group_names, &
          pair_interactions, groups)
     
