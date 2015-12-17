@@ -1,4 +1,5 @@
 module utils
+  use iso_fortran_env, only: iostat_end, iostat_eor
   use num_kind
   include 'rng.inc'
   implicit none
@@ -14,7 +15,11 @@ module utils
        real(dp), intent(out) :: values(3)
      end subroutine eigensystem
   end interface
-  
+
+  type str_wrapper
+     character(len=:), allocatable :: c
+  end type str_wrapper
+    
 contains 
 
 !> Implements the Metropolis acceptance rule for a Monte Carlo update. 
@@ -272,6 +277,50 @@ pure function fmt_char_dp_array(array_size) result(format_char)
        trim(adjustl(fmt_char_dp())) // ',1X),' // &
        trim(adjustl(fmt_char_dp())) // ')'
   format_char = trim(adjustl(format_char))
-end function
+end function fmt_char_dp_array
 
-end module
+subroutine readstr(unit, str, ios)
+  integer, intent(in) :: unit
+  character(len=:), allocatable, intent(out) :: str
+  integer, intent(out) :: ios
+  character(len=1) :: buf
+  str = ''
+  do while(.true.)
+     read(unit=unit, advance='no', iostat=ios, fmt='(A)') buf
+     !write(*, *) buf
+     if (ios == iostat_end) then
+        return
+     else if (ios == iostat_eor) then
+        str = str // new_line(str)
+        continue
+     else if (ios /= 0) then
+        return
+     else
+        str = str // buf
+     end if
+  end do
+end subroutine readstr
+  
+subroutine readlines(unit, lines, ios)
+  intrinsic new_line
+  integer, intent(in) :: unit
+  type(str_wrapper), allocatable, intent(out) :: lines(:)
+  integer, intent(out) :: ios
+  character(len=:), allocatable :: temp
+  integer :: current, next
+  call readstr(unit, temp, ios)
+  allocate(lines(0))
+  current = 1
+  do while(current < len(temp))
+     next = index(temp(current:), new_line(temp))
+     if (next == 0) then
+        lines = [lines, str_wrapper(temp(current:))]
+        exit
+     else
+        lines = [lines, str_wrapper(temp(current:next))]
+     end if
+     current = next + 1
+  end do
+end subroutine readlines
+
+end module utils
