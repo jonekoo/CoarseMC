@@ -5,7 +5,7 @@
 !! calls to analysis routines and prints the results to files. 
 !!
 program analysis
-  use class_factory
+  use m_particle_factory
   use class_poly_box
   use num_kind, only: dp
   use particle, only : particledat

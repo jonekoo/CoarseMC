@@ -9,7 +9,7 @@ program tau1_program
   use tau1_module, only: tau1_routine
   use orientational_ordering, only: orientation_parameter
   use utils
-  use class_factory
+  use m_particle_factory
   implicit none
   type(particledat), allocatable :: particles(:)
   integer :: io_status
@@ -25,9 +25,12 @@ program tau1_program
     if (io_status < 0) then
       exit
     else
-      call orientation_parameter(pack(particles, particles%rod), count(particles%rod), P2, direction)
-      call tau1_routine(pack(particles, particles%rod), real(direction, sp), value, layer_distance)
-      write(*, '(6(' // fmt_char_dp() // ',1X))') value, layer_distance, p2, direction
+       call orientation_parameter(pack(particles, particles%rod), &
+            count(particles%rod), P2, direction)
+       call tau1_routine(pack(particles, particles%rod), real(direction, sp), &
+            value, layer_distance)
+       write(*, '(6(' // fmt_char_dp() // ',1X))') value, layer_distance, p2, &
+            direction
     end if
   end do
 end program 

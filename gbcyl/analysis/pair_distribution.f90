@@ -10,7 +10,7 @@
 program pair_distribution
   use num_kind, only: dp
   use particle, only : particledat
-  use class_factory, only: factory_readstate, factory
+  use m_particle_factory, only: factory_readstate, factory
   use class_poly_box, only: poly_box
   use distribution
   use utils, only: fmt_char_dp

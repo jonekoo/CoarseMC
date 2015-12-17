@@ -3,7 +3,7 @@ program xe_nmr_profile2
   use particle, only : particledat
   use orientational_ordering
   use class_poly_box
-  use class_factory
+  use m_particle_factory
   use m_shielding
   use m_quadrupole_coupling
   use m_rank2_tensor, only: rank2_tensor, new_tensor, rotate, operator(+)

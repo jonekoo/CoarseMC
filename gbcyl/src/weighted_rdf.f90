@@ -10,7 +10,7 @@
 program analysis
   use iso_fortran_env, only: dp => REAL64
   use particle, only : particledat
-  use class_factory, only: factory, factory_readstate
+  use m_particle_factory, only: factory, factory_readstate
   use class_poly_box
   use gr3dweighted
   use layernormal
@@ -36,9 +36,10 @@ program analysis
         allocate(orientations(3, size(particles)))
       end if
       do i = 1, size(particles)
-        orientations(1:3, i) = localnormal(simbox, particles, i, cutoff) !orientation(particles(i))
+        orientations(1:3, i) = localnormal(simbox, particles, i, cutoff)
       end do
-      call gr3dweighted1(particles, simbox, maxbin, delr, orientations, histogram, weightedhistogram)  
+      call gr3dweighted1(particles, simbox, maxbin, delr, orientations, &
+           histogram, weightedhistogram)  
       write(*, '(100('//fmt_char_dp()//',1X))') weightedhistogram
     end if
   end do

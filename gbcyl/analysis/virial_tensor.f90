@@ -6,7 +6,7 @@ program virial_tensor
 !! read from file parameters.in.id. id is given to the program in standard 
 !! input at the beginning of the program. 
 !!
-use class_factory !! for reading configurations.
+use m_particle_factory !! for reading configurations.
 use particle !! for particletype.
 use class_poly_box !! for simulation box handling.
 use class_parameterizer !! for reading parameters.

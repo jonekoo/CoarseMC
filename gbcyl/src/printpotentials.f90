@@ -24,7 +24,7 @@ use m_fileunit
 use particlewall
 use class_poly_box
 use particle, only: particledat, setposition, setorientation
-use class_factory
+use m_particle_factory, only: factory_readstate, factory
 use class_parameterizer
 implicit none
 

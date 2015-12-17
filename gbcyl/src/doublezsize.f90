@@ -1,7 +1,7 @@
 program doublezsize
 use class_poly_box
 use particle
-use class_factory
+use m_particle_factory
 implicit none
 
 type(poly_box) :: simbox

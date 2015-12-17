@@ -19,7 +19,7 @@ use utils, only: fmt_char_dp
 use num_kind
 
 !! For reading configurations from disk
-use class_factory, only: factory, factory_readstate
+use m_particle_factory, only: factory, factory_readstate
 
 !! To determine the normal of the layers
 use layernormal

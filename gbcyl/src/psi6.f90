@@ -11,7 +11,7 @@ program total_psi6
   use psi6_module, only : psi6_bulk
   use class_poly_box, only: poly_box
   use utils, only: fmt_char_dp
-  use class_factory, only: factory, factory_readstate
+  use m_particle_factory, only: factory, factory_readstate
   implicit none
   type(particledat), allocatable :: particles(:)
   integer :: io_status
@@ -25,8 +25,10 @@ program total_psi6
     if (io_status < 0) then
       exit
     else
-      call orientation_parameter(pack(particles, particles%rod), count(particles%rod), value, direction)
-      write(*,'(5(' // fmt_char_dp() //',1X))') psi6_bulk(simbox, pack(particles, particles%rod), direction), value, direction
+       call orientation_parameter(pack(particles, particles%rod), &
+            count(particles%rod), value, direction)
+       write(*,'(5(' // fmt_char_dp() //',1X))') psi6_bulk(simbox, &
+            pack(particles, particles%rod), direction), value, direction
     end if
   end do
 end program

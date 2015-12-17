@@ -4,11 +4,16 @@
 !! read but defines where it is read from or written to. Basicly it
 !! defines the structure of the coordinate file but leaves details of
 !! writing and reading to the particle and simulation box modules.
-module class_factory
-  use num_kind
-  use particle, only: particledat, readparticle, writeparticle
+module m_particle_factory
+  use iso_fortran_env, only: error_unit
+  use num_kind, only: dp
+  use m_rod, only: rod
+  use m_point, only: point
+  use particle, only: particledat, readparticle, writeparticle, &
+       particlearray_wrapper
   use class_poly_box, only: poly_box, pbox_read, pbox_write
   use utils, only: fmt_char_dp, fmt_char_int
+  use m_fileunit, only: fileunit_getfreeunit
   implicit none
   
   character(len=14), parameter :: beginmark = '#configuration'
@@ -20,6 +25,22 @@ module class_factory
   end type factory
 
 contains
+
+  subroutine read_group(filename, group_name, group)
+    character(len=*), intent(in) :: filename
+    character(len=*), intent(in) :: group_name
+    type(particlearray_wrapper), intent(out) :: group
+    integer :: coordinateunit, ios
+    coordinateunit = fileunit_getfreeunit()
+    open(file=filename, unit=coordinateunit, action='READ', status='OLD',&
+         iostat=ios)
+    if (0 /= ios) then 
+       write(error_unit, *) 'ERROR ', ios,' reading ', filename
+       stop
+    end if
+    close(coordinateunit)
+  end subroutine read_group
+
 
   !> Writes the coordinates of @p particles and the dimensions of the 
   !! cylindrical simulation cell to the output unit specified by @p

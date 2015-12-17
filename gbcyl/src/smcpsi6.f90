@@ -12,7 +12,7 @@ use particle
 use class_poly_box
 use utils, only: fmt_char_dp
 use num_kind
-use class_factory, only: factory, factory_readstate
+use m_particle_factory, only: factory, factory_readstate
 use layernormal
 use class_poly_box, only: poly_box
 use psi6_module

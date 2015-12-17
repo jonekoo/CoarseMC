@@ -5,7 +5,7 @@
 !! calls to analysis routines and prints the results to files. 
 !!
 program analysis
-  use class_factory
+  use m_particle_factory
   use num_kind, only: dp
   use particle, only : particledat
   use class_poly_box
@@ -25,7 +25,8 @@ program analysis
     if (io_status < 0) then
       exit
     else
-      call orientation_parameter(pack(particles, particles%rod), count(particles%rod), p2, director)
+       call orientation_parameter(pack(particles, particles%rod), &
+            count(particles%rod), p2, director)
       write(*, '( 4('// fmt_char_dp() //',1X))') p2, director
     end if
   end do

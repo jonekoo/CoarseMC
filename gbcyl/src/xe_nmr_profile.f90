@@ -4,7 +4,7 @@ program xe_nmr_profile
   use orientational_ordering, only: orientation_parameter, eigens, &
        cycle_largest_to_3rd
   use class_poly_box, only: poly_box, getx, getz
-  use class_factory, only: factory, factory_readstate
+  use m_particle_factory, only: factory, factory_readstate
   use m_shielding, only: gbxe_shielding_local, xexe_shielding_local, &
        xewall_shielding_local, init_shielding
   use m_quadrupole_coupling, only: gbxe_coupling_local, xexe_coupling_local, &
