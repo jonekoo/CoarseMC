@@ -4,6 +4,7 @@ module m_gb_interaction
   use num_kind, only: dp
   use json_module
   use class_parameter_writer, only: parameter_writer, writeparameter
+  use m_json_wrapper, only: get_parameter
   implicit none
 
   type, extends(pair_interaction) :: gb_interaction
@@ -26,6 +27,7 @@ contains
   function gb_interaction_from_json(json_val) result(this)
     type(json_value), pointer, intent(in) :: json_val
     type(gb_interaction) :: this
+    call get_parameter(json_val, 'r_cutoff', this%cutoff, error_lb=0._dp)
     this%pef = gayberne(json_val)
   end function gb_interaction_from_json
 
