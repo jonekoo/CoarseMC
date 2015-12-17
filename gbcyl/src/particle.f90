@@ -184,13 +184,19 @@ subroutine readparticle(readunit, aparticle, ios)
   integer, intent(in) :: readunit
   integer, intent(out) :: ios
   character(len = 2) :: temp
-  read(readunit, fmt=*, iostat=ios) &
-       temp, aparticle%x, aparticle%y, aparticle%z, aparticle%ux, &
-       aparticle%uy, aparticle%uz 
+  character(len=1000) :: buffer
+  read(readunit, fmt='(A1000)', iostat=ios) buffer
+  if (ios /= 0) return
+  read(buffer, *, iostat=ios) temp
   if (temp == 'gb') then
      aparticle%rod = .true.
+     read(buffer, fmt=*, iostat=ios) &
+       temp, aparticle%x, aparticle%y, aparticle%z, aparticle%ux, &
+       aparticle%uy, aparticle%uz
   else if (temp == 'lj') then 
-     aparticle%rod = .false. 
+     aparticle%rod = .false.
+     read(buffer, fmt=*, iostat=ios) &
+          temp, aparticle%x, aparticle%y, aparticle%z
   else
      ios = 999
   end if
