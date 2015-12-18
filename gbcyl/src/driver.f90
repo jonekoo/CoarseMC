@@ -3,10 +3,12 @@ program main
    !use mpi
    use gayberne_pfunit
    use class_simplelist_pfunit
+   use utils_pfunit
    implicit none
 
    type (TestSuite_type) :: gayberne_suite
    type (TestSuite_type) :: class_simplelist_suite
+   type (TestSuite_type) :: utils_suite
    type (TestResult_type) :: result
    character(len=100) :: summary_statement
 
@@ -41,6 +43,12 @@ program main
    call add(class_simplelist_suite, TestCase1Step('Test neighbour mask',&
         test_nbrmask))
 
+   utils_suite = TestSuite('Tests for utility routines in module utils.')
+   call add(utils_suite, TestCase1Step('Test reading a file to a string.', &
+        test_readstr))
+   call add(utils_suite, TestCase1Step('Test parsing a file to lines.', &
+        test_readlines))
+   
    ! Run the tests and accumulate the results in "result"
    result = newTestResult(mode=MODE_USE_STDOUT)
    call Run(gayberne_suite, result)
@@ -54,6 +62,12 @@ program main
    print*,trim(summary_statement)
 
    call clean(class_simplelist_suite)
+
+   call Run(utils_suite, result)
+   summary_statement=Summary(result)
+   print*,trim(summary_statement)
+
+   call clean(utils_suite)
 
    call pFUnit_finalize()
 
