@@ -9,7 +9,7 @@ module m_particlegroup
        iszperiodic
   use particle, only: particledat, position, setposition, &
        moveparticle_2, pair_interaction, pair_interaction_ptr, single_energy, &
-       particlearray_wrapper, wrapper_delete
+       particlearray_wrapper, wrapper_delete, particlearray_to_json
   use class_parameterizer, only: parameterizer, getparameter
   use class_parameter_writer, only: parameter_writer, writeparameter, &
        writecomment
@@ -34,9 +34,11 @@ module m_particlegroup
   logical :: is_initialized = .false.
 
   type particlegroup
+     character(len=:), allocatable :: name
      type(particledat), allocatable :: particles(:)
      type(simplelist) :: sl
    contains
+     procedure :: to_json => particlegroup_to_json
      procedure :: scalepositions
      final :: particlegroup_finalize
   end type particlegroup
@@ -64,11 +66,13 @@ module m_particlegroup
 contains
 
   function create_particlegroup(simbox, particles, min_cell_length, &
-       min_boundary_width) result(group)
+       min_boundary_width, name) result(group)
     type(poly_box), intent(in) :: simbox
     type(particledat), intent(in) :: particles(:)
     real(dp), intent(in) :: min_cell_length, min_boundary_width
+    character(len=*), intent(in) :: name
     type(particlegroup) :: group
+    group%name = name
     allocate(group%particles(size(particles)), source=particles)
     !$ if (.true.) then
     !$ call new_simplelist(group%sl, simbox, group%particles, min_cell_length, &
@@ -80,6 +84,16 @@ contains
     !$ end if
   end function create_particlegroup
 
+  subroutine particlegroup_to_json(this, json_val)
+    class(particlegroup), intent(in) :: this
+    type(json_value), pointer, intent(inout) :: json_val
+    if (allocated(this%name)) call json_add(json_val, 'name', this%name)
+    !! particlearray
+    call particlearray_to_json(json_val, this%particles)
+    !! cell list
+
+  end subroutine particlegroup_to_json
+  
   impure elemental subroutine particlegroup_finalize(group)
     type(particlegroup), intent(inout) :: group
     call simplelist_deallocate(group%sl)

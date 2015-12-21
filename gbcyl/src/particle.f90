@@ -6,7 +6,8 @@ module particle
   use class_poly_box, only: poly_box, minimage
   include 'rng.inc'
   use particle_mover, only: transmove, rotate
-  use json_module, only: json_value
+  use json_module, only: json_value, json_add, CK, json_add, &
+       json_create_array
   use class_parameter_writer, only: parameter_writer
   implicit none
   
@@ -42,6 +43,9 @@ module particle
      procedure :: move => particledat_move
      procedure :: orientation => orientation
      procedure :: position => position
+     procedure, nopass :: typestr => particledat_typestr
+     procedure, nopass :: description => particledat_description
+     procedure :: coordinates_to_json => particledat_coordinates_to_json
   end type particledat
   
   interface   
@@ -135,6 +139,16 @@ end type pair_interaction_ptr
 
 contains
 
+  function particledat_typestr() result(str)
+    character(len=:), allocatable :: str
+    str = "particledat"
+  end function particledat_typestr
+
+  subroutine particledat_description(descr)
+    character(kind=CK, len=3), allocatable, intent(inout) :: descr(:)
+    descr = ["x  ", "y  ", "z  ", "ux ", "uy ", "uz ", "rod"]
+  end subroutine particledat_description
+
   pure subroutine particledat_downcast_assign(this, a_particle, err)
     class(particledat), intent(inout) :: this
     class(particledat), intent(in) :: a_particle
@@ -148,33 +162,67 @@ contains
   end subroutine particledat_downcast_assign
 
   !> Writes @p aparticle to the outputunit @p writeunit.
-subroutine writeparticle(writeunit, aparticle)
-  integer, intent(in) :: writeunit
-  type(particledat), intent(in) :: aparticle
-  character(len = 2) :: typeid
-  if (aparticle%rod) then
-     typeid = 'gb'
-  else 
-     typeid = 'lj'
-  end if
-  write(writeunit, '(A,1X,6(' // fmt_char_dp() // ',1X))', advance='no') &
-       typeid, aparticle%x, aparticle%y, aparticle%z, aparticle%ux, &
-       aparticle%uy, aparticle%uz 
-end subroutine writeparticle
+  subroutine writeparticle(writeunit, aparticle)
+    integer, intent(in) :: writeunit
+    type(particledat), intent(in) :: aparticle
+    character(len = 2) :: typeid
+    if (aparticle%rod) then
+       typeid = 'gb'
+    else 
+       typeid = 'lj'
+    end if
+    write(writeunit, '(A,1X,6(' // fmt_char_dp() // ',1X))', advance='no') &
+         typeid, aparticle%x, aparticle%y, aparticle%z, aparticle%ux, &
+         aparticle%uy, aparticle%uz 
+  end subroutine writeparticle
+  
+  !> Writes @p aparticle to the outputunit @p writeunit.
+  subroutine to_stdout(this)
+    class(particledat), intent(in) :: this
+    character(len = 2) :: typeid
+    if (this%rod) then
+       typeid = 'gb'
+    else 
+       typeid = 'lj'
+    end if
+    write(output_unit, '(A,1X,6(' // fmt_char_dp() // ',1X))', advance='no') &
+         typeid, this%x, this%y, this%z, this%ux, &
+         this%uy, this%uz 
+  end subroutine to_stdout
+  
+  
+subroutine particlearray_to_json(json_val, particles)
+  type(json_value), pointer, intent(inout) :: json_val
+  class(particledat), intent(in) :: particles(:)
+  character(kind=CK, len=3), allocatable :: descr(:)
+  type(json_value), pointer :: coordinates_json
+  type(json_value), pointer :: particle_json
+  integer :: i
+  if (size(particles) == 0) return
+  call json_add(json_val, "type", particles(1)%typestr())
+  call particles(1)%description(descr)
+  call json_add(json_val, "description", descr)
+  call json_create_array(coordinates_json, 'coordinates')
+  do i = 1, size(particles)
+     call particles(i)%coordinates_to_json(particle_json)
+     call json_add(coordinates_json, particle_json)
+  end do
+  call json_add(json_val, coordinates_json)
+end subroutine particlearray_to_json
 
-!> Writes @p aparticle to the outputunit @p writeunit.
-subroutine to_stdout(this)
+
+subroutine particledat_coordinates_to_json(this, json_val)
   class(particledat), intent(in) :: this
-  character(len = 2) :: typeid
-  if (this%rod) then
-     typeid = 'gb'
-  else 
-     typeid = 'lj'
-  end if
-  write(output_unit, '(A,1X,6(' // fmt_char_dp() // ',1X))', advance='no') &
-       typeid, this%x, this%y, this%z, this%ux, &
-       this%uy, this%uz 
-end subroutine to_stdout
+  type(json_value), pointer :: json_val
+  call json_create_array(json_val, '')
+  call json_add(json_val, '', this%x)
+  call json_add(json_val, '', this%y)
+  call json_add(json_val, '', this%z)
+  call json_add(json_val, '', this%ux)
+  call json_add(json_val, '', this%uy)
+  call json_add(json_val, '', this%uz)
+  call json_add(json_val, '', this%rod)
+end subroutine particledat_coordinates_to_json
 
 
 !> Reads @p aparticle from @p readunit. If the reading succeeds, 

@@ -86,6 +86,7 @@ module mc_engine
   !> Output file name for parameters.
   character(len=:), allocatable, save :: fn_parameters_out
   character(len=:), allocatable, save :: fn_parameters_restart
+  character(len=:), allocatable, save :: fn_coordinates_restart
   
   !> The random number generator states.
   type(mt_state), allocatable, save :: mts(:)
@@ -151,12 +152,14 @@ contains
     character(len=*), intent(in) :: parameter_infile
     character(len=*), intent(in) :: parameter_outfile
     character(len=*), intent(in) :: parameter_restartfile
+    !character(len=*), intent(in) :: coordinate_restartfile
     type(json_file) :: json
     type(json_value), pointer :: json_val
     logical :: status_ok
     character(len=:), allocatable :: error_msg
     fn_parameters_out = parameter_outfile
     fn_parameters_restart = parameter_restartfile
+    !fn_coordinates_restart = coordinate_restartfile
     write(idchar, '(I9)') id 
     call json_parse(parameter_infile, json_val)
     if (json_failed()) then
@@ -394,13 +397,13 @@ subroutine create_groups(simbox, particles, group_names, &
              pack(particles, particles%rod), &
              min_cell_length=max_cutoff + &
              2 * get_max_translation(), &
-             min_boundary_width=2 * get_max_translation()))
+             min_boundary_width=2 * get_max_translation(), name=group_names(i)))
      else if (group_names(i) == 'lj') then
         allocate(groups(i)%ptr, source=particlegroup(simbox, &
              pack(particles, .not. particles%rod), &
              min_cell_length=max_cutoff + &
              2 * get_max_translation(), &
-             min_boundary_width=2 * get_max_translation()))
+             min_boundary_width=2 * get_max_translation(), name=group_names(i)))
      else
         write(error_unit, *) 'ERROR: unknown group type ' // &
              trim(adjustl(group_type))
@@ -522,13 +525,13 @@ subroutine mce_writeparameters(writer)
   call mc_sweep_writeparameters(writer)
 end subroutine
 
-subroutine mce_tojson(json_val)
+subroutine mce_tojson(json_val, coordinates_json)
   type(json_value), pointer, intent(out) :: json_val
+  type(json_value), pointer, intent(out), optional :: coordinates_json
   integer :: i, j
   type(json_value), pointer :: json_child, group_name, pair_ia_json, &
-       pair_ia_element
+       pair_ia_element, group_json, group_json_element
   call json_create_object(json_val, 'mc_engine')
-  !call writecomment(writer, 'mc engine parameters')
   
   call json_add(json_val, 'n_equilibration_sweeps', &
   nequilibrationsweeps)
@@ -570,6 +573,7 @@ subroutine mce_tojson(json_val)
      call json_create_string(group_name, group_names(i), '')
      call json_add(json_child, group_name)
   end do
+
   call json_add(json_val, json_child)
   
   call json_create_array(pair_ia_json, 'pair_interactions')
@@ -584,6 +588,19 @@ subroutine mce_tojson(json_val)
   call particlewall_to_json(json_val)
   call particlemover_to_json(json_val)
   call mc_sweep_to_json(json_val)
+
+  !! Write groups
+  call json_create_array(group_json, 'particle_groups')
+  do i = 1, size(groups)
+     call json_create_object(group_json_element, '')
+     call groups(i)%ptr%to_json(group_json_element)
+     call json_add(group_json, group_json_element)
+  end do
+  if (present(coordinates_json)) then
+     call json_add(coordinates_json, group_json)
+  else
+     call json_add(json_val, group_json)
+  end if
 end subroutine mce_tojson
 
 
@@ -630,8 +647,8 @@ subroutine makerestartpoint
   character(len=80) :: parameterfile
   character(len=80) :: configurationfile
   integer :: ios
-  type(json_value), pointer :: restart_json
-  restart_json => null()
+  type(json_value), pointer :: parameters_json, coordinates_json
+  parameters_json => null()
 
   !! Write parameters to a restartfile
   parameterunit = fileunit_getfreeunit()
@@ -642,12 +659,16 @@ subroutine makerestartpoint
        'makerestartpoint failed opening', parameterfile
   pwriter = new_parameter_writer(parameterunit)
   call mce_writeparameters(pwriter)
-
-  call mce_tojson(restart_json)
-  call json_print(restart_json, fn_parameters_restart)
-  call json_destroy(restart_json)
-  
   close(parameterunit)
+  
+  call mce_tojson(parameters_json) !, coordinates_json)
+  
+  call json_print(parameters_json, fn_parameters_restart)
+  call json_destroy(parameters_json)
+
+  !! Write configuration of molecules to a restartfile.
+  !call json_print(coordinates_json, fn_coordinates_restart)
+  !call json_destroy(coordinates_json)
 
   !! Write configurations to a restartfile
   configurationunit = fileunit_getfreeunit()
