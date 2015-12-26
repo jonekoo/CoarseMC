@@ -28,6 +28,7 @@ module mc_engine
   use json_module
   use m_json_wrapper, only: get_parameter
   use m_interaction_factory, only: create_pair_interaction
+  use m_particlejson_parser, only: particlearray_from_json
   implicit none
   
   !> The number of equilibration MC sweeps in the simulation.  Equilibration
@@ -154,7 +155,7 @@ contains
     character(len=*), intent(in) :: parameter_restartfile
     !character(len=*), intent(in) :: coordinate_restartfile
     type(json_file) :: json
-    type(json_value), pointer :: json_val
+    type(json_value), pointer :: json_val, box_json
     logical :: status_ok
     character(len=:), allocatable :: error_msg
     fn_parameters_out = parameter_outfile
@@ -190,11 +191,17 @@ contains
     !end if
     !call json%destroy() ! Causes segmentation fault.
     !write(*, *) nequilibrationsweeps
+    call json_get(json_val, 'box', box_json)
+    call simbox%from_json(box_json)
+
+    call create_groups(json_val, simbox, group_names, pair_interactions, groups)
+    
     if (json_failed()) call json_print_error_message(error_unit)
     call mce_init_common(id, n_tasks)
+    
   end subroutine mce_init_json
 
-  
+
   !> Initializes this module and its dependencies.
   !!
   !! @param id the process id for an MPI process.
@@ -216,38 +223,40 @@ contains
     if (temperature < 0._dp) then
        write(error_unit, *) 'ERROR: mc_engine '//&
             'tried to set a negative temperature.'
-       stop  
+       stop 'Program stopped by mce_init_common.'  
     end if
     call beta_exchange_init(1._dp / temperature)
     
     if (pressure < 0._dp) then
        write(error_unit, *) 'ERROR: mc_engine '//&
             'tried to set a negative pressure.'
-       stop  
+       stop 'Program stopped by mce_init_common.'  
     end if
 
-    statefile = 'inputconfiguration.'//trim(adjustl(idchar))
+    !! statefile = 'inputconfiguration.'//trim(adjustl(idchar))
 
-    !! Read geometry
-    if (.false.) then
-       allocate(temp_groups(size(group_names)))
-       do i = 1, size(group_names)
-          call read_group(statefile, group_names(i), temp_groups(i))
-       end do
-    else
-       coordinateunit = fileunit_getfreeunit()
-       open(file=statefile, unit=coordinateunit, action='READ', status='OLD',&
-            iostat=ios)
-       call factory_readstate(coordinatereader, coordinateunit, simbox, &
-            particles, ios)
-       if (0 /= ios) then 
-          write(error_unit, *) 'ERROR ', ios,' reading ', statefile
-          stop
-       end if
-       close(coordinateunit)
-    end if
-    call create_groups(simbox, particles, group_names, &
-         pair_interactions, groups)
+    !! !! Read geometry
+    !! if (.false.) then
+    !!    allocate(temp_groups(size(group_names)))
+    !!    do i = 1, size(group_names)
+    !!       call read_group(statefile, group_names(i), temp_groups(i))
+    !!    end do
+    !! else
+    !!    coordinateunit = fileunit_getfreeunit()
+    !!    open(file=statefile, unit=coordinateunit, action='READ', status='OLD',&
+    !!         iostat=ios)
+    !!    call factory_readstate(coordinatereader, coordinateunit, simbox, &
+    !!         particles, ios)
+    !!    if (0 /= ios) then 
+    !!       write(error_unit, *) 'ERROR ', ios,' reading ', statefile
+    !!       stop
+    !!    end if
+    !!    close(coordinateunit)
+    !! end if
+    !! call create_groups(simbox, particles, group_names, &
+    !!     pair_interactions, groups)
+
+
     
     !! Open output for geometries
     coordinateunit = fileunit_getfreeunit()
@@ -257,13 +266,13 @@ contains
     if (0 /= ios) then
        write(error_unit, *) 'ERROR: mce_init: Failed opening ', statefile, & 
             ' for writing.'
-       stop
+       stop 'Program stopped by mce_init_common.'
     end if
     call total_energy(groups, simbox, pair_interactions, &
          particlewall_potential, etotal, err)
     if (err /= 0) then
        write(error_unit, *) 'ERROR: mce_init: total_energy returned err = ', err
-       stop
+       stop 'Program stopped by mce_init_common.'
     end if
     call makerestartpoint
   end subroutine mce_init_common
@@ -379,7 +388,37 @@ subroutine mce_init_rng(id, n_tasks)
 end subroutine mce_init_rng
 
 
-subroutine create_groups(simbox, particles, group_names, &
+subroutine create_groups(json_val, simbox, group_names, &
+     pair_interactions, groups)
+  type(json_value), pointer, intent(in) :: json_val
+  type(poly_box), intent(in) :: simbox
+  character(len=*), intent(in) :: group_names(:)
+  character(kind=CK, len=:), allocatable :: group_name
+  type(pair_interaction_ptr), intent(in) :: pair_interactions(:, :)
+  type(particlegroup_ptr), allocatable, intent(out) :: groups(:)
+  character(len=20) :: group_type
+  integer :: i
+  real(dp) :: max_cutoff
+  type(json_value), pointer :: groups_json, groups_json_element
+  class(particledat), allocatable :: particles(:)
+  max_cutoff = pair_interactions(1, 1)%ptr%get_cutoff()
+  allocate(groups(size(group_names)))
+  call json_get(json_val, 'particle_groups', groups_json)
+  do i = 1, json_count(groups_json)
+     call json_get_child(groups_json, i, groups_json_element)
+     call get_parameter(groups_json_element, 'name', group_name)
+     if (any(group_names == group_name)) then
+        call particlearray_from_json(groups_json_element, particles)
+        allocate(groups(i)%ptr, source=particlegroup(simbox, particles, &
+             min_cell_length=max_cutoff + 2 * get_max_translation(), &
+             min_boundary_width=2 * get_max_translation(), name=group_name))
+     end if
+     deallocate(particles)
+  end do
+end subroutine create_groups
+
+
+subroutine create_groups2(simbox, particles, group_names, &
      pair_interactions, groups)
   type(poly_box), intent(in) :: simbox
   type(particledat), intent(in) :: particles(:)
@@ -407,10 +446,10 @@ subroutine create_groups(simbox, particles, group_names, &
      else
         write(error_unit, *) 'ERROR: unknown group type ' // &
              trim(adjustl(group_type))
-        stop
+        stop 'Program stopped by create_groups2.'
      end if
   end do
-end subroutine create_groups
+end subroutine create_groups2
 
 
 !> Finalizes the simulation.
@@ -525,12 +564,12 @@ subroutine mce_writeparameters(writer)
   call mc_sweep_writeparameters(writer)
 end subroutine
 
-subroutine mce_tojson(json_val, coordinates_json)
+subroutine mce_to_json(json_val, coordinates_json)
   type(json_value), pointer, intent(out) :: json_val
   type(json_value), pointer, intent(out), optional :: coordinates_json
   integer :: i, j
   type(json_value), pointer :: json_child, group_name, pair_ia_json, &
-       pair_ia_element, group_json, group_json_element
+       pair_ia_element, group_json, group_json_element, box_json
   call json_create_object(json_val, 'mc_engine')
   
   call json_add(json_val, 'n_equilibration_sweeps', &
@@ -589,6 +628,11 @@ subroutine mce_tojson(json_val, coordinates_json)
   call particlemover_to_json(json_val)
   call mc_sweep_to_json(json_val)
 
+  !! Write box
+  call json_create_object(box_json, 'box')
+  call simbox%to_json(box_json)
+  call json_add(json_val, box_json)
+
   !! Write groups
   call json_create_array(group_json, 'particle_groups')
   do i = 1, size(groups)
@@ -601,7 +645,7 @@ subroutine mce_tojson(json_val, coordinates_json)
   else
      call json_add(json_val, group_json)
   end if
-end subroutine mce_tojson
+end subroutine mce_to_json
 
 
 !> Runs the simulation. 
@@ -647,7 +691,7 @@ subroutine makerestartpoint
   character(len=80) :: parameterfile
   character(len=80) :: configurationfile
   integer :: ios
-  type(json_value), pointer :: parameters_json, coordinates_json
+  type(json_value), pointer :: parameters_json
   parameters_json => null()
 
   !! Write parameters to a restartfile
@@ -661,14 +705,10 @@ subroutine makerestartpoint
   call mce_writeparameters(pwriter)
   close(parameterunit)
   
-  call mce_tojson(parameters_json) !, coordinates_json)
+  call mce_to_json(parameters_json) !, coordinates_json)
   
   call json_print(parameters_json, fn_parameters_restart)
   call json_destroy(parameters_json)
-
-  !! Write configuration of molecules to a restartfile.
-  !call json_print(coordinates_json, fn_coordinates_restart)
-  !call json_destroy(coordinates_json)
 
   !! Write configurations to a restartfile
   configurationunit = fileunit_getfreeunit()
@@ -726,7 +766,7 @@ subroutine runproductiontasks
     if (ios /= 0) then
        write(error_unit, *) 'ERROR: runproductiontasks failed opening', &
             parameterfile
-      stop
+      stop 'Program stopped by runproductiontasks.'
     end if
     writer = new_parameter_writer(pwunit)
     call mce_writeparameters(writer)
@@ -738,9 +778,9 @@ subroutine runproductiontasks
     if (ios /= 0) then
        write(error_unit, *) 'ERROR: runproductiontasks failed opening ', &
             fn_parameters_out
-       stop
+       stop 'Program stopped by runproductiontasks.'
     end if
-    call mce_tojson(output_json)
+    call mce_to_json(output_json)
     call json_print(output_json, u_output_json)
     close(u_output_json)
     call json_destroy(output_json)
