@@ -4,7 +4,7 @@
 !! with OpenMP, the domain decomposition algorithm is used for the
 !! particle moves and energy calculations. 
 module m_particlegroup
-  use iso_fortran_env, only: dp => REAL64, output_unit
+  use iso_fortran_env, only: dp => REAL64, output_unit, error_unit
   use class_poly_box, only: poly_box, minimage, isxperiodic, isyperiodic, &
        iszperiodic
   use particle, only: particledat, position, setposition, &
@@ -35,7 +35,7 @@ module m_particlegroup
 
   type particlegroup
      character(len=:), allocatable :: name
-     type(particledat), allocatable :: particles(:)
+     class(particledat), allocatable :: particles(:)
      type(simplelist) :: sl
    contains
      procedure :: to_json => particlegroup_to_json
@@ -68,9 +68,9 @@ contains
   function create_particlegroup(simbox, particles, min_cell_length, &
        min_boundary_width, name) result(group)
     type(poly_box), intent(in) :: simbox
-    type(particledat), intent(in) :: particles(:)
+    class(particledat), intent(in) :: particles(:)
     real(dp), intent(in) :: min_cell_length, min_boundary_width
-    character(len=*), intent(in) :: name
+    character(kind=CK, len=*), intent(in) :: name
     type(particlegroup) :: group
     group%name = name
     allocate(group%particles(size(particles)), source=particles)
@@ -152,8 +152,8 @@ subroutine parsescalingtype(scalingtype)
   isok = (0 == verify(trim(adjustl(scalingtype)), 'xyz,') .and. &
        0 /= len_trim(adjustl(scalingtype)))
   if (.not. isok) then
-     write(*, *) 'Error parsing parameter scaling_type, stopping!'
-     stop
+     write(error_unit, *) 'Error parsing parameter scaling_type, stopping!'
+     stop 'Stopped by parsescalingtype'
   end if
   call splitstr(scalingtype, ',', scalingtypes)
 end subroutine parsescalingtype
@@ -308,18 +308,28 @@ function create_domain(this, simbox, jx, jy, jz) result(d)
   type(domain) :: d
   logical, allocatable :: nbr_mask(:)
   integer :: n_local
+  integer :: i
+  integer, allocatable :: helper(:)
+
   allocate(nbr_mask(size(this%particles)), source=.false.)
   d%n_cell = this%sl%counts(jx, jy, jz)
   call simplelist_cell_nbrmask(this%sl, simbox, jx, jy, jz, nbr_mask)
   n_local = count(nbr_mask)
-  
   !! Remove particles in jx, jy, jz from mask:
   nbr_mask(this%sl%indices(1:d%n_cell, jx, jy, jz)) = .false.
+
+  !! GFortran 6.0.0 is not fine with pack from a polymorphic
+  !! array class(particledat) so we'll use a workaround.
   !! Put particles in jx, jy, jz first in temp_particles:
-  allocate(d%arr(n_local), source=[this%particles(&
-       this%sl%indices(1:d%n_cell, jx, jy, jz)), &
-       pack(this%particles, nbr_mask)])
-  allocate(d%mask(size(d%arr)), source=.true.)
+  allocate(helper, source=[this%sl%indices(1:d%n_cell, jx, jy, jz), &
+       pack([(i, i = 1, size(this%particles))], nbr_mask)])
+
+  allocate(d%arr(n_local), mold=this%particles(1))
+  do i = 1, n_local
+     call d%arr(i)%downcast_assign(this%particles(helper(i)))
+  end do
+
+  allocate(d%mask(n_local), source=.true.)
 end function create_domain
 
 impure elemental subroutine delete_domain(this)
@@ -359,7 +369,12 @@ subroutine domain_move(domains, i_d, genstates, simbox, temperature, &
      if(err == 0) then 
         call domains(i_d)%arr(j)%energy(domains, pair_ias(:, i_d), simbox, &
              subr_single_energy, eold, err)
-        if (err /= 0) stop
+        if (err /= 0) then
+           call domains(i_d)%arr(j)%to_stdout()
+           call newparticle%to_stdout()
+           write(error_unit, *) 'ERROR: err=', err, ' domain=', i_d, ' old particle ', j
+           stop 'Stopped by domain_move.'
+        end if
         call acceptchange(eold, enew, temperature, genstates(1), isaccepted)
         if(isaccepted) then
            call domains(i_d)%arr(j)%downcast_assign(newparticle)
