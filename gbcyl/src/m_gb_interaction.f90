@@ -5,6 +5,8 @@ module m_gb_interaction
   use json_module
   use class_parameter_writer, only: parameter_writer, writeparameter
   use m_json_wrapper, only: get_parameter
+  use m_rod, only: rod
+  use m_point, only: point
   implicit none
 
   type, extends(pair_interaction) :: gb_interaction
@@ -34,24 +36,37 @@ contains
   subroutine gb_to_json(this, json_val)
     class(gb_interaction), intent(in) :: this
     type(json_value), pointer, intent(inout) :: json_val
-    type(json_value), pointer :: pef_json
-    call json_add(json_val, 'type', 'gb_interaction')
+    !type(json_value), pointer :: pef_json
+    !call json_add(json_val, 'type', 'gb_interaction')
     call json_add(json_val, 'r_cutoff', this%cutoff)
-    call json_create_object(pef_json, 'potential')
-    call this%pef%to_json(pef_json)
-    call json_add(json_val, pef_json)
+    !call json_create_object(pef_json, 'potential')
+    !call this%pef%to_json(pef_json)
+    !call json_add(json_val, pef_json)
+    call this%pef%to_json(json_val)
   end subroutine gb_to_json
   
-  pure subroutine gb_pair_potential(this, particlei, particlej, rij, energy, err)
+  pure subroutine gb_pair_potential(this, particlei, particlej, rij, &
+       energy, err)
     class(gb_interaction), intent(in) :: this
-    type(particledat), intent(in) :: particlei, particlej
+    class(particledat), intent(in) :: particlei, particlej
     real(dp), intent(in) :: rij(3)
     real(dp), intent(out) :: energy
     integer, intent(out) :: err
     logical :: overlap
-    call this%pef%potential(particlei%orientation(), particlej%orientation(), &
-         rij, energy, overlap)
-    if (overlap) err = 1
+    err = 0
+    select type (particlei)
+    type is (rod)
+       select type (particlej)
+       type is (rod)
+          call this%pef%potential(particlei%orientation(), particlej%orientation(), &
+               rij, energy, overlap)
+          if (overlap) err = 1
+       class default
+         err = 77
+       end select
+    class default
+      err = 78
+    end select
   end subroutine gb_pair_potential
 
   pure function gb_get_cutoff(this) result(cutoff)
@@ -62,7 +77,7 @@ contains
 
   pure function gb_pair_force(this, particlei, particlej, rij) result(f)
     class(gb_interaction), intent(in) :: this
-    type(particledat), intent(in) :: particlei, particlej
+    class(particledat), intent(in) :: particlei, particlej
     real(dp), intent(in) :: rij(3)
     real(dp) :: f(3)
     f = this%pef%force(particlei%orientation(), particlej%orientation(), rij)
