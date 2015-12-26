@@ -9,6 +9,7 @@ module particle
   use json_module, only: json_value, json_add, CK, json_add, &
        json_create_array
   use class_parameter_writer, only: parameter_writer
+  use m_json_wrapper, only: get_parameter
   implicit none
   
   !> Holds data of a uniaxial particle, e.g. Gay-Berne 
@@ -46,6 +47,9 @@ module particle
      procedure, nopass :: typestr => particledat_typestr
      procedure, nopass :: description => particledat_description
      procedure :: coordinates_to_json => particledat_coordinates_to_json
+     procedure :: from_json => particledat_from_json
+     procedure :: particledat_equals
+     generic :: operator(==) => particledat_equals
   end type particledat
   
   interface   
@@ -62,7 +66,7 @@ module particle
           energy, overlap)
        import particledat, poly_box, dp
        type(poly_box), intent(in) :: simbox
-       type(particledat), intent(in) :: particles(:)
+       class(particledat), intent(in) :: particles(:)
        integer, intent(in) :: i
        real(dp), intent(out) :: energy
        logical, intent(out) :: overlap
@@ -70,7 +74,7 @@ module particle
      
      pure subroutine single_energy(aparticle, simbox, energy, err)
        import particledat, poly_box, dp
-       type(particledat), intent(in) :: aparticle
+       class(particledat), intent(in) :: aparticle
        type(poly_box), intent(in) :: simbox
        real(dp), intent(out) :: energy
        integer, intent(out) :: err
@@ -100,7 +104,7 @@ abstract interface
         energy, err)
      import
      class(pair_interaction), intent(in) :: this
-     type(particledat), intent(in) :: particlei, particlej
+     class(particledat), intent(in) :: particlei, particlej
      real(dp), intent(in) :: rij(3)
      real(dp), intent(out) :: energy
      integer, intent(out) :: err
@@ -109,7 +113,7 @@ abstract interface
    pure function pair_force(this, particlei, particlej, rij) result(f)
      import
      class(pair_interaction), intent(in) :: this
-     type(particledat), intent(in) :: particlei, particlej
+     class(particledat), intent(in) :: particlei, particlej
      real(dp), intent(in) :: rij(3)
      real(dp) :: f(3)
    end function pair_force
@@ -139,10 +143,25 @@ end type pair_interaction_ptr
 
 contains
 
-  function particledat_typestr() result(str)
-    character(len=:), allocatable :: str
+  subroutine particledat_from_json(this, json_val)
+    class(particledat), intent(inout) :: this
+    type(json_value), pointer, intent(in) :: json_val
+    call get_parameter(json_val, '[1]', this%x)
+    call get_parameter(json_val, '[2]', this%y)
+    call get_parameter(json_val, '[3]', this%z)
+    call get_parameter(json_val, '[4]', this%ux, error_lb=-1._dp, &
+         error_ub=1._dp)
+    call get_parameter(json_val, '[5]', this%uy, error_lb=-1._dp, &
+         error_ub=1._dp)
+    call get_parameter(json_val, '[6]', this%uz, error_lb=-1._dp, &
+         error_ub=1._dp)
+    call get_parameter(json_val, '[7]', this%rod)
+  end subroutine particledat_from_json
+
+  subroutine particledat_typestr(str)
+    character(len=:), allocatable, intent(out) :: str
     str = "particledat"
-  end function particledat_typestr
+  end subroutine particledat_typestr
 
   subroutine particledat_description(descr)
     character(kind=CK, len=3), allocatable, intent(inout) :: descr(:)
@@ -161,6 +180,16 @@ contains
     end select
   end subroutine particledat_downcast_assign
 
+  elemental function particledat_equals(this, another) result(res)
+    class(particledat), intent(in) :: this
+    type(particledat), intent(in) :: another
+    logical :: res
+    res = (this%x == another%x) .and. (this%y == another%y) .and. &
+         (this%z == another%z) .and. (this%ux == another%ux) .and. &
+         (this%uy == another%uy) .and. (this%uz == another%uz) .and. &
+         (this%rod .eqv. another%rod)
+  end function particledat_equals
+  
   !> Writes @p aparticle to the outputunit @p writeunit.
   subroutine writeparticle(writeunit, aparticle)
     integer, intent(in) :: writeunit
@@ -196,10 +225,12 @@ subroutine particlearray_to_json(json_val, particles)
   class(particledat), intent(in) :: particles(:)
   character(kind=CK, len=3), allocatable :: descr(:)
   type(json_value), pointer :: coordinates_json
-  type(json_value), pointer :: particle_json
+  type(json_value), pointer :: particle_json, type_json
   integer :: i
+  character(kind=CK, len=:), allocatable :: str
   if (size(particles) == 0) return
-  call json_add(json_val, "type", particles(1)%typestr())
+  call particles(1)%typestr(str)
+  call json_add(json_val, "type", str)
   call particles(1)%description(descr)
   call json_add(json_val, "description", descr)
   call json_create_array(coordinates_json, 'coordinates')
@@ -268,7 +299,7 @@ end subroutine particledat_assign
 !! random number generator state. After the move, @p dE contains the
 !! change in energy of the system and @p isaccepted == .true. if the
 !! move was accepted. 
-pure subroutine moveparticle_2(this, genstates, simbox, temperature, nbrs, &
+subroutine moveparticle_2(this, genstates, simbox, temperature, nbrs, &
      pair_ias, subr_single_energy, dE, n_trials, n_accepted)
   class(particledat), intent(inout) :: this
   !! Could be type(particlearray_wrapper) if beneficial:
@@ -320,7 +351,7 @@ pure subroutine moveparticle_2(this, genstates, simbox, temperature, nbrs, &
 end subroutine moveparticle_2
 
 
-pure subroutine particle_potential(this, nbrs, pair_ias, simbox, &
+subroutine particle_potential(this, nbrs, pair_ias, simbox, &
      subr_single_energy, energy, err)
   class(particledat), intent(in) :: this
   class(particlearray_wrapper), intent(in) :: nbrs(:)
@@ -456,10 +487,12 @@ end subroutine particledat_move
   impure elemental subroutine wrapper_assign(this, src)
     class(particlearray_wrapper), intent(inout) :: this
     type(particlearray_wrapper), intent(in) :: src
+    if(.not. allocated(src%arr)) stop 'ERROR: wrapper_assign: src%arr not allocated!'
+    if (.not. allocated(src%mask)) stop 'ERROR: wrapper_assign: src%mask not allocated!'
     if (allocated(this%arr)) deallocate(this%arr)
     allocate(this%arr(size(src%arr)), source=src%arr)
     if (allocated(this%mask)) deallocate(this%mask)
-    allocate(this%mask(size(src%arr)), source=src%mask)
+    allocate(this%mask, source=src%mask)
   end subroutine wrapper_assign
   
 end module particle
