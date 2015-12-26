@@ -15,6 +15,8 @@ module class_pair_potential
   use class_parameter_writer
   use json_module
   use m_json_wrapper, only: get_parameter
+  use m_rod, only: rod
+  use m_point, only: point
   implicit none
   
   type, extends(pair_interaction) :: conditional_pair_interaction
@@ -221,7 +223,7 @@ contains
   pure subroutine cpi_pair_potential_2(this, particlei, particlej, &
        simbox, energy, err)
     class(conditional_pair_interaction), intent(in) :: this
-    type(particledat), intent(in) :: particlei, particlej
+    class(particledat), intent(in) :: particlei, particlej
     type(poly_box), intent(in) :: simbox
     real(dp), intent(out) :: energy
     integer, intent(out) :: err
@@ -241,30 +243,47 @@ contains
   pure subroutine cpi_pair_potential(this, particlei, particlej, rij, energy,&
        err)
     class(conditional_pair_interaction), intent(in) :: this
-    type(particledat), intent(in) :: particlei 
-    type(particledat), intent(in) :: particlej
+    class(particledat), intent(in) :: particlei 
+    class(particledat), intent(in) :: particlej
     real(dp), intent(in) :: rij(3)
     real(dp), intent(out) :: energy
     integer, intent(out) :: err
     logical :: overlap
     real(dp), dimension(3) :: ui, uj
-    ui(1) = particlei%ux
-    ui(2) = particlei%uy
-    ui(3) = particlei%uz
-    uj(1) = particlej%ux
-    uj(2) = particlej%uy
-    uj(3) = particlej%uz
+    overlap = .false.
     err = 0
-    if (particlei%rod .and. particlej%rod) then
-       call this%p_rod_ia%potential(ui, uj, rij, energy, overlap)
-    else if (particlei%rod) then
-       call this%p_rodsphere%potential(ui, rij, energy, overlap)
-    else if (particlej%rod) then
-       call this%p_rodsphere%potential(uj, -rij, energy, overlap)
-    else
-       call this%p_sphere_ia%potential(sqrt(dot_product(rij, rij)), &
-            energy, overlap)
-    end if
+    select type (particlei)
+    type is (rod)
+      ui(1) = particlei%ux
+      ui(2) = particlei%uy
+      ui(3) = particlei%uz
+      select type (particlej)
+      type is (rod)
+        uj(1) = particlej%ux
+        uj(2) = particlej%uy
+        uj(3) = particlej%uz
+        call this%p_rod_ia%potential(ui, uj, rij, energy, overlap)
+      type is (point)
+        call this%p_rodsphere%potential(ui, rij, energy, overlap)
+      class default
+        err = 99
+      end select
+    type is (point)
+      select type (particlej)
+      type is (rod)
+        uj(1) = particlej%ux
+        uj(2) = particlej%uy
+        uj(3) = particlej%uz
+        call this%p_rodsphere%potential(uj, -rij, energy, overlap)      
+      type is (point)
+        call this%p_sphere_ia%potential(sqrt(dot_product(rij, rij)), &
+             energy, overlap)
+      class default
+        err = 99
+      end select
+    class default
+      err = 98
+    end select
     if (overlap) err = 1
   end subroutine cpi_pair_potential
   
@@ -278,7 +297,7 @@ contains
   !!
   pure function cpi_pair_force(this, particlei, particlej, rij) result(f)
     class(conditional_pair_interaction), intent(in) :: this
-    type(particledat), intent(in) :: particlei, particlej
+    class(particledat), intent(in) :: particlei, particlej
     real(dp), intent(in) :: rij(3)
     real(dp) :: f(3)
     real(dp), dimension(3) :: ui, uj
