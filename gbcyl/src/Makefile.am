@@ -60,11 +60,11 @@ AM_FCFLAGS = \
 model_src = \
   class_parameterizer.f90 \
   class_parameter_writer.f90 \
-  class_poly_box.f90 \
   json_module.F90 \
+  m_json_wrapper.f90 \
   process_not_found.inc \
   check_parameter.inc \
-  m_json_wrapper.f90 \
+  class_poly_box.f90 \
   particle_mover.f90 \
   particle.f90 \
   m_point.f90 \
@@ -113,6 +113,7 @@ parallel_src = \
   m_particlegroup.f90 \
   m_gb_interaction.f90 \
   m_interaction_factory.f90 \
+  m_particlejson_parser.f90 \
   mc_engine.f90 
 
 ## Below: Listings of source files needed by programs
@@ -513,24 +514,6 @@ test_simplelist_with_openmp_SOURCES = \
   ${energy_src} \
   test_simplelist_with_openmp.f90
 
-#testrunner_SOURCES = \
-#  num_kind.f90 \
-#  m_fileunit.f90 \
-#  utils.f90 \
-#  utils_test.f90 \
-#  class_parameterizer.f90 \
-#  rng.inc mtfort90.f90  \
-#  class_parameter_writer.f90 \
-#  gayberne.f90 \
-#  gayberne_test.f90 \
-#  particle.f90 \
-#  particle_test.f90 \
-#  class_poly_box.f90 \
-#  class_poly_box_test.f90 \
-#  class_factory.f90 \
-#  class_factory_test.f90 \
-#  testrunner.f90 
-
 if PFUNIT
 
 driver_SOURCES = \
@@ -556,6 +539,10 @@ driver_SOURCES = \
   class_simplelist.f90 \
   class_simplelist_pfunit.f90 \
   utils_pfunit.f90 \
+  m_point.f90 \
+  m_rod.f90 \
+  m_particlejson_parser.f90 \
+  particle_pfunit.f90 \
   driver.F90  
 
 
@@ -565,11 +552,8 @@ driver_FCFLAGS = -I${PFUNIT_DIR}/mod \
 
 driver_LDADD = ${PFUNIT_DIR}/lib/libpfunit.a ${ldadd_mtstream}
 
-#testrunner_LDADD = ${top_builddir}/ftnunit/libftnunit.a ${ldadd_mtstream}
-
 TESTS = driver
-#dist_check_SCRIPTS = ${top_builddir}/ftnunit/runtests.sh
-check_PROGRAMS = driver #testrunner
+check_PROGRAMS = driver
 endif
 
 MODEXT = @MODEXT@
