@@ -15,6 +15,8 @@ module particlewall
   use ljcylinder
   use json_module
   use m_json_wrapper, only: get_parameter
+  use m_rod, only: rod
+  use m_point, only: point
   implicit none
     
   !> The relative strength of attractive term as compared to the
@@ -174,18 +176,21 @@ contains
   !! cylindrical Lennard-Jones cavity. The radius of the cavity is
   !! defined by @p simbox. If the particle is too close to the wall or
   !! inside the wall @p overlap == true.
-  pure subroutine particlewall_potential(particle, simbox, energy, err)
-    type(particledat), intent(in) :: particle
+  pure subroutine particlewall_potential(aparticle, simbox, energy, err)
+    class(particledat), intent(in) :: aparticle
     type(poly_box), intent(in) :: simbox
     real(dp), intent(out) :: energy
     integer, intent(out) :: err
     logical :: overlap
     err = 0
-    if (particle%rod) then
-      call gbwall(particle, simbox, energy, overlap)
-    else
-      call ljwall(particle, simbox, energy, overlap)
-   end if
+    select type (aparticle)
+    type is (rod)
+      call gbwall(aparticle, simbox, energy, overlap)
+    type is (point)
+      call ljwall(aparticle, simbox, energy, overlap)
+    class default
+      err = 66
+   end select
    if (overlap) err = 1
   end subroutine
 
@@ -193,15 +198,18 @@ contains
   !> Returns the force acting on @p particle by the wall of a
   !! cylindrical cavity. Radius of the cavity is defined by @p simbox.
   !! See module description for details.
-  function particlewall_force(particle, simbox) result(f)
-    type(particledat), intent(in) :: particle
+  function particlewall_force(aparticle, simbox) result(f)
+    class(particledat), intent(in) :: aparticle
     type(poly_box), intent(in) :: simbox
     real(dp) :: f(3)
-    if (particle%rod) then
-      f = gbwall_force(particle, simbox)
-    else
-      f = ljwall_force(particle, simbox)
-    end if
+    select type (aparticle)
+    class is (rod)
+      f = gbwall_force(aparticle, simbox)
+    class is (point)
+      f = ljwall_force(aparticle, simbox)
+    class default
+      stop 'ERROR: particlewall_force: unknown type.'
+    end select
   end function
 
 
@@ -216,8 +224,7 @@ contains
   !! wall too much.
   !! 
   pure subroutine ljwall(ljparticle, simbox, energy, overlap)
-    implicit none
-    type(particledat), intent(in) :: ljparticle
+    class(point), intent(in) :: ljparticle
     type(poly_box), intent(in) :: simbox
     real(dp), intent(out) :: energy
     logical, intent(out) :: overlap
@@ -239,8 +246,7 @@ contains
   !! wall of the cylindrical cavity. The radius of the cavity is
   !! defined by the @p simbox.
   function ljwall_force(ljparticle, simbox) result(f)
-    implicit none
-    type(particledat), intent(in) :: ljparticle
+    class(point), intent(in) :: ljparticle
     type(poly_box), intent(in) :: simbox
     real(dp) :: f(3)
 
@@ -272,7 +278,7 @@ contains
   !!
   pure subroutine gbwall(gbparticle, simbox, energy, overlap)
     implicit none
-    type(particledat), intent(in) :: gbparticle
+    class(rod), intent(in) :: gbparticle
     type(poly_box), intent(in) :: simbox
     real(dp), intent(out) :: energy
     logical, intent(out) :: overlap
@@ -300,7 +306,7 @@ contains
   !! wall of a cylindrical cavity. The @p gbparticle interacts with the
   !! wall via two embedded LJ sites.
   function gbwall_force(gbparticle, simbox) result(f)
-    type(particledat), intent(in) :: gbparticle
+    class(rod), intent(in) :: gbparticle
     type(poly_box), intent(in) :: simbox
     real(dp) :: f(3)
     real(dp) :: f_a(3), f_b(3)
@@ -330,7 +336,7 @@ contains
   !> Returns the distances from cavity axis @p ra, @p rb for
   !! interaction sites embedded in @p particle.
   pure subroutine rarb(particle, ra, rb)
-    type(particledat), intent(in) :: particle
+    class(rod), intent(in) :: particle
     real(dp), intent(out) :: ra, rb
     real(dp) :: xa, ya, xb, yb
     xa = particle%x + LJdist * particle%ux
@@ -348,7 +354,7 @@ contains
   !! @param particle the particle to which the potential is calculated. 
   !! 
   pure real(dp) function angular(particle)
-    type(particledat), intent(in) :: particle
+    class(rod), intent(in) :: particle
     angular = (particle%uz)**2
   end function angular
 
