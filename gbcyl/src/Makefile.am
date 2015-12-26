@@ -14,7 +14,6 @@ bin_PROGRAMS = \
   smcpsi6 \
   cylhist \
   cylhist2 \
-  configurationconverter \
   cylindrical_layerorientation \
   virial_tensor \
   doublezsize \
@@ -455,13 +454,6 @@ printforces_SOURCES = \
   ${model_src} \
   ${energy_src} \
   printforces.f90 
-
-configurationconverter_SOURCES = \
-  num_kind.f90 \
-  ${model_src} \
-  utils.f90 \
-  m_fileunit.f90 \
-  configurationconverter.f90
 
 test_gblj_SOURCES = \
   num_kind.f90 \
