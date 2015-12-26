@@ -14,7 +14,7 @@ contains
     call json_get(json_val, "type", typestr)
     if (typestr == 'conditional_pair_interaction') then
        allocate(res, source=conditional_pair_interaction(json_val))
-    else if (typestr == 'gb_interaction') then
+    else if (typestr == 'gayberne') then
        allocate(res, source=gb_interaction(json_val))
     end if
   end function create_pair_interaction
