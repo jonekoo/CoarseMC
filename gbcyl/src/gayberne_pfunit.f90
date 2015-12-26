@@ -221,23 +221,29 @@ contains
     logical :: overlap
     real(dp), dimension(3), parameter :: r0 = ex * (kappa_sigma - 1.) * 2. / 3.
     real(dp), parameter :: dr = 1e-6
-    real(dp), dimension(3), parameter :: r1 = r0 + ex * dr
+    !real(dp), dimension(3), parameter :: r1 = r0 + ex * dr
+    real(dp), dimension(3) :: r1 
     real(dp), dimension(3), parameter :: uj = (/sqrt(2.)**(-1), 0., &
          sqrt(2.)**(-1)/) 
     real(dp) :: force(3), energy1, energy0
     real(dp),dimension(3) :: gradient
     type(gayberne) :: gb
+    real(dp), parameter :: evecs(3, 3) = &
+         reshape([1, 0, 0, 0, 1, 0, 0, 0, 1], [3, 3])
+    integer :: i
     gb = gayberne(kappa_sigma, kappa_epsilon, mu, nu, sigma_0, epsilon_0)
-    call gb%potential(ez, uj, r0, energy0, overlap)
-    call gb%potential(ez, uj, r1, energy1, overlap)
-    force = gb%force(ez, uj, r0 + 0.5 * dr * ex)
-    call assertEqual(force(1), (energy1 - energy0) / dr, margin, &
-         "Force comparable "//&
-         "to finite difference approximation.")
-    gradient= g_potential(gb, ez, uj, r0 + 0.5 * dr * ex)
-    write(*, *) gradient
-    call assertEqual(gradient(1), (energy1 - energy0) / dr, margin, &
-         "New force comparable to finite difference approximation.")
+
+    do i = 1, 3
+       call gb%potential(ez, uj, r0, energy0, overlap)
+       r1 = r0 + evecs(:, i) * dr
+       call gb%potential(ez, uj, r1, energy1, overlap)
+       force = gb%force(ez, uj, r0 + 0.5 * dr * evecs(:, i))
+       call assertEqual(-(energy1 - energy0) / dr, force(i), margin, &
+            "Force not comparable to finite difference approximation.")
+       gradient= g_potential(gb, ez, uj, r0 + 0.5 * dr * evecs(:, i))
+       call assertEqual(gradient(i), (energy1 - energy0) / dr, margin, &
+            "New force comparable to finite difference approximation.")
+    end do
 end subroutine
 
 end module 
