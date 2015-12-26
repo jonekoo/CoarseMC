@@ -15,51 +15,64 @@ subroutine test_new_simplelist
   type(simplelist) :: sl
   integer :: i
   real(dp), parameter :: minlength=10._dp
-  simbox = new_cylinder(2._dp*(minlength+tiny(minlength)), 2._dp*(minlength+tiny(minlength)))
+  simbox = new_cylinder(2._dp*(minlength+tiny(minlength)), &
+       2._dp*(minlength+tiny(minlength)))
   do i=1,n
     particles(i)%x = i*(-minlength*0.25_dp)
     particles(i)%y = i*(-minlength*0.25_dp)
     particles(i)%z = i*(-minlength*0.25_dp)
   end do
-  !! Create new list 
-  call new_simplelist(sl, simbox, particles, minlength, min_boundary_width=0._dp)
+  !! Create new list with one cell only
+  call new_simplelist(sl, simbox, particles, minlength, &
+       min_boundary_width=0._dp)
+  !! Tests for list dimensions
+  call assertEqual(1, sl%nx, 'Number of cells in x-direction should be 1.')
+  call assertEqual(1, sl%ny, 'Number of cells in y-direction should be 1.')
+  call assertEqual(1, sl%nz, 'Number of cells in z-direction should be 1.')
+  
   !! Tests for lists contents
-  call AssertEqual(n, sl%counts(0,0,0), "Number of particle indices in the&
-  & cell 1,1,1 does not match the total particle number.")
-  call AssertEqual((/1,2,3/), sl%indices(1:3,0,0,0), "Some particles did not&
-  & end up to the right cell.")
-  call AssertEqual(n, sum(sl%counts), "Total count of particle indices in cell&
-  & list does not match particle count.")
+  call AssertEqual(n, sl%counts(0, 0, 0), "Number of particle indices in the&
+  & cell 0,0,0 does not match the total particle number.")
+  call AssertEqual((/1, 2, 3/), sl%indices(1:3, 0, 0, 0), &
+       "Some particles did not end up to the right cell.")
+  call AssertEqual(n, sum(sl%counts), &
+       "Total count of particle indices in cell list does not match particle "&
+       //" count.")
   call simplelist_deallocate(sl)
 
   !! Create new list with more cells. 
-  do i=1,n
-    particles(i)%x = i*(minlength-1e-9)*0.25_dp
-    particles(i)%y = i*(minlength-1e-9)*0.25_dp
-    particles(i)%z = i*(minlength-1e-9)*0.25_dp
+  do i = 1, n
+    particles(i)%x = i * (minlength - 1e-9) * 0.25_dp
+    particles(i)%y = i * (minlength - 1e-9) * 0.25_dp
+    particles(i)%z = i * (minlength - 1e-9) * 0.25_dp
   end do
-  call new_simplelist(sl, simbox, particles, minlength, min_boundary_width=0._dp)
-  call AssertEqual(2, sl%counts(2,2,2), "More or less than two particles ended up in&
-  & the cell 2,2,2")
-  call AssertEqual(1, sl%counts(3,3,3), "More or less than one particle ended up in&
-  & the cell 3,3,3")
-  call AssertEqual((/1,2/), sl%indices(1:2,2,2,2), "Particles 1,2 did not end&
-  & up as first particles in the cell 2,2,2")
-  call AssertEqual((/3,0/), sl%indices(1:2,3,3,3), "Particle 3 did not end up as&
-  & the first particle in cell 3,3,3")
-  call AssertEqual(n, sum(sl%counts), "Total particle count does&
-  & not match the total count of particle indices in the cell list.")
+  call new_simplelist(sl, simbox, particles, minlength / 2, &
+       min_boundary_width=0._dp)
+  call AssertEqual(2, sl%counts(2, 2, 2), &
+       "More or less than two particles ended up in the cell 2, 2, 2")
+  call AssertEqual(1, sl%counts(3, 3, 3), &
+       "More or less than one particle ended up in the cell 3, 3, 3")
+  call AssertEqual((/1, 2/), sl%indices(1:2, 2, 2, 2), &
+       "Particles 1,2 did not end up as first particles in the cell 2, 2, 2")
+  call AssertEqual((/3, 0/), sl%indices(1:2, 3, 3, 3), &
+       "Particle 3 did not end up as the first particle in cell 3, 3, 3")
+  call AssertEqual(n, sum(sl%counts), &
+       "Total particle count does not match the total count of particle " // &
+       "indices in the cell list.")
   call simplelist_deallocate(sl)
 
   !! Cases where the creation might break:
   !! 1. Only one cell in some dimension
-  call new_simplelist(sl, simbox, particles, minlength, min_boundary_width=0._dp)
-  call AssertEqual(n, sl%counts(0,0,0), "Number of particle indices in the&
-  & cell 1,1,1 does not match the total particle number.")
-  call AssertEqual((/1,2,3/), sl%indices(1:3,0,0,0), "Some particles did not&
-  & end up to the right cell.")
-  call AssertEqual(n, sum(sl%counts), "Total count of particle indices in cell&
-  & list does not match particle count.")
+  call new_simplelist(sl, simbox, particles, minlength, &
+       min_boundary_width=0._dp)
+  call AssertEqual(n, sl%counts(0,0,0), &
+       "Number of particle indices in the cell 0, 0, 0 does not match the " //&
+       "total particle number.")
+  call AssertEqual((/1, 2, 3/), sl%indices(1:3, 0, 0, 0), &
+       "Some particles did not end up to the right cell.")
+  call AssertEqual(n, sum(sl%counts), &
+       "Total count of particle indices in cell list does not match " // &
+       "particle count.")
   call simplelist_deallocate(sl)
   !! 2. iseven=.true. but only one cell can fit with the given minlength
   !! What should happen? Failure? Warning? Silence and only one cell created?
