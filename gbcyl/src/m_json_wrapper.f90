@@ -6,12 +6,13 @@ module m_json_wrapper
   
   interface get_parameter
      module procedure get_integer_parameter, get_real_parameter, &
-          get_logical_parameter, get_string_vec_parameter
+          get_logical_parameter, get_string_parameter, get_string_vec_parameter
   end interface get_parameter
 
   interface process_not_found
      module procedure process_integer_not_found, process_real_not_found, &
-          process_logical_not_found, process_string_vec_not_found
+          process_logical_not_found, process_string_not_found, &
+          process_string_vec_not_found
   end interface process_not_found
   
 contains
@@ -73,6 +74,23 @@ contains
     include 'process_not_found.inc'    
   end subroutine process_logical_not_found
 
+  subroutine get_string_parameter(json_val, name, val)
+    type(json_value), pointer, intent(in) :: json_val
+    character(kind=CK, len=*), intent(in) :: name
+    character(kind=CK, len=:), allocatable, intent(inout) :: val
+    character(kind=CK, len=:), allocatable :: temp
+    call json_get(json_val, name, temp)
+    call process_not_found(json_val, name, val, temp)
+  end subroutine get_string_parameter
+
+  subroutine process_string_not_found(json_val, name, val, temp)
+    type(json_value), pointer, intent(in) :: json_val
+    character(kind=CK, len=*), intent(in) :: name
+    character(kind=CK, len=:), allocatable, intent(inout) :: val
+    character(kind=CK, len=*), intent(in) :: temp
+    include 'process_not_found.inc'    
+  end subroutine process_string_not_found
+  
   subroutine get_string_vec_parameter(json_val, name, val)
     type(json_value), pointer, intent(in) :: json_val
     character(kind=CK, len=*), intent(in) :: name
