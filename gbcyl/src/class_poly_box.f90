@@ -4,6 +4,8 @@ module class_poly_box
 use num_kind
 use utils
 use iso_fortran_env, only: error_unit
+use json_module
+use m_json_wrapper
 implicit none
 
 public :: poly_box
@@ -19,6 +21,7 @@ public :: setxperiodicity, setyperiodicity, setzperiodicity
 public :: volume
 public :: pbox_read
 public :: pbox_write
+public :: pbox_from_json
 
 private
 
@@ -27,13 +30,16 @@ character(len=15), dimension(2), parameter :: typeids = (/'rectangular', 'cylind
 !> Stores the geometry of the system. Possible values of typeid are
 !! listed in the static array typeids.
 type poly_box
-  character(len=15) :: typeid = 'rectangular'
+  character(len=:), allocatable :: typeid
   real(dp) :: lx = 0._dp
   real(dp) :: ly = 0._dp
   real(dp) :: lz = 0._dp
   logical :: xperiodic = .true.
   logical :: yperiodic = .true.
   logical :: zperiodic = .true.
+  contains
+    procedure :: from_json => pbox_from_json
+    procedure :: to_json => pbox_to_json
 end type poly_box
 
 interface new_box
@@ -106,6 +112,76 @@ end interface
 
 contains 
 
+  subroutine pbox_from_json(this, json_val)
+    class(poly_box), intent(inout) :: this
+    type(json_value), pointer, intent(in) :: json_val
+    call get_parameter(json_val, 'type', this%typeid)
+    if (this%typeid == 'rectangular') then
+       call rectangularbox_from_json(this, json_val)
+    else if (this%typeid == 'cylindrical') then
+       call cylindricalbox_from_json(this, json_val)
+    else
+       write(error_unit, *) 'ERROR: box_from_json: Unknown box type ', this%typeid
+       write(error_unit, *) 'Valid box types are', typeids(:)
+       stop
+    end if
+  end subroutine pbox_from_json
+
+  subroutine rectangularbox_from_json(this, json_val)
+    class(poly_box), intent(inout) :: this
+    type(json_value), pointer, intent(in) :: json_val
+    call get_parameter(json_val, 'lx', this%lx, error_lb=0._dp)
+    call get_parameter(json_val, 'ly', this%ly, error_lb=0._dp)
+    call get_parameter(json_val, 'lz', this%lz, error_lb=0._dp)
+    this%xperiodic = .true.
+    this%yperiodic = .true.
+    this%zperiodic = .true.
+  end subroutine rectangularbox_from_json
+
+  subroutine cylindricalbox_from_json(this, json_val)
+    class(poly_box), intent(inout) :: this
+    type(json_value), pointer, intent(in) :: json_val
+    call get_parameter(json_val, 'diameter', this%lx, error_lb=0._dp)
+    call get_parameter(json_val, 'length', this%lz, error_lb=0._dp)
+    call get_parameter(json_val, 'periodic', this%zperiodic)
+    this%ly = this%lx
+    this%xperiodic = .false.
+    this%yperiodic = .false.
+  end subroutine cylindricalbox_from_json
+
+
+  subroutine pbox_to_json(this, json_val)
+    class(poly_box), intent(in) :: this
+    type(json_value), pointer, intent(in) :: json_val
+    if (this%typeid == trim(adjustl(typeids(1)))) then
+       call rectangularbox_to_json(this, json_val)
+    else if (this%typeid == trim(adjustl(typeids(2)))) then
+       call cylindricalbox_to_json(this, json_val)
+    else
+       write(error_unit, *) 'ERROR: pbox_to_json: unknown typeid ', this%typeid
+       stop 
+    end if
+  end subroutine pbox_to_json
+
+
+  subroutine rectangularbox_to_json(this, json_val)
+    class(poly_box), intent(in) :: this
+    type(json_value), pointer, intent(in) :: json_val
+    call json_add(json_val, 'type', trim(adjustl(typeids(1))))
+    call json_add(json_val, 'lx', this%lx)
+    call json_add(json_val, 'ly', this%ly)
+    call json_add(json_val, 'lz', this%lz)
+  end subroutine rectangularbox_to_json
+
+  subroutine cylindricalbox_to_json(this, json_val)
+    class(poly_box), intent(in) :: this
+    type(json_value), pointer, intent(in) :: json_val
+    call json_add(json_val, 'type', trim(adjustl(typeids(2))))
+    call json_add(json_val, 'diameter', this%lx)
+    call json_add(json_val, 'length', this%lz)
+    call json_add(json_val, 'periodic', .true.)
+  end subroutine cylindricalbox_to_json
+
 !> Returns a poly_box with the given typeid @p boxtype. @p lx and, 
 !! optionally, @p ly and @p lz give the dimensions of the box. If
 !! @p boxtype == 'rectangular' all three dimensions are considered. If
@@ -135,13 +211,14 @@ function new_box_all(boxtype, lx, ly, lz) result(b)
      write(error_unit, *) 'Error: class_poly_box:new_box_all: internal ' // &
           'consistency error. Please send a bug report to the developer!'
   end if
-end function
+End function
 
 !> Returns a rectangular type poly_box with sides of equal length
 !! @p side and periodic boundaries in all directions.
 function new_box1(side) result(b)
   type(poly_box) :: b
   real(dp), intent(in) :: side
+  b%typeid = trim(adjustl(typeids(1)))
   b%lx = side
   b%ly = side
   b%lz = side
@@ -152,6 +229,7 @@ end function new_box1
 function new_box3(lx, ly, lz) result(b)
   type(poly_box) :: b
   real(dp), intent(in) :: lx, ly, lz
+  b%typeid = trim(adjustl(typeids(1)))
   b%lx = lx
   b%ly = ly
   b%lz = lz
@@ -163,7 +241,7 @@ function new_cylinder(diameter, height) result(pbox)
   real(dp), intent(in) :: diameter
   real(dp), intent(in) :: height
   type(poly_box) :: pbox
-  pbox%typeid = typeids(2)
+  pbox%typeid = trim(adjustl(typeids(2)))
   pbox%lx = diameter
   pbox%ly = diameter
   pbox%lz = height
