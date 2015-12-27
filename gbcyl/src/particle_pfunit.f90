@@ -40,7 +40,6 @@ contains
     out%uz = 0.
     !! write coordinates to json
     call out%coordinates_to_json(json_val)
-    
     !! read coordinates from json
     call in%from_json(json_val)
     call assertTrue(out == in, 'Input and output rod not equal.')
@@ -98,7 +97,7 @@ contains
        call assertTrue(all(out(:) == in(1:2)), &
             'Input and output particlearrays not equal.')
     class default
-       call assertTrue(.false., 'Input is not type point.')
+       call assertTrue(.false., 'Input is not of type point.')
     end select
     
   end subroutine test_pointarray_json_io
