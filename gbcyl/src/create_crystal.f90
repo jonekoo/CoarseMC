@@ -5,28 +5,32 @@ program create_crystal
   use m_particle_factory
   use class_poly_box
   use iso_fortran_env
+  use json_module
   implicit none
   integer :: nx = -1, ny = -1, nz = -1
   real(8), allocatable :: xs(:, :, :), ys(:, :, :), zs(:, :, :) 
   real(8) :: a = 1.0, d = 3.6
   real(8), allocatable :: rs(:, :) !(3, nx * ny * nz)
   type(poly_box) :: simbox
-  type(particledat), allocatable :: particles(:)
+  class(particledat), allocatable :: particles(:)
   integer :: i
   real(8) :: h != sqrt(3.0) / 2 * a
   type(factory) :: f
   integer :: unit = 12
   character(len=80) :: ofile = "configurations.txt"
   character(len=15) :: boxtype = "rectangular"
+  character(len=15) :: particletype = "rod"
   logical, allocatable :: mask(:)
   real(dp) :: radius = 9.0,  offset = 0.5
 
   !!---- Command line parsing ------------------------------------------------
   character(len=1000) :: cmd_line = ""
-  namelist /cmd/ nx, ny, nz, a, d, ofile, boxtype, radius, offset
+  namelist /cmd/ nx, ny, nz, a, d, ofile, boxtype, radius, offset, particletype
   character(len=*), parameter :: options_str = &
        'ofile="configurations.txt", a=1.0, d=3.6, nx=12, ny=12, nz=6, ' // &
-       'boxtype="rectangular", [radius=9.0,] [offset=0.5]'
+       'boxtype="rectangular", particletype="rod", [radius=9.0,] [offset=0.5]'
+  type(json_value), pointer :: json_val => null(), box_json => null(), &
+       groups_json => null(), groups_json_element => null()
 
   call get_command(cmd_line)
   call parse_cmdline(cmd_line)
@@ -51,30 +55,63 @@ program create_crystal
   simbox = new_box(boxtype, (nx + 1) * a, (ny + 1) * h, (nz + 1) * d)
 
   allocate(xs(nx, ny, nz), ys(nx, ny, nz), zs(nx, ny, nz), &
-       rs(3, nx * ny * nz), particles(nx * ny * nz))
+       rs(3, nx * ny * nz))
+
   call hexagonally_close_packed(nx, ny, nz, a, d, .true., xs, ys, zs)
  
   rs(1, :) = reshape(xs, [nx * ny * nz]) 
   rs(2, :) = reshape(ys, [nx * ny * nz]) 
   rs(3, :) = reshape(zs, [nx * ny * nz]) 
 
+  select case (particletype)
+  case ("rod")
+     allocate(particles(nx * ny * nz), source=rod())
+  case ("point")
+     allocate(particles(nx * ny * nz), source=point())
+  case default
+     write(error_unit, *) 'ERROR: Unknown particle type ', particletype
+     stop 'create_crystal is unable to continue.'
+  end select
+
   do i = 1, nx * ny * nz
      call setposition(particles(i), rs(:, i))
   end do
 
-  open(unit=unit, file=ofile, action='write')
+  call json_initialize()
+
+  call json_create_object(json_val, 'crystal')
+  call json_create_array(groups_json, 'particle_groups')
+
+  
+
+
   if (gettype(simbox) == 'cylindrical') then
      if (radius > 0) call setx(simbox, radius * 2)
      allocate(mask(size(particles)))
      !call cylinder_mask(particles, getx(simbox) / 2 - offset, mask)
      !mask = .false.
      mask(:) = particles(:)%x**2 + particles(:)%y**2 < (getx(simbox) / 2 - offset)**2
-     call factory_writestate(f, unit, simbox, pack(particles, mask))
+     call json_create_object(groups_json_element, '')
+     call particlearray_to_json(groups_json_element, particles(pack([(i, i=1, size(particles))], mask)))
+     call json_add(groups_json, groups_json_element)
   else
-     call factory_writestate(f, unit, simbox, particles)
+     if (.false.) then
+        open(unit=unit, file=ofile, action='write')
+        call factory_writestate(f, unit, simbox, particles)
+        close(unit)
+     else
+        call json_create_object(groups_json_element, '')
+        call particlearray_to_json(groups_json_element, particles)
+        call json_add(groups_json, groups_json_element)
+     end if
   end if
-  close(unit)
 
+  call json_create_object(box_json, 'box')
+  call simbox%to_json(box_json)
+  call json_add(json_val, box_json)
+
+  call json_add(json_val, groups_json)
+  call json_print(json_val, ofile)
 
 contains
 
@@ -117,6 +154,11 @@ subroutine print_help
   write(output_unit, *) '    if boxtype is cylindrical then this option can'
   write(output_unit, *) '    be used to control how close to the cylinder'
   write(output_unit, *) '    wall the particles are put.'
+  write(output_unit, *) ''
+  write(output_unit, *) 'particletype="rod"'
+  write(output_unit, *) '    options are "rod", "point". You may need to'
+  write(output_unit, *) '    escape the quotes with backslash. Example:'
+  write(output_unit, *) '    particletype=\"point\"'
   write(output_unit, *) ''
 end subroutine
 
