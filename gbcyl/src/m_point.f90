@@ -2,7 +2,9 @@ module m_point
   use particle, only: particledat
   use num_kind, only: dp
   use particle_mover, only: transmove, rotate
+  use json_module, only: json_value, json_add, json_create_array, CK
   include 'rng.inc'
+  use m_json_wrapper, only: get_parameter
   implicit none
 
   type, extends(particledat) :: point
@@ -15,6 +17,9 @@ module m_point
      generic :: operator(==) => point_equals
      procedure, nopass :: typestr => point_typestr
      procedure :: move => point_move
+     procedure :: coordinates_to_json => point_coordinates_to_json
+     procedure :: from_json => point_from_json
+     procedure, nopass :: description => point_description
   end type point
 
 contains
@@ -31,6 +36,11 @@ contains
     str = "point"
   end subroutine point_typestr
   
+  subroutine point_description(descr)
+    character(kind=CK, len=3), allocatable, intent(inout) :: descr(:)
+    descr = ["x  ", "y  ", "z  "]
+  end subroutine point_description
+
   pure subroutine point_downcast_assign(this, a_particle, err)
     class(point), intent(inout) :: this
     class(particledat), intent(in) :: a_particle
@@ -68,5 +78,22 @@ contains
     this%y = yn
     this%z = zn
   end subroutine point_move
+
+  subroutine point_coordinates_to_json(this, json_val)
+    class(point), intent(in) :: this
+    type(json_value), pointer :: json_val
+    call json_create_array(json_val, '')
+    call json_add(json_val, '', this%x)
+    call json_add(json_val, '', this%y)
+    call json_add(json_val, '', this%z)
+  end subroutine point_coordinates_to_json
+
+  subroutine point_from_json(this, json_val)
+    class(point), intent(inout) :: this
+    type(json_value), pointer, intent(in) :: json_val
+    call get_parameter(json_val, '[1]', this%x)
+    call get_parameter(json_val, '[2]', this%y)
+    call get_parameter(json_val, '[3]', this%z)
+  end subroutine point_from_json
 
 end module m_point

@@ -5,6 +5,8 @@ module m_rod
   use utils, only: fmt_char_dp
   use particle_mover, only: transmove, rotate
   include 'rng.inc'
+  use json_module, only: json_create_array, CK, json_value, json_add
+  use m_json_wrapper, only: get_parameter
   implicit none
   
   type, extends(particledat) :: rod
@@ -18,6 +20,9 @@ module m_rod
      procedure, nopass :: typestr => rod_typestr
      procedure :: to_stdout => rod_to_stdout
      procedure :: move => rod_move
+     procedure :: coordinates_to_json => rod_coordinates_to_json
+     procedure :: from_json => rod_from_json
+     procedure, nopass :: description => rod_description
   end type rod
 
 contains
@@ -34,6 +39,11 @@ contains
     character(len=:), allocatable, intent(out) :: str
     str = "rod"
   end subroutine rod_typestr
+
+  subroutine rod_description(descr)
+    character(kind=CK, len=3), allocatable, intent(inout) :: descr(:)
+    descr = ["x  ", "y  ", "z  ", "ux ", "uy ", "uz "]
+  end subroutine rod_description
 
   pure subroutine rod_downcast_assign(this, a_particle, err)
     class(rod), intent(inout) :: this
@@ -86,5 +96,31 @@ contains
     this%uy = uyn
     this%uz = uzn
   end subroutine rod_move
+
+  subroutine rod_coordinates_to_json(this, json_val)
+    class(rod), intent(in) :: this
+    type(json_value), pointer :: json_val
+    call json_create_array(json_val, '')
+    call json_add(json_val, '', this%x)
+    call json_add(json_val, '', this%y)
+    call json_add(json_val, '', this%z)
+    call json_add(json_val, '', this%ux)
+    call json_add(json_val, '', this%uy)
+    call json_add(json_val, '', this%uz)
+  end subroutine rod_coordinates_to_json
+  
+  subroutine rod_from_json(this, json_val)
+    class(rod), intent(inout) :: this
+    type(json_value), pointer, intent(in) :: json_val
+    call get_parameter(json_val, '[1]', this%x)
+    call get_parameter(json_val, '[2]', this%y)
+    call get_parameter(json_val, '[3]', this%z)
+    call get_parameter(json_val, '[4]', this%ux, error_lb=-1._dp, &
+         error_ub=1._dp)
+    call get_parameter(json_val, '[5]', this%uy, error_lb=-1._dp, &
+         error_ub=1._dp)
+    call get_parameter(json_val, '[6]', this%uz, error_lb=-1._dp, &
+         error_ub=1._dp)
+  end subroutine rod_from_json
 
 end module m_rod
