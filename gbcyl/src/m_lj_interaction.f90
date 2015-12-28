@@ -72,7 +72,13 @@ contains
     class(particledat), intent(in) :: particlei, particlej
     real(dp), intent(in) :: rij(3)
     real(dp) :: f(3)
-    f = this%pef%force(rij)
+    select type (particlei)
+    type is (point)
+       select type (particlej)
+       type is (point)
+          f = this%pef%force(rij)
+       end select
+    end select
   end function lj_pair_force
 
 end module m_lj_interaction
