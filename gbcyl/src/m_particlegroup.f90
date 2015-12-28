@@ -192,12 +192,14 @@ subroutine mc_sweep_to_json(json_val)
   integer :: i
   if (allocated(scalingtypes)) then
      call json_add(json_val, 'max_scaling', maxscaling)
-     call json_create_array(temp, 'scaling_types')
-     do i = 1, size(scalingtypes)
-        call json_create_string(str, scalingtypes(i), '')
-        call json_add(temp, str)
-     end do
-     call json_add(json_val, temp)
+     if (size(scalingtypes) > 0) then
+        call json_create_array(temp, 'scaling_types')
+        do i = 1, size(scalingtypes)
+           call json_create_string(str, scalingtypes(i), '')
+           call json_add(temp, str)
+        end do
+        call json_add(json_val, temp)
+     end if
   else
      stop 'ERROR: scalingtypes not allocated!'
   end if
