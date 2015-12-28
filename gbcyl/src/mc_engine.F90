@@ -127,44 +127,25 @@ contains
     character(len=*), intent(in) :: parameter_infile
     character(len=*), intent(in) :: parameter_outfile
     character(len=*), intent(in) :: parameter_restartfile
-    !character(len=*), intent(in) :: coordinate_restartfile
-    type(json_file) :: json
     type(json_value), pointer :: json_val, box_json
     logical :: status_ok
     character(len=:), allocatable :: error_msg
     fn_parameters_out = parameter_outfile
     fn_parameters_restart = parameter_restartfile
-    !fn_coordinates_restart = coordinate_restartfile
     write(idchar, '(I9)') id 
     call json_parse(parameter_infile, json_val)
     if (json_failed()) then
        call json_print_error_message(error_unit)
        stop
     end if
-    !call json_check_for_errors(status_ok, error_msg)
-    !if (.not. status_ok) then
-    !   write(error_unit, *) 'ERROR: ' // error_msg
-    !   call json_clear_exceptions()
-    !end if
-    !call json%get('$', json_val)
     call mce_from_json(json_val)
     if (json_failed()) then
         call json_check_for_errors(status_ok, error_msg)
         write(error_unit, *) 'Error: '//error_msg
         call json_clear_exceptions()
         stop 'json_failed'
-    !    !call json%destroy()
     end if
     call create_interactions_json(json_val, group_names, pair_interactions)
-    !if (json_failed()) then
-    !    call json_check_for_errors(status_ok, error_msg)
-    !    write(error_unit, *) 'Error: '//error_msg
-    !    call json_clear_exceptions()
-    !    stop 'json_failed'
-    !    !call json%destroy()
-    !end if
-    !call json%destroy() ! Causes segmentation fault.
-    !write(*, *) nequilibrationsweeps
     call json_get(json_val, 'box', box_json)
     call simbox%from_json(box_json)
 
@@ -184,64 +165,10 @@ contains
   subroutine mce_init_common(id, n_tasks)
     integer, intent(in) :: id
     integer, intent(in) :: n_tasks 
-    character(len = 50) :: statefile 
-    integer :: ios
-    type(factory) :: coordinatereader
-    type(particledat), allocatable :: particles(:)
     integer :: err
-    type(particlearray_wrapper), allocatable :: temp_groups(:)
-    integer :: i
     
-    call mce_init_rng(id, n_tasks)
-    
-    if (temperature < 0._dp) then
-       write(error_unit, *) 'ERROR: mc_engine '//&
-            'tried to set a negative temperature.'
-       stop 'Program stopped by mce_init_common.'  
-    end if
+    call mce_init_rng(id, n_tasks)    
     call beta_exchange_init(1._dp / temperature)
-    
-    if (pressure < 0._dp) then
-       write(error_unit, *) 'ERROR: mc_engine '//&
-            'tried to set a negative pressure.'
-       stop 'Program stopped by mce_init_common.'  
-    end if
-
-    !! statefile = 'inputconfiguration.'//trim(adjustl(idchar))
-
-    !! !! Read geometry
-    !! if (.false.) then
-    !!    allocate(temp_groups(size(group_names)))
-    !!    do i = 1, size(group_names)
-    !!       call read_group(statefile, group_names(i), temp_groups(i))
-    !!    end do
-    !! else
-    !!    coordinateunit = fileunit_getfreeunit()
-    !!    open(file=statefile, unit=coordinateunit, action='READ', status='OLD',&
-    !!         iostat=ios)
-    !!    call factory_readstate(coordinatereader, coordinateunit, simbox, &
-    !!         particles, ios)
-    !!    if (0 /= ios) then 
-    !!       write(error_unit, *) 'ERROR ', ios,' reading ', statefile
-    !!       stop
-    !!    end if
-    !!    close(coordinateunit)
-    !! end if
-    !! call create_groups(simbox, particles, group_names, &
-    !!     pair_interactions, groups)
-
-
-    
-    !! Open output for geometries
-    coordinateunit = fileunit_getfreeunit()
-    statefile = 'configurations.' // trim(adjustl(idchar))
-    open(file=statefile, unit=coordinateunit, action='WRITE', &
-         position='APPEND', status='UNKNOWN', form='formatted', iostat=ios)
-    if (0 /= ios) then
-       write(error_unit, *) 'ERROR: mce_init: Failed opening ', statefile, & 
-            ' for writing.'
-       stop 'Program stopped by mce_init_common.'
-    end if
     call total_energy(groups, simbox, pair_interactions, &
          particlewall_potential, etotal, err)
     if (err /= 0) then
@@ -254,8 +181,6 @@ contains
 
 subroutine mce_from_json(json_val)
   type(json_value), pointer, intent(in) :: json_val
-  character(kind=CK, len=:), allocatable :: msg
-  logical :: status_ok
   call get_parameter(json_val, 'n_equilibration_sweeps', &
        nequilibrationsweeps, error_lb=0)
   call get_parameter(json_val, 'n_production_sweeps', &
@@ -336,7 +261,6 @@ subroutine create_groups(json_val, simbox, group_names, &
   character(kind=CK, len=:), allocatable :: group_name
   type(pair_interaction_ptr), intent(in) :: pair_interactions(:, :)
   type(particlegroup_ptr), allocatable, intent(out) :: groups(:)
-  character(len=20) :: group_type
   integer :: i
   real(dp) :: max_cutoff
   type(json_value), pointer :: groups_json, groups_json_element
