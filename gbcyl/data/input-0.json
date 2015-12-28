@@ -26,6 +26,7 @@
   ],
   "pair_interactions": [
     {
+      "participants": ["gb", "gb"],
       "r_cutoff": 0.55E+1,
       "type": "gayberne",
       "gb_kappa_sigma": 0.44E+1,
@@ -37,89 +38,23 @@
       "gb_hardcore": 0.6E+0
     },
     {
-      "type": "conditional_pair_interaction",
+      "participants": ["gb", "lj"],
       "r_cutoff": 0.55E+1,
-      "rod_ia": {
-        "type": "gayberne",
-        "gb_kappa_sigma": 0.44E+1,
-        "gb_kappa_epsilon": 0.2E+2,
-        "gb_mu": 0.1E+1,
-        "gb_nu": 0.1E+1,
-        "gb_sigma_0": 0.1E+1,
-        "gb_epsilon_0": 0.1E+1,
-        "gb_hardcore": 0.6E+0
-      },
-      "sphere_ia": {
-        "type": "lj",
-        "lj_sigma_0": 0.869E+0,
-        "lj_epsilon_0": 0.358E+0
-      },
-      "rodsphere": {
-        "type": "gblj_potential",
-        "gblj_epsilon_0": 0.155E+1,
-        "gblj_sigma_0": 0.8E+0,
-        "gblj_mu": 0.35E+0,
-        "gblj_ee_to_es": 0.16E+0,
-        "gblj_se_to_ss": 0.332E+1,
-        "gblj_hardcore": 0.300000011920929E+0
-      }
+      "type": "gblj",
+      "gblj_epsilon_0": 0.155E+1,
+      "gblj_sigma_0": 0.8E+0,
+      "gblj_mu": 0.35E+0,
+      "gblj_ee_to_es": 0.16E+0,
+      "gblj_se_to_ss": 0.332E+1,
+      "gblj_hardcore": 0.300000011920929E+0
     },
     {
-      "type": "conditional_pair_interaction",
+      "participants": ["lj", "lj"],
       "r_cutoff": 0.55E+1,
-      "rod_ia": {
-        "type": "gayberne",
-        "gb_kappa_sigma": 0.44E+1,
-        "gb_kappa_epsilon": 0.2E+2,
-        "gb_mu": 0.1E+1,
-        "gb_nu": 0.1E+1,
-        "gb_sigma_0": 0.1E+1,
-        "gb_epsilon_0": 0.1E+1,
-        "gb_hardcore": 0.6E+0
-      },
-      "sphere_ia": {
-        "type": "lj",
-        "lj_sigma_0": 0.869E+0,
-        "lj_epsilon_0": 0.358E+0
-      },
-      "rodsphere": {
-        "type": "gblj_potential",
-        "gblj_epsilon_0": 0.155E+1,
-        "gblj_sigma_0": 0.8E+0,
-        "gblj_mu": 0.35E+0,
-        "gblj_ee_to_es": 0.16E+0,
-        "gblj_se_to_ss": 0.332E+1,
-        "gblj_hardcore": 0.300000011920929E+0
-      }
-    },
-    {
-      "type": "conditional_pair_interaction",
-      "r_cutoff": 0.55E+1,
-      "rod_ia": {
-        "type": "gayberne",
-        "gb_kappa_sigma": 0.44E+1,
-        "gb_kappa_epsilon": 0.2E+2,
-        "gb_mu": 0.1E+1,
-        "gb_nu": 0.1E+1,
-        "gb_sigma_0": 0.1E+1,
-        "gb_epsilon_0": 0.1E+1,
-        "gb_hardcore": 0.6E+0
-      },
-      "sphere_ia": {
-        "type": "lj",
-        "lj_sigma_0": 0.869E+0,
-        "lj_epsilon_0": 0.358E+0
-      },
-      "rodsphere": {
-        "type": "gblj_potential",
-        "gblj_epsilon_0": 0.155E+1,
-        "gblj_sigma_0": 0.8E+0,
-        "gblj_mu": 0.35E+0,
-        "gblj_ee_to_es": 0.16E+0,
-        "gblj_se_to_ss": 0.332E+1,
-        "gblj_hardcore": 0.300000011920929E+0
-      }
-    }
+      "type": "lj",
+      "lj_sigma_0": 0.869E+0,
+      "lj_epsilon_0": 0.358E+0
+     }
   ],
   "wall_density": 0.1E+1,
   "rodwall": "ljdimer-wall",
