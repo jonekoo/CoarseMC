@@ -96,7 +96,6 @@ type, abstract :: pair_interaction
    procedure(pair_force), deferred :: pair_force
    procedure(get_cutoff), deferred :: get_cutoff
    procedure(to_json), deferred :: to_json
-   procedure(writeparameters), deferred :: writeparameters
 end type pair_interaction
 
 abstract interface
@@ -130,11 +129,6 @@ abstract interface
      type(json_value), pointer, intent(inout) :: json_val
    end subroutine to_json
 
-   subroutine writeparameters(this, writer)
-     import pair_interaction, parameter_writer
-     class(pair_interaction), intent(in) :: this
-     type(parameter_writer), intent(inout) :: writer
-   end subroutine writeparameters
 end interface
 
 type pair_interaction_ptr
