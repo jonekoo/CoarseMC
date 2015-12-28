@@ -119,33 +119,7 @@ module mc_engine
   character(len=20), allocatable, save :: group_names(:)
   type(pair_interaction_ptr), allocatable, save :: pair_interactions(:, :)
 
-  interface mce_init
-     module procedure mce_init_parameterizer
-  end interface mce_init
-  
 contains
-  
-
-  subroutine mce_init_parameterizer(id, n_tasks)
-    integer, intent(in) :: id, n_tasks
-    character(len=80) :: parameterinputfile
-    type(parameterizer) :: parameterreader
-    integer :: ios
-    write(idchar, '(I9)') id 
-    parameterinputfile = 'inputparameters.' // trim(adjustl(idchar))
-    parameterreader = new_parameterizer(parameterinputfile, iostat=ios)
-    if (ios /= 0) then
-       write(error_unit, *) 'ERROR: Could not open ' // &
-            trim(adjustl(parameterinputfile))
-       stop
-    end if
-    call mce_readparameters(parameterreader)
-    call create_interactions_parameterizer(parameterreader, group_names, &
-         pair_interactions)
-    call delete(parameterreader)
-    call mce_init_common(id, n_tasks)
-  end subroutine mce_init_parameterizer
-
   
   subroutine mce_init_json(id, n_tasks, parameter_infile, parameter_outfile, &
        parameter_restartfile)
@@ -277,40 +251,6 @@ contains
     call makerestartpoint
   end subroutine mce_init_common
   
-
-  subroutine mce_readparameters(parameterreader)
-    intrinsic index
-  type(parameterizer), intent(in) :: parameterreader
-  character(kind=CK, len=:), allocatable :: msg
-  logical :: status_ok
-  call getparameter(parameterreader, 'n_equilibration_sweeps', &
-       nequilibrationsweeps)
-  call getparameter(parameterreader, 'n_production_sweeps', &
-       nproductionsweeps)
-  call getparameter(parameterreader, 'production_period', &
-       productionperiod)
-  call getparameter(parameterreader, 'i_sweep', isweep)
-  call getparameter(parameterreader, 'move_adjusting_period', &
-       moveadjustperiod)
-  call getparameter(parameterreader, 'move_ratio', moveratio)
-  call getparameter(parameterreader, 'scaling_ratio', scalingratio)
-  call getparameter(parameterreader, 'pt_period', pt_period)
-  call getparameter(parameterreader, 'restartperiod', restartperiod)
-  call getparameter(parameterreader, 'temperature', temperature)
-  call getparameter(parameterreader, 'pressure', pressure)
-  call getparameter(parameterreader, 'seed', seed)
-  call getparameter(parameterreader, 'nmovetrials', nmovetrials)
-  call getparameter(parameterreader, 'nacceptedmoves', nacceptedmoves)
-  call getparameter(parameterreader, 'nscalingtrials', nscalingtrials)
-  call getparameter(parameterreader, 'nacceptedscalings', nacceptedscalings)
-
-    !! Initialize modules.
-  call particlewall_init(parameterreader)
-  call particlemover_init(parameterreader)
-  call particlegroup_init(parameterreader)
-end subroutine mce_readparameters
-
-
 
 subroutine mce_from_json(json_val)
   type(json_value), pointer, intent(in) :: json_val
@@ -511,58 +451,6 @@ subroutine sweep(simbox, groups, genstates, isweep)
   end if
 end subroutine sweep
 
-!> Writes the parameters and observables of this module and its children
-!! with the class_parameter_writer module and by calling the write routines
-!! of the child modules.
-!!
-!! @param writer is the object responsible for writing the parameters.
-!!
-subroutine mce_writeparameters(writer)
-  type(parameter_writer), intent(inout) :: writer
-  integer :: i, j
-  call writecomment(writer, 'mc engine parameters')
-  call writeparameter(writer, 'n_equilibration_sweeps', &
-  nequilibrationsweeps)
-  call writeparameter(writer, 'n_production_sweeps', nproductionsweeps)
-  call writeparameter(writer, 'i_sweep', isweep)
-  call writeparameter(writer, 'production_period', productionperiod)
-  call writeparameter(writer, 'move_adjusting_period', moveadjustperiod)
-  call writeparameter(writer, 'pt_period', pt_period)
-  call writeparameter(writer, 'restartperiod', restartperiod)
-  call writeparameter(writer, 'seed', seed)
-  call writeparameter(writer, 'pressure', pressure)
-  call writeparameter(writer, 'temperature', temperature)
-  call writeparameter(writer, 'volume', volume(simbox))
-  call writeparameter(writer, 'total_energy', etotal)
-  call writeparameter(writer, 'enthalpy', etotal + &
-       volume(simbox) * pressure)
-  call writeparameter(writer, 'move_ratio', moveratio)
-  call writeparameter(writer, 'scaling_ratio', scalingratio)
-  call writeparameter(writer, 'nmovetrials', nmovetrials)
-  call writeparameter(writer, 'nacceptedmoves', nacceptedmoves)
-  if (nmovetrials > 0) then
-     call writeparameter(writer, 'current_move_ratio', &
-          real(nacceptedmoves, dp)/real(nmovetrials, dp))
-  else
-     call writeparameter(writer, 'current_move_ratio', 'nan')
-  end if
-  call writeparameter(writer, 'nscalingtrials', nscalingtrials)
-  call writeparameter(writer, 'nacceptedscalings', nacceptedscalings)
-  if (nscalingtrials > 0) then
-     call writeparameter(writer, 'current_scaling_ratio', &
-          real(nacceptedscalings, dp)/real(nscalingtrials, dp))
-  else
-     call writeparameter(writer, 'current_scaling_ratio', 'nan')
-  end if
-  do j = 1, size(pair_interactions, 2)
-     do i = 1, size(pair_interactions, 1)
-        call pair_interactions(i, j)%ptr%writeparameters(writer)
-     end do
-  end do
-  call particlewall_writeparameters(writer)
-  call particlemover_writeparameters(writer)
-  call mc_sweep_writeparameters(writer)
-end subroutine
 
 subroutine mce_to_json(json_val, coordinates_json)
   type(json_value), pointer, intent(out) :: json_val
@@ -617,8 +505,9 @@ subroutine mce_to_json(json_val, coordinates_json)
   
   call json_create_array(pair_ia_json, 'pair_interactions')
   do j = 1, size(pair_interactions, 2)
-     do i = 1, size(pair_interactions, 1)
+     do i = 1, j
         call json_create_object(pair_ia_element, '')
+        call json_add(pair_ia_element, 'participants', [group_names(i), group_names(j)])
         call pair_interactions(i, j)%ptr%to_json(pair_ia_element)
         call json_add(pair_ia_json, pair_ia_element)
      end do
@@ -684,41 +573,11 @@ end subroutine
 !! have been written to standard output if something fails.
 !!
 subroutine makerestartpoint
-  type(factory) :: restartwriter
-  integer :: configurationunit
-  integer :: parameterunit
-  type(parameter_writer) :: pwriter
-  character(len=80) :: parameterfile
-  character(len=80) :: configurationfile
-  integer :: ios
   type(json_value), pointer :: parameters_json
   parameters_json => null()
-
-  !! Write parameters to a restartfile
-  parameterunit = fileunit_getfreeunit()
-  parameterfile = 'restartparameters.' // trim(adjustl(idchar))
-  open(UNIT=parameterunit, FILE=parameterfile, action='WRITE',&
-       status='REPLACE', DELIM='QUOTE', iostat=ios)
-  if (ios /= 0) write(error_unit, *) 'Warning: ' // &
-       'makerestartpoint failed opening', parameterfile
-  pwriter = new_parameter_writer(parameterunit)
-  call mce_writeparameters(pwriter)
-  close(parameterunit)
-  
   call mce_to_json(parameters_json) !, coordinates_json)
-  
   call json_print(parameters_json, fn_parameters_restart)
   call json_destroy(parameters_json)
-
-  !! Write configurations to a restartfile
-  configurationunit = fileunit_getfreeunit()
-  configurationfile = 'restartconfiguration.' // trim(adjustl(idchar))
-  open(file=configurationfile, unit=configurationunit, &
-       action='WRITE', status='REPLACE', iostat=ios)
-  if (ios /= 0) write(error_unit, *) 'Warning: ' // &
-       'makerestartpoint failed opening', configurationfile
-  call writestate(restartwriter, configurationunit, simbox, groups)
-  close(configurationunit)
 end subroutine
 
 
@@ -748,29 +607,11 @@ end subroutine writestate
 !! should be gathered inside this routine for clarity. 
 subroutine runproductiontasks
   integer :: ios
-  character(len=80) :: parameterfile
-  type(parameter_writer) :: writer
-  type(factory) :: coordinatewriter
   integer :: be_unit
   type(json_value), pointer :: output_json
   integer :: u_output_json
   if (mod(isweep, productionperiod) == 0) then
-    !! Record snapshot of molecules and geometry.
-    call writestate(coordinatewriter, coordinateunit, simbox, groups)
     
-    !! Record simulation parameters.
-    parameterfile = 'parameters.'//trim(adjustl(idchar))
-    pwunit = fileunit_getfreeunit()
-    open(UNIT=pwunit, FILE=parameterfile, action='WRITE', position='APPEND', &
-         DELIM='QUOTE', IOSTAT=ios) 
-    if (ios /= 0) then
-       write(error_unit, *) 'ERROR: runproductiontasks failed opening', &
-            parameterfile
-      stop 'Program stopped by runproductiontasks.'
-    end if
-    writer = new_parameter_writer(pwunit)
-    call mce_writeparameters(writer)
-
     !! Write json output
     u_output_json = fileunit_getfreeunit()
     open(UNIT=u_output_json, file=fn_parameters_out, action='WRITE', &
@@ -886,46 +727,6 @@ subroutine check_simbox(simbox)
 end subroutine
 
 
-subroutine create_interactions_parameterizer(reader, group_names, &
-     pair_ias)
-  type(parameterizer), intent(in) :: reader
-  type(pair_interaction_ptr), intent(inout), allocatable :: pair_ias(:, :)
-  character(len=*), intent(in) :: group_names(:)
-  integer :: i, j
-  allocate(pair_ias(size(group_names), size(group_names)))
-  do j = 1, size(pair_ias, 2)
-     do i = 1, size(pair_ias, 1)
-        allocate(pair_ias(i, j)%ptr, &
-             source=conditional_pair_interaction(reader))
-     end do
-  end do
-end subroutine create_interactions_parameterizer
-
-subroutine create_interactions_json2(json_val, group_names, pair_ias)
-  type(json_value), pointer, intent(in) :: json_val
-  character(len=*), intent(in) :: group_names(:)
-  type(pair_interaction_ptr), intent(inout), allocatable :: pair_ias(:, :)
-  type(json_value), pointer :: pair_ia_json, pair_ia_element
-  logical :: found
-  integer :: i, j
-  call json_get(json_val, 'pair_interactions', pair_ia_json, found)
-  if (found) then
-     allocate(pair_ias(size(group_names), size(group_names)))
-     do j = 1, size(pair_ias, 2)
-        do i = 1, size(pair_ias, 1)
-           call json_get_child(pair_ia_json, i + (j - 1) * size(pair_ias, 1), &
-                pair_ia_element)
-           allocate(pair_ias(i, j)%ptr, &
-                source=create_pair_interaction(pair_ia_element))
-        end do
-     end do
-  else
-     write(error_unit, *) 'ERROR: pair_interactions not found in json:'
-     call json_print(json_val, error_unit)
-     stop
-  end if
-end subroutine create_interactions_json2
-
 subroutine create_interactions_json(json_val, group_names, pair_ias)
   type(json_value), pointer, intent(in) :: json_val
   character(len=*), intent(in) :: group_names(:)
@@ -933,7 +734,7 @@ subroutine create_interactions_json(json_val, group_names, pair_ias)
   type(json_value), pointer :: pair_ia_json, pair_ia_element
   character(len=len(group_names)), allocatable :: participants(:)
   logical :: found
-  integer :: i, j, k, l
+  integer :: i, j, k, l, astat
   call json_get(json_val, 'pair_interactions', pair_ia_json, found)
   if (found) then
      allocate(pair_ias(size(group_names), size(group_names)))
@@ -953,7 +754,15 @@ subroutine create_interactions_json(json_val, group_names, pair_ias)
                       'Warning: only the first interaction with participants ', &
                       participants, ' is used.'
               else
-                 allocate(pair_ias(k, l)%ptr, source=create_pair_interaction(pair_ia_element))
+                 allocate(pair_ias(k, l)%ptr, &
+                      source=create_pair_interaction(pair_ia_element), &
+                      stat=astat)
+                 if (astat /= 0) then
+                    write(error_unit, *) 'create_interactions_json could ' // &
+                         'not allocate interaction between ', group_names(k), &
+                         ' and ', group_names(l), '.'
+                    stop 'create_interactions_json unable to continue.'
+                 end if
                  if (k /= l) then
                     pair_ias(l, k)%ptr => pair_ias(k, l)%ptr
                  end if
@@ -973,6 +782,15 @@ subroutine create_interactions_json(json_val, group_names, pair_ias)
      call json_print(json_val, error_unit)
      stop
   end if
+  do j = 1, size(group_names)
+     do i = 1, size(group_names)
+        if (.not. associated(pair_ias(i, j)%ptr)) then
+           write(error_unit, *) 'Interaction between ', group_names(i), " and ", &
+                group_names(j), 'is not defined.'
+           stop 'create_interactions_json unable to continue.'
+        end if
+     end do
+  end do
 end subroutine create_interactions_json
 
 end module mc_engine
