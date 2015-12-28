@@ -901,7 +901,7 @@ subroutine create_interactions_parameterizer(reader, group_names, &
   end do
 end subroutine create_interactions_parameterizer
 
-subroutine create_interactions_json(json_val, group_names, pair_ias)
+subroutine create_interactions_json2(json_val, group_names, pair_ias)
   type(json_value), pointer, intent(in) :: json_val
   character(len=*), intent(in) :: group_names(:)
   type(pair_interaction_ptr), intent(inout), allocatable :: pair_ias(:, :)
@@ -918,6 +918,55 @@ subroutine create_interactions_json(json_val, group_names, pair_ias)
            allocate(pair_ias(i, j)%ptr, &
                 source=create_pair_interaction(pair_ia_element))
         end do
+     end do
+  else
+     write(error_unit, *) 'ERROR: pair_interactions not found in json:'
+     call json_print(json_val, error_unit)
+     stop
+  end if
+end subroutine create_interactions_json2
+
+subroutine create_interactions_json(json_val, group_names, pair_ias)
+  type(json_value), pointer, intent(in) :: json_val
+  character(len=*), intent(in) :: group_names(:)
+  type(pair_interaction_ptr), intent(inout), allocatable :: pair_ias(:, :)
+  type(json_value), pointer :: pair_ia_json, pair_ia_element
+  character(len=len(group_names)), allocatable :: participants(:)
+  logical :: found
+  integer :: i, j, k, l
+  call json_get(json_val, 'pair_interactions', pair_ia_json, found)
+  if (found) then
+     allocate(pair_ias(size(group_names), size(group_names)))
+     do i = 1, json_count(pair_ia_json)
+        call json_get_child(pair_ia_json, i, pair_ia_element)
+        call get_parameter(pair_ia_element, "participants", participants)
+        if (size(participants) == 2) then
+           k = 0
+           l = 0
+           do j = 1, size(group_names)
+              if (group_names(j) == participants(1)) k = j
+              if (group_names(j) == participants(2)) l = j
+           end do
+           if (k > 0 .and. l > 0) then
+              if (associated(pair_ias(k, l)%ptr)) then
+                 write(error_unit, *) &
+                      'Warning: only the first interaction with participants ', &
+                      participants, ' is used.'
+              else
+                 allocate(pair_ias(k, l)%ptr, source=create_pair_interaction(pair_ia_element))
+                 if (k /= l) then
+                    pair_ias(l, k)%ptr => pair_ias(k, l)%ptr
+                 end if
+              end if
+           else
+              write(error_unit, *) 'ERROR: Pair interaction has invalid participant.'
+              stop 'create_interactions_json unable to continue.'
+           end if
+        else
+           write(error_unit, *) 'ERROR: Pair interaction has ', &
+                size(participants), ' participants.'
+           stop 'create_interactions_json unable to continue.'
+        end if
      end do
   else
      write(error_unit, *) 'ERROR: pair_interactions not found in json:'
