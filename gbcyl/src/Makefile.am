@@ -30,8 +30,7 @@ bin_PROGRAMS = \
   print_xewall_coupling \
   print_xewall_shielding \
   print_xeslab_shielding \
-  create_crystal \
-  default_parameters
+  create_crystal
 #  pressurezz 
 
 
@@ -110,6 +109,7 @@ parallel_src = \
   genvoltrial.f90 \
   beta_exchange.f90 \
   m_particlegroup.f90 \
+  m_lj_interaction.f90 \
   m_gb_interaction.f90 \
   m_interaction_factory.f90 \
   m_particlejson_parser.f90 \
@@ -123,15 +123,6 @@ ptgbcyl_SOURCES = \
   $(energy_src) \
   $(parallel_src) \
   gbcyl.f90 
-
-default_parameters_LDADD = $(ptgbcyl_LDADD)
-
-default_parameters_SOURCES = \
-  ${utils_src} \
-  ${model_src} \
-  ${energy_src} \
-  ${parallel_src} \
-  default_parameters.f90
 
 create_crystal_SOURCES = \
   m_fileunit.f90 \
