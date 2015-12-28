@@ -1,8 +1,10 @@
 module m_interaction_factory
+  use iso_fortran_env
   use class_pair_potential, only: conditional_pair_interaction
   use particle, only: pair_interaction
   use m_gb_interaction, only: gb_interaction
   use m_lj_interaction, only: lj_interaction
+  use m_gblj_interaction, only: gblj_interaction
   use json_module, only: json_value, json_get, CK
   implicit none
 
@@ -19,6 +21,11 @@ contains
        allocate(res, source=gb_interaction(json_val))
     else if (typestr == 'lj') then
        allocate(res, source=lj_interaction(json_val))
+    else if (typestr == 'gblj') then
+       allocate(res, source=gblj_interaction(json_val))
+    else
+       write(error_unit, *) 'ERROR: Unknown interaction type ', typestr
+       stop 'create_pair_interaction unable to continue.'
     end if
   end function create_pair_interaction
   

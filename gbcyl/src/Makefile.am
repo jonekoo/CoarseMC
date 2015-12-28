@@ -111,6 +111,7 @@ parallel_src = \
   m_particlegroup.f90 \
   m_lj_interaction.f90 \
   m_gb_interaction.f90 \
+  m_gblj_interaction.f90 \
   m_interaction_factory.f90 \
   m_particlejson_parser.f90 \
   mc_engine.f90 
