@@ -239,7 +239,7 @@ subroutine make_particle_moves(groups, genstates, simbox, temperature, &
   !$ n_threads = 1
   !! Loop over cells. This can be thought of as looping through a 
   !! 2 x 2 x 2 cube of cells.
-  !$OMP PARALLEL shared(groups, simbox, genstates, pair_ia)& 
+  !$OMP PARALLEL shared(groups, simbox, genstates, pair_ias)& 
   !$OMP& private(thread_id, n_threads, n_trials_d, n_accepted_d, ds, dE_d, &
   !$OMP& i_group)&
   !$OMP& reduction(+:dE, n_accepted, n_trials) 
