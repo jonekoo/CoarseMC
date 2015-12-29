@@ -1,8 +1,6 @@
 ## Programs to install
 bin_PROGRAMS = \
   ptgbcyl \
-  printpotentials \
-  printforces \
   orientation_parameter \
   cylindrical_orientation \
   tau1 \
@@ -17,7 +15,6 @@ bin_PROGRAMS = \
   cylindrical_layerorientation \
   virial_tensor \
   doublezsize \
-  onwallpressure \
   remove_every_2nd \
   test_simplelist_with_openmp \
   pair_distribution \
@@ -431,21 +428,21 @@ smcpsi6_SOURCES = \
   ${eigens_src} \
   smcpsi6.f90
 
-printpotentials_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  $(model_src) \
-  ${energy_src} \
-  printpotentials.f90 
+#printpotentials_SOURCES = \
+#  num_kind.f90 \
+#  utils.f90 \
+#  m_fileunit.f90 \
+#  $(model_src) \
+#  ${energy_src} \
+#  printpotentials.f90 
 
-printforces_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  ${energy_src} \
-  printforces.f90 
+#printforces_SOURCES = \
+#  num_kind.f90 \
+#  utils.f90 \
+#  m_fileunit.f90 \
+#  ${model_src} \
+#  ${energy_src} \
+#  printforces.f90 
 
 test_gblj_SOURCES = \
   num_kind.f90 \
@@ -482,13 +479,13 @@ virial_tensor_SOURCES = \
   m_fileunit.f90 \
   virial_tensor.f90
 
-onwallpressure_SOURCES = \
-  num_kind.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  ${energy_src} \
-  utils.f90 \
-  onwallpressure.f90
+#onwallpressure_SOURCES = \
+#  num_kind.f90 \
+#  m_fileunit.f90 \
+#  ${model_src} \
+#  ${energy_src} \
+#  utils.f90 \
+#  onwallpressure.f90
 
 test_simplelist_with_openmp_SOURCES = \
   num_kind.f90 \
