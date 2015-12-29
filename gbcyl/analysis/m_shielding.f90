@@ -5,7 +5,7 @@ use m_gblj
 use m_constants
 use class_parameterizer !! for initialization
 use m_lj
-use particlewall
+use particlewall, only: ljwall_interaction
 implicit none
 !!
 !! This module implements the calculation of Xe NMR shielding for a 
@@ -61,8 +61,9 @@ anisotropy_xexe(4) = [ 6274.20005258_dp, -1.20014259_dp,      0.93600894_dp,    
 !! 13.5 Å the shielding is set to zero.
 real(dp), parameter :: xexe_cutoff_A = 13.5_dp
 
-type(gblj_potential) :: gblj
-type(lj_potential) :: lj
+type(gblj_potential), save :: gblj
+type(lj_potential), save :: lj
+type(ljwall_interaction), save :: ljwall
 
 interface xewall_shielding
   pure function xewall_shielding(k, radiusA, densityA, epsilonratio, &
@@ -72,6 +73,8 @@ interface xewall_shielding
     real(dp) :: local_tensor(3, 3)
   end function
 end interface
+
+
 
 contains
 
@@ -84,7 +87,8 @@ contains
 subroutine init_shielding(reader)
   type(parameterizer), intent(inout) :: reader
   !! The modules below are needed for the ljwall_shielding calculation
-  call particlewall_init(reader)
+  !call particlewall_init(reader)
+  ljwall = ljwall_interaction(reader)
   lj = lj_potential(reader)   
   gblj = gblj_potential(reader)
 end subroutine
@@ -178,16 +182,14 @@ end function
 !! @return the Xe-wall shielding tensor.
 !!
 pure function xewall_shielding_local(r, radius) result(local_tensor)
-  use particlewall, only: ljwall_sigma_0 => sigwall_lj, ljwall_epsilon_0 => &
-  epswall_lj, wall_density
   real(dp), intent(in) :: radius
   real(dp), intent(in) :: r
   real(dp) :: local_tensor(3, 3) 
   local_tensor = 0._dp
   local_tensor = xewall_shielding(r / radius, &
     radius * sigma0_aengstroms, &
-    wall_density / sigma0_aengstroms**3, ljwall_epsilon_0 / lj%epsilon_0, &
-    ljwall_sigma_0 / lj%sigma_0)
+    ljwall%wall_density / sigma0_aengstroms**3, ljwall%epswall_lj / lj%epsilon_0, &
+    ljwall%sigwall_lj / lj%sigma_0)
 end function
 
 end module

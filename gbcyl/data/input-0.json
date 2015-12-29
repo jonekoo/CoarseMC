@@ -1,6 +1,6 @@
 {
-  "n_equilibration_sweeps": 5,
-  "n_production_sweeps": 5,
+  "n_equilibration_sweeps": 0,
+  "n_production_sweeps": 0,
   "i_sweep": 0,
   "production_period": 5,
   "move_adjusting_period": 5,
@@ -56,6 +56,10 @@
       "lj_epsilon_0": 0.358E+0
      }
   ],
+  "single_interactions": [
+{
+  "type": "ljwall_interaction",
+  "participant": "gb",
   "wall_density": 0.1E+1,
   "rodwall": "ljdimer-wall",
   "alpha_A": 0.1E+1,
@@ -67,7 +71,25 @@
   "pointwall": "ljcylinder",
   "alpha_LJ": 0.1E+1,
   "sigwall_LJ": 0.8E+0,
-  "epswall_LJ": 0.8715820312499998E+0,
+  "epswall_LJ": 0.8715820312499998E+0
+},
+{
+  "type": "ljwall_interaction",
+  "participant": "lj",
+  "wall_density": 0.1E+1,
+  "rodwall": "ljdimer-wall",
+  "alpha_A": 0.1E+1,
+  "alpha_B": 0.1E+1,
+  "LJ_dist": 0.17E+1,
+  "is_uniform_alignment": false,
+  "sigwall": 0.1E+1,
+  "epswall": 0.1E+1,
+  "pointwall": "ljcylinder",
+  "alpha_LJ": 0.1E+1,
+  "sigwall_LJ": 0.8E+0,
+  "epswall_LJ": 0.8715820312499998E+0
+}
+],
   "max_translation": 0.218287458838194E+0,
   "max_rotation": 0.992623185307094E-1,
   "max_scaling": 0.19799315994394E+3,

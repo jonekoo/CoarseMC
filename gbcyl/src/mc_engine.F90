@@ -1,6 +1,7 @@
 !> Implements the streering of the simulation and controlling it's
 !! input and output.
 module mc_engine
+  !$ use omp_lib
   use m_particlegroup, only: make_particle_moves, update_volume, &
        total_energy, mc_sweep_writeparameters, mcsweep_finalize, &
        get_maxscaling, set_maxscaling, particlegroup, particlegroup_ptr, &
@@ -12,8 +13,8 @@ module mc_engine
   use class_poly_box, only: poly_box, volume, getx, gety, getz
   use class_parameterizer
   use class_parameter_writer
-  use particle, only: pair_interaction, particledat, pair_interaction_ptr, &
-       particlearray_wrapper
+  use particle, only: particledat, pair_interaction_ptr, &
+       particlearray_wrapper, single_interaction_ptr
   use particle_mover, only: particlemover_init, particlemover_writeparameters,&
        get_max_translation, getmaxmoves, setmaxmoves, particlemover_to_json
   use beta_exchange, only: write_stats, reset_counters, &
@@ -21,13 +22,11 @@ module mc_engine
   use class_pair_potential, only: conditional_pair_interaction
   use num_kind
   use iso_fortran_env, only: error_unit, output_unit
-  use particlewall, only: particlewall_potential, particlewall_init, &
-       particlewall_writeparameters, particlewall_to_json
+  use particlewall, only: ljwall_interaction
   use utils, only: splitstr, join
-  !$ use omp_lib
   use json_module
   use m_json_wrapper, only: get_parameter
-  use m_interaction_factory, only: create_pair_interaction
+  use m_interaction_factory, only: create_pair_interaction, create_single_interaction
   use m_particlejson_parser, only: particlearray_from_json
   implicit none
   
@@ -117,7 +116,16 @@ module mc_engine
   type(poly_box), save :: simbox
 
   character(len=20), allocatable, save :: group_names(:)
+
+  !> Stores a matrix of pair interactions, corresponding to group_names.
+  !! if particle groups with names group_names(k) and group_names(l) interact
+  !! with each other, then pair_interactions(k, l)%ptr and 
+  !! pair_interactions(l, k)%ptr contain that interaction.
   type(pair_interaction_ptr), allocatable, save :: pair_interactions(:, :)
+
+  !> Stores an array of single particle interactions, corresponding to
+  !! group_names. 
+  type(single_interaction_ptr), allocatable, save :: single_interactions(:)
 
 contains
   
@@ -145,7 +153,9 @@ contains
         call json_clear_exceptions()
         stop 'json_failed'
     end if
-    call create_interactions_json(json_val, group_names, pair_interactions)
+ 
+    call create_pair_interactions_json(json_val, group_names, pair_interactions)
+    call create_single_interactions_json(json_val, group_names, single_interactions)
     call json_get(json_val, 'box', box_json)
     call simbox%from_json(box_json)
 
@@ -170,7 +180,7 @@ contains
     call mce_init_rng(id, n_tasks)    
     call beta_exchange_init(1._dp / temperature)
     call total_energy(groups, simbox, pair_interactions, &
-         particlewall_potential, etotal, err)
+         single_interactions, etotal, err)
     if (err /= 0) then
        write(error_unit, *) 'ERROR: mce_init: total_energy returned err = ', err
        stop 'Program stopped by mce_init_common.'
@@ -210,7 +220,7 @@ subroutine mce_from_json(json_val)
   allocate(group_names(0))
   call get_parameter(json_val, 'groups', group_names)
   !! Initialize modules.
-  call particlewall_init(json_val)
+  !call particlewall_init(json_val)
   call particlemover_init(json_val)
   call particlegroup_init(json_val)
 end subroutine mce_from_json
@@ -353,16 +363,16 @@ subroutine sweep(simbox, groups, genstates, isweep)
   integer :: n_trials, n_accepted, err
   dE = 0.
   call make_particle_moves(groups, genstates, simbox, temperature, & 
-       pair_interactions, particlewall_potential, dE, n_trials, &
+       pair_interactions, single_interactions, dE, n_trials, &
        n_accepted)
   write(output_unit, *) "etotal + dE = ", etotal, " + ", dE, " = ", etotal + dE
   call total_energy(groups, simbox, pair_interactions, &
-       particlewall_potential, etotal, err)
+       single_interactions, etotal, err)
   write(output_unit, *) "etotal updated = ", etotal
   nmovetrials = nmovetrials + n_trials
   nacceptedmoves = nacceptedmoves + n_accepted
   call update_volume(simbox, groups, genstates(0), pair_interactions,&
-       particlewall_potential, temperature, pressure, etotal, n_trials, &
+       single_interactions, temperature, pressure, etotal, n_trials, &
        n_accepted)
   nscalingtrials = nscalingtrials + n_trials
   nacceptedscalings = nacceptedscalings + n_accepted
@@ -381,7 +391,8 @@ subroutine mce_to_json(json_val, coordinates_json)
   type(json_value), pointer, intent(out), optional :: coordinates_json
   integer :: i, j
   type(json_value), pointer :: json_child, group_name, pair_ia_json, &
-       pair_ia_element, group_json, group_json_element, box_json
+       pair_ia_element, group_json, group_json_element, box_json, &
+       single_ia_json, single_ia_element
   call json_create_object(json_val, 'mc_engine')
   
   call json_add(json_val, 'n_equilibration_sweeps', &
@@ -426,7 +437,8 @@ subroutine mce_to_json(json_val, coordinates_json)
   end do
 
   call json_add(json_val, json_child)
-  
+
+  !! Write pair interactions
   call json_create_array(pair_ia_json, 'pair_interactions')
   do j = 1, size(pair_interactions, 2)
      do i = 1, j
@@ -437,7 +449,21 @@ subroutine mce_to_json(json_val, coordinates_json)
      end do
   end do
   call json_add(json_val, pair_ia_json) 
-  call particlewall_to_json(json_val)
+
+  !! Write single interactions
+  call json_create_array(single_ia_json, 'single_interactions')
+  do j = 1, size(single_interactions)
+     if (associated(single_interactions(j)%ptr)) then
+        call json_create_object(single_ia_element, '')
+        call json_add(single_ia_element, 'participant', group_names(j))
+        call single_interactions(j)%ptr%to_json(single_ia_element)
+        call json_add(single_ia_json, single_ia_element)
+     end if
+  end do
+  if (json_count(single_ia_json) > 0) then
+     call json_add(json_val, single_ia_json) 
+  end if
+
   call particlemover_to_json(json_val)
   call mc_sweep_to_json(json_val)
 
@@ -651,7 +677,7 @@ subroutine check_simbox(simbox)
 end subroutine
 
 
-subroutine create_interactions_json(json_val, group_names, pair_ias)
+subroutine create_pair_interactions_json(json_val, group_names, pair_ias)
   type(json_value), pointer, intent(in) :: json_val
   character(len=*), intent(in) :: group_names(:)
   type(pair_interaction_ptr), intent(inout), allocatable :: pair_ias(:, :)
@@ -682,10 +708,10 @@ subroutine create_interactions_json(json_val, group_names, pair_ias)
                       source=create_pair_interaction(pair_ia_element), &
                       stat=astat)
                  if (astat /= 0) then
-                    write(error_unit, *) 'create_interactions_json could ' // &
+                    write(error_unit, *) 'create_pair_interactions_json could ' // &
                          'not allocate interaction between ', group_names(k), &
                          ' and ', group_names(l), '.'
-                    stop 'create_interactions_json unable to continue.'
+                    stop 'create_pair_interactions_json unable to continue.'
                  end if
                  if (k /= l) then
                     pair_ias(l, k)%ptr => pair_ias(k, l)%ptr
@@ -693,12 +719,12 @@ subroutine create_interactions_json(json_val, group_names, pair_ias)
               end if
            else
               write(error_unit, *) 'ERROR: Pair interaction has invalid participant.'
-              stop 'create_interactions_json unable to continue.'
+              stop 'create_pair_interactions_json unable to continue.'
            end if
         else
            write(error_unit, *) 'ERROR: Pair interaction has ', &
                 size(participants), ' participants.'
-           stop 'create_interactions_json unable to continue.'
+           stop 'create_pair_interactions_json unable to continue.'
         end if
      end do
   else
@@ -711,10 +737,52 @@ subroutine create_interactions_json(json_val, group_names, pair_ias)
         if (.not. associated(pair_ias(i, j)%ptr)) then
            write(error_unit, *) 'Interaction between ', group_names(i), " and ", &
                 group_names(j), 'is not defined.'
-           stop 'create_interactions_json unable to continue.'
+           stop 'create_pair_interactions_json unable to continue.'
         end if
      end do
   end do
-end subroutine create_interactions_json
+end subroutine create_pair_interactions_json
+
+
+subroutine create_single_interactions_json(json_val, group_names, single_ias)
+  type(json_value), pointer, intent(in) :: json_val
+  character(len=*), intent(in) :: group_names(:)
+  type(single_interaction_ptr), intent(inout), allocatable :: single_ias(:)
+  type(json_value), pointer :: single_ia_json, single_ia_element
+  character(kind=CK, len=:), allocatable :: participant
+  logical :: found
+  integer :: i, j, k, astat
+  call json_get(json_val, 'single_interactions', single_ia_json, found)
+  allocate(single_ias(size(group_names)))
+  if (found) then
+     do i = 1, json_count(single_ia_json)
+        call json_get_child(single_ia_json, i, single_ia_element)
+        call get_parameter(single_ia_element, "participant", participant)
+        k = 0
+        do j = 1, size(group_names)
+           if (group_names(j) == participant) k = j
+        end do
+        if (k > 0) then
+           if (associated(single_ias(k)%ptr)) then
+              write(error_unit, *) &
+                   'Warning: only the first single interaction with participant ', &
+                   participant, ' is used.'
+           else
+              allocate(single_ias(k)%ptr, &
+                   source=create_single_interaction(single_ia_element), &
+                   stat=astat)
+              if (astat /= 0) then
+                 write(error_unit, *) 'create_single_interactions_json could ' // &
+                      'not allocate interaction to ', trim(adjustl(group_names(k))), '.'
+                 stop 'create_single_interactions_json unable to continue.'
+              end if
+           end if
+        else
+           write(error_unit, *) 'ERROR: Single interaction has invalid participant.'
+           stop 'create_single_interactions_json unable to continue.'
+        end if
+     end do
+  end if
+end subroutine create_single_interactions_json
 
 end module mc_engine

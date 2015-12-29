@@ -6,7 +6,7 @@ use m_shielding, only: sigma
 use utils
 use class_parameterizer
 use m_lj
-use particlewall
+use particlewall, only: ljwall_interaction
 implicit none
 
 !! Lintuvuori et al. Phys. Rev. E 75, 031707 (2007), excerpt from TABLE II: 
@@ -48,8 +48,9 @@ b_xexe_parall(4) = [ 13488314876.57440000,  16.12455833, -1.45189255,  0.0842901
 !! 13.5 Å, the coupling is set to zero.
 real(dp), parameter :: xexe_cutoff_A = 13.5_dp
 
-type(gblj_potential) :: gblj
-type(lj_potential) :: lj
+type(gblj_potential), save :: gblj
+type(lj_potential), save :: lj
+type(ljwall_interaction), save :: ljwall 
 
 interface 
   pure function xewall_qcoupling(k, radiusA, densityA, epsilonratio, &
@@ -64,8 +65,7 @@ contains
 
 subroutine qcoup_init(reader)
   type(parameterizer), intent(in) :: reader
-  call particlewall_init(reader)
-  !call gblj_init(reader)
+  ljwall = ljwall_interaction(reader)
   gblj = gblj_potential(reader)
   lj = lj_potential(reader)
 end subroutine
@@ -150,15 +150,13 @@ end function
 !! @p local_tensor the quadrupolar coupling tensor in the local coordinates.
 !! 
 pure function xewall_coupling_local(r, cyl_radius) result(t)
-  use particlewall, only: ljwall_epsilon_0 => epswall_lj, &
-    ljwall_sigma_0 => sigwall_lj, wall_density
   real(dp), intent(in) :: r, cyl_radius
   real(dp) :: t(3, 3)
   t = 0._dp
 
   t = xewall_qcoupling(r / cyl_radius, cyl_radius * sigma0_aengstroms, &
-    wall_density / sigma0_aengstroms**3, ljwall_epsilon_0 / lj%epsilon_0, &
-    ljwall_sigma_0 / lj%sigma_0)
+    ljwall%wall_density / sigma0_aengstroms**3, ljwall%epswall_lj / lj%epsilon_0, &
+    ljwall%sigwall_lj / lj%sigma_0)
   t = 0.001_dp * t !! Conversion to MHz
 
 end function

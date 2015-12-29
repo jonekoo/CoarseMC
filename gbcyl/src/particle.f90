@@ -135,6 +135,43 @@ type pair_interaction_ptr
    class(pair_interaction), pointer :: ptr => null()
 end type pair_interaction_ptr
 
+type, abstract :: single_interaction
+ contains
+   procedure(single_potential), deferred :: potential
+   procedure(single_force), deferred :: force
+   procedure(single_to_json), deferred :: to_json
+end type single_interaction
+
+abstract interface
+   pure subroutine single_potential(this, particlei, simbox, energy, err)
+     import
+     class(single_interaction), intent(in) :: this
+     class(particledat), intent(in) :: particlei
+     type(poly_box), intent(in) :: simbox
+     real(dp), intent(out) :: energy
+     integer, intent(out) :: err
+   end subroutine single_potential
+
+   pure function single_force(this, particlei, simbox) result(f)
+     import
+     class(single_interaction), intent(in) :: this
+     class(particledat), intent(in) :: particlei
+     type(poly_box), intent(in) :: simbox
+     real(dp) :: f(3)
+   end function single_force
+   
+   subroutine single_to_json(this, json_val)
+     import single_interaction, json_value
+     class(single_interaction), intent(in) :: this
+     type(json_value), pointer, intent(inout) :: json_val
+   end subroutine single_to_json
+
+end interface
+
+type single_interaction_ptr
+   class(single_interaction), pointer :: ptr => null()
+end type single_interaction_ptr
+
 contains
 
   subroutine particledat_from_json(this, json_val)
@@ -294,7 +331,7 @@ end subroutine particledat_assign
 !! change in energy of the system and @p isaccepted == .true. if the
 !! move was accepted. 
 subroutine moveparticle_2(this, genstates, simbox, temperature, nbrs, &
-     pair_ias, subr_single_energy, dE, n_trials, n_accepted)
+     pair_ias, single_ia, dE, n_trials, n_accepted)
   class(particledat), intent(inout) :: this
   !! Could be type(particlearray_wrapper) if beneficial:
   class(particlearray_wrapper), intent(in) :: nbrs(:) 
@@ -302,7 +339,7 @@ subroutine moveparticle_2(this, genstates, simbox, temperature, nbrs, &
   real(dp), intent(in) :: temperature
   type(rngstate), intent(inout) :: genstates(0:)
   type(pair_interaction_ptr), intent(in) :: pair_ias(:)
-  procedure(single_energy) :: subr_single_energy
+  class(single_interaction), pointer, intent(in) :: single_ia
   real(dp), intent(out) :: dE
   integer, intent(out) :: n_trials, n_accepted
 
@@ -323,11 +360,11 @@ subroutine moveparticle_2(this, genstates, simbox, temperature, nbrs, &
   allocate(oldparticle, source=this)
   call this%downcast_assign(newparticle)
  
-  call this%energy(nbrs, pair_ias, simbox, subr_single_energy, enew, err)
+  call this%energy(nbrs, pair_ias, simbox, single_ia, enew, err)
   
   call this%downcast_assign(oldparticle)
   if(err == 0) then 
-     call this%energy(nbrs, pair_ias, simbox, subr_single_energy, &
+     call this%energy(nbrs, pair_ias, simbox, single_ia, &
           enew, err)
      call acceptchange(eold, enew, temperature, genstates(0), isaccepted)
      if(isaccepted) then
@@ -346,12 +383,12 @@ end subroutine moveparticle_2
 
 
 subroutine particle_potential(this, nbrs, pair_ias, simbox, &
-     subr_single_energy, energy, err)
+     single_ia, energy, err)
   class(particledat), intent(in) :: this
   class(particlearray_wrapper), intent(in) :: nbrs(:)
   type(pair_interaction_ptr), intent(in) :: pair_ias(:)
   type(poly_box), intent(in) :: simbox
-  procedure(single_energy) :: subr_single_energy
+  class(single_interaction), pointer, intent(in) :: single_ia
   real(dp), intent(out) :: energy
   integer, intent(out) :: err
   real(dp) :: e
@@ -402,8 +439,8 @@ subroutine particle_potential(this, nbrs, pair_ias, simbox, &
         end if
      end do
   end do
-  if (err == 0) then
-     call subr_single_energy(this, simbox, e, err)
+  if (err == 0 .and. associated(single_ia)) then
+     call single_ia%potential(this, simbox, e, err)
      if (err == 0) energy = energy + e
   end if
 end subroutine particle_potential
