@@ -35,12 +35,7 @@ contains
   subroutine gblj_to_json(this, json_val)
     class(gblj_interaction), intent(in) :: this
     type(json_value), pointer, intent(inout) :: json_val
-    !type(json_value), pointer :: pef_json
-    !call json_add(json_val, 'type', 'gblj_interaction')
     call json_add(json_val, 'r_cutoff', this%cutoff)
-    !call json_create_object(pef_json, 'potential')
-    !call this%pef%to_json(pef_json)
-    !call json_add(json_val, pef_json)
     call this%pef%to_json(json_val)
   end subroutine gblj_to_json
   
