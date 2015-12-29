@@ -172,7 +172,7 @@ end subroutine
 subroutine gblj_to_json(this, json_val)
   class(gblj_potential), intent(in) :: this
   type(json_value), pointer, intent(inout) :: json_val
-  call json_add(json_val, 'type', 'gblj_potential')
+  call json_add(json_val, 'type', 'gblj')
   call json_add(json_val, 'gblj_epsilon_0', this%epsilon_0)
   call json_add(json_val, 'gblj_sigma_0', this%sigma_0)
   call json_add(json_val, 'gblj_mu', this%mu)
