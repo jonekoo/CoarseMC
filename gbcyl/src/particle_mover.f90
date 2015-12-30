@@ -138,7 +138,9 @@ contains
 
   !> Returns the maximum possible translation of a particle.
   real(dp) function get_max_translation()
-    if (.not. is_initialized) stop 'Trying to access max_translation before module particle is initialized.'
+    if (.not. is_initialized) &
+         stop 'Trying to access max_translation before module ' // &
+         'particle_mover is initialized.'
     get_max_translation = max_translation
   end function
     
