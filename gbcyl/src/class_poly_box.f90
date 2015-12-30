@@ -285,7 +285,7 @@ subroutine pbox_read(unit, bp, ios)
 end subroutine pbox_read
 
 !> Returns the typeid of the @p abox in a string.
-elemental function pbox_gettype(abox)
+function pbox_gettype(abox)
   type(poly_box), intent(in) :: abox
   character(len=len(abox%typeid)) pbox_gettype
   pbox_gettype = abox%typeid
