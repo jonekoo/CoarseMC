@@ -31,6 +31,7 @@ program create_crystal
        'boxtype="rectangular", particletype="rod", [radius=9.0,] [offset=0.5]'
   type(json_value), pointer :: json_val => null(), box_json => null(), &
        groups_json => null(), groups_json_element => null()
+  integer, allocatable :: indices(:)
 
   call get_command(cmd_line)
   call parse_cmdline(cmd_line)
@@ -82,17 +83,15 @@ program create_crystal
   call json_create_object(json_val, 'crystal')
   call json_create_array(groups_json, 'particle_groups')
 
-  
-
-
   if (gettype(simbox) == 'cylindrical') then
      if (radius > 0) call setx(simbox, radius * 2)
      allocate(mask(size(particles)))
      !call cylinder_mask(particles, getx(simbox) / 2 - offset, mask)
      !mask = .false.
      mask(:) = particles(:)%x**2 + particles(:)%y**2 < (getx(simbox) / 2 - offset)**2
+     allocate(indices, source=pack([(i, i=1, size(particles))], mask))
      call json_create_object(groups_json_element, '')
-     call particlearray_to_json(groups_json_element, particles(pack([(i, i=1, size(particles))], mask)))
+     call particlearray_to_json(groups_json_element, particles(indices))
      call json_add(groups_json, groups_json_element)
   else
      if (.false.) then

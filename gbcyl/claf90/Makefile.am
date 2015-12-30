@@ -1,6 +1,6 @@
 noinst_LTLIBRARIES = libclaf.la
 
-libclaf_la_SOURCES = kinds.f90 cla.f90
+libclaf_la_SOURCES = kinds.f90 cla.F90
 libclaf_la_FCFLAGS = -cpp -Df2003
 
 if CLAF_TESTS
