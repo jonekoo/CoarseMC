@@ -1,1 +1,1 @@
-dist_data_DATA = LJ_particles_NVT_ensemble/input-0.json
+dist_data_DATA = LJ_particles_NVT_ensemble/input-0.json LJ_particles_NVT_ensemble/README
