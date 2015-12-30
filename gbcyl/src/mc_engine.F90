@@ -2,12 +2,13 @@
 !! input and output.
 module mc_engine
   !$ use omp_lib
-  use m_particlegroup, only: make_particle_moves, update_volume, &
-       total_energy, mc_sweep_writeparameters, mcsweep_finalize, &
-       get_maxscaling, set_maxscaling, particlegroup, particlegroup_ptr, &
-       mc_sweep_to_json, particlegroup_init
-  use m_particle_factory, only: factory, factory_readstate, &
-       factory_writestate, read_group
+  use m_particlegroup, only: total_energy,  particlegroup, particlegroup_ptr
+  use m_npt_engine, only: npt_engine_reset_counters, &
+       npt_engine_update_max_scaling, npt_engine_finalize, &
+       npt_engine_to_json, npt_engine_init_json, pressure, npt_update
+  use m_nvt_engine, only: temperature, nvt_update, &
+       nvt_engine_update_max_moves, nvt_engine_reset_counters, &
+       nvt_engine_to_json, nvt_engine_init_json
   use mt_stream
   use m_fileunit
   use class_poly_box, only: poly_box, volume, getx, gety, getz
@@ -26,7 +27,8 @@ module mc_engine
   use utils, only: splitstr, join
   use json_module
   use m_json_wrapper, only: get_parameter
-  use m_interaction_factory, only: create_pair_interaction, create_single_interaction
+  use m_interaction_factory, only: create_pair_interaction, &
+       create_single_interaction
   use m_particlejson_parser, only: particlearray_from_json
   implicit none
   
@@ -63,16 +65,6 @@ module mc_engine
   !> The sweep counter.
   integer, save :: isweep = 0
   
-  !> The simulation temperature.
-  real(dp), save :: temperature = -1._dp
-
-  !> The total energy.
-  real(dp), save :: etotal = 0._dp
-  
-  !> The simulation pressure. Only meaningful in a constant-pressure
-  !! simulation.
-  real(dp), save :: pressure = -1._dp
-  
   !> Output unit and filename for writing parameters.
   integer, save :: pwunit
 
@@ -83,38 +75,25 @@ module mc_engine
   !> The (MPI) id of this process formatted to a character.
   character(len = 9), save :: idchar
 
-  !> Output file name for parameters.
+  !> Output file name.
   character(len=:), allocatable, save :: fn_parameters_out
+
+  !> Restart file name.
   character(len=:), allocatable, save :: fn_parameters_restart
-  character(len=:), allocatable, save :: fn_coordinates_restart
-  
+
   !> The random number generator states.
   type(mt_state), allocatable, save :: mts(:)
   
   !> The random number generator seed.
   integer, save :: seed = -1
-  
-  !> Counter for trial particle moves.
-  integer, save :: nmovetrials = 0
-  
-  !> Counter for trial volume updates.
-  integer, save :: nscalingtrials = 0
-  
-  !> The number of accepted particle moves
-  integer, save :: nacceptedmoves = 0
-  
-  !> The number of accepted volume moves
-  integer, save :: nacceptedscalings = 0
-  
-  !> The desired acceptance ratio for trial particle moves.
-  real(dp), save :: moveratio
-  
-  !> The desired acceptance ratio for trial volume updates.
-  real(dp), save :: scalingratio
 
+  !> Stores the particle groups.
   type(particlegroup_ptr), allocatable, save :: groups(:)
+
+  !> The simulation box, which contains the particle groups.
   type(poly_box), save :: simbox
 
+  !> Stores the names of the groups that are used in the simulation.
   character(len=20), allocatable, save :: group_names(:)
 
   !> Stores a matrix of pair interactions, corresponding to group_names.
@@ -126,6 +105,11 @@ module mc_engine
   !> Stores an array of single particle interactions, corresponding to
   !! group_names. 
   type(single_interaction_ptr), allocatable, save :: single_interactions(:)
+
+  !> The total energy.
+  real(dp), save :: etotal = 0._dp
+
+  character(len=:), allocatable, save :: ensemble
 
 contains
   
@@ -154,12 +138,15 @@ contains
         stop 'json_failed'
     end if
  
-    call create_pair_interactions_json(json_val, group_names, pair_interactions)
-    call create_single_interactions_json(json_val, group_names, single_interactions)
+    call create_pair_interactions_json(json_val, group_names, &
+         pair_interactions)
+    call create_single_interactions_json(json_val, group_names, &
+         single_interactions)
     call json_get(json_val, 'box', box_json)
     call simbox%from_json(box_json)
 
-    call create_groups(json_val, simbox, group_names, pair_interactions, groups)
+    call create_groups(json_val, simbox, group_names, pair_interactions, &
+         groups)
     
     if (json_failed()) call json_print_error_message(error_unit)
     call mce_init_common(id, n_tasks)
@@ -182,7 +169,8 @@ contains
     call total_energy(groups, simbox, pair_interactions, &
          single_interactions, etotal, err)
     if (err /= 0) then
-       write(error_unit, *) 'ERROR: mce_init: total_energy returned err = ', err
+       write(error_unit, *) &
+            'ERROR: mce_init: total_energy returned err = ', err
        stop 'Program stopped by mce_init_common.'
     end if
     call makerestartpoint
@@ -201,28 +189,20 @@ subroutine mce_from_json(json_val)
        warn_ub=nequilibrationsweeps + nproductionsweeps)  
   call get_parameter(json_val, 'move_adjusting_period', &
        moveadjustperiod, error_lb=1)
-  call get_parameter(json_val, 'move_ratio', moveratio, error_lb=0._dp, &
-       error_ub=1._dp)
-  call get_parameter(json_val, 'scaling_ratio', scalingratio, error_lb=0._dp, &
-       error_ub=1._dp)
   call get_parameter(json_val, 'pt_period', pt_period, error_lb=1, &
        warn_ub=nequilibrationsweeps + nproductionsweeps)
   call get_parameter(json_val, 'restartperiod', restartperiod, error_lb=1)
-  call get_parameter(json_val, 'temperature', temperature, error_lb=0._dp)
-  call get_parameter(json_val, 'pressure', pressure, error_lb=0._dp)
   call get_parameter(json_val, 'seed', seed, warn_lb=1000)
-  call get_parameter(json_val, 'nmovetrials', nmovetrials, error_lb=0)
-  call get_parameter(json_val, 'nacceptedmoves', nacceptedmoves, &
-       error_ub=nmovetrials, error_lb=0)
-  call get_parameter(json_val, 'nscalingtrials', nscalingtrials, error_lb=0)
-  call get_parameter(json_val, 'nacceptedscalings', nacceptedscalings, &
-       error_ub=nscalingtrials, error_lb=0)
   allocate(group_names(0))
   call get_parameter(json_val, 'groups', group_names)
+  ensemble = 'npt'
+  call get_parameter(json_val, 'ensemble', ensemble)
   !! Initialize modules.
-  !call particlewall_init(json_val)
   call particlemover_init(json_val)
-  call particlegroup_init(json_val)
+  call nvt_engine_init_json(json_val)
+  if (ensemble == 'npt') then
+     call npt_engine_init_json(json_val)
+  end if
 end subroutine mce_from_json
 
 
@@ -263,19 +243,26 @@ subroutine mce_init_rng(id, n_tasks)
 end subroutine mce_init_rng
 
 
-subroutine create_groups(json_val, simbox, group_names, &
-     pair_interactions, groups)
+subroutine create_groups(json_val, simbox, group_names, pair_interactions, &
+     groups)
   type(json_value), pointer, intent(in) :: json_val
   type(poly_box), intent(in) :: simbox
   character(len=*), intent(in) :: group_names(:)
   character(kind=CK, len=:), allocatable :: group_name
   type(pair_interaction_ptr), intent(in) :: pair_interactions(:, :)
   type(particlegroup_ptr), allocatable, intent(out) :: groups(:)
-  integer :: i
-  real(dp) :: max_cutoff
+  integer :: i, j
+  real(dp) :: max_cutoff = 0._dp
   type(json_value), pointer :: groups_json, groups_json_element
   class(particledat), allocatable :: particles(:)
-  max_cutoff = pair_interactions(1, 1)%ptr%get_cutoff()
+  !! Find maximum cutoff radius for pair interactions to be used when 
+  !! determining the cell sizes of the cell list.
+  do i = 1, size(pair_interactions, 2)
+     do j = 1, size(pair_interactions, 1)
+        max_cutoff = max(max_cutoff, pair_interactions(j, i)%ptr%get_cutoff())
+     end do
+  end do
+  
   allocate(groups(size(group_names)))
   call json_get(json_val, 'particle_groups', groups_json)
   do i = 1, json_count(groups_json)
@@ -291,41 +278,6 @@ subroutine create_groups(json_val, simbox, group_names, &
   end do
 end subroutine create_groups
 
-
-subroutine create_groups2(simbox, particles, group_names, &
-     pair_interactions, groups)
-  type(poly_box), intent(in) :: simbox
-  type(particledat), intent(in) :: particles(:)
-  character(len=*), intent(in) :: group_names(:)
-  type(pair_interaction_ptr), intent(in) :: pair_interactions(:, :)
-  type(particlegroup_ptr), allocatable, intent(out) :: groups(:)
-  character(len=20) :: group_type
-  integer :: i
-  real(dp) :: max_cutoff
-  max_cutoff = pair_interactions(1, 1)%ptr%get_cutoff()
-  allocate(groups(size(group_names)))
-  do i = 1, size(group_names)
-     if (group_names(i) == 'gb') then
-        allocate(groups(i)%ptr, source=particlegroup(simbox, &
-             pack(particles, particles%rod), &
-             min_cell_length=max_cutoff + &
-             2 * get_max_translation(), &
-             min_boundary_width=2 * get_max_translation(), name=group_names(i)))
-     else if (group_names(i) == 'lj') then
-        allocate(groups(i)%ptr, source=particlegroup(simbox, &
-             pack(particles, .not. particles%rod), &
-             min_cell_length=max_cutoff + &
-             2 * get_max_translation(), &
-             min_boundary_width=2 * get_max_translation(), name=group_names(i)))
-     else
-        write(error_unit, *) 'ERROR: unknown group type ' // &
-             trim(adjustl(group_type))
-        stop 'Program stopped by create_groups2.'
-     end if
-  end do
-end subroutine create_groups2
-
-
 !> Finalizes the simulation.
 !!
 !! @param id is the MPI process id.
@@ -335,7 +287,9 @@ subroutine finalize(id)
   integer :: i
   close(coordinateunit)
   call makerestartpoint
-  call mcsweep_finalize
+  if (ensemble == 'npt') then
+     call npt_engine_finalize
+  end if
   call be_finalize
   do i = 0, size(mts) - 1
      call delete(mts(i))
@@ -362,25 +316,26 @@ subroutine sweep(simbox, groups, genstates, isweep)
   real(dp) :: beta, dE
   integer :: n_trials, n_accepted, err
   dE = 0.
-  call make_particle_moves(groups, genstates, simbox, temperature, & 
-       pair_interactions, single_interactions, dE, n_trials, &
-       n_accepted)
+  call nvt_update(groups, genstates, simbox, pair_interactions, &
+       single_interactions, dE)
   write(output_unit, *) "etotal + dE = ", etotal, " + ", dE, " = ", etotal + dE
   call total_energy(groups, simbox, pair_interactions, &
        single_interactions, etotal, err)
   write(output_unit, *) "etotal updated = ", etotal
-  nmovetrials = nmovetrials + n_trials
-  nacceptedmoves = nacceptedmoves + n_accepted
-  call update_volume(simbox, groups, genstates(0), pair_interactions,&
-       single_interactions, temperature, pressure, etotal, n_trials, &
-       n_accepted)
-  nscalingtrials = nscalingtrials + n_trials
-  nacceptedscalings = nacceptedscalings + n_accepted
+  if (ensemble == 'npt') then
+     call npt_update(simbox, groups, genstates(0), pair_interactions, &
+          single_interactions, etotal)
+  end if
   call check_simbox(simbox)
   if (mod(isweep, pt_period) == 0) then
      beta = 1._dp / temperature
-     call try_beta_exchanges(beta, etotal + pressure * volume(simbox), 3, &
-          genstates(0)) 
+     if (ensemble == 'npt') then
+        call try_beta_exchanges(beta, etotal + pressure * volume(simbox), 3, &
+             genstates(0)) 
+     else 
+        !! Assuming NVT ensemble.
+        call try_beta_exchanges(beta, etotal, 3, genstates(0))
+     end if
      temperature = 1._dp / beta
   end if
 end subroutine sweep
@@ -404,38 +359,17 @@ subroutine mce_to_json(json_val, coordinates_json)
   call json_add(json_val, 'pt_period', pt_period)
   call json_add(json_val, 'restartperiod', restartperiod)
   call json_add(json_val, 'seed', seed)
-  call json_add(json_val, 'pressure', pressure)
-  call json_add(json_val, 'temperature', temperature)
   call json_add(json_val, 'volume', volume(simbox))
   call json_add(json_val, 'total_energy', etotal)
   call json_add(json_val, 'enthalpy', etotal + &
-       volume(simbox) * pressure)
-  call json_add(json_val, 'move_ratio', moveratio)
-  call json_add(json_val, 'scaling_ratio', scalingratio)
-  call json_add(json_val, 'nmovetrials', nmovetrials)
-  call json_add(json_val, 'nacceptedmoves', nacceptedmoves)
-  if (nmovetrials > 0) then
-     call json_add(json_val, 'current_move_ratio', &
-          real(nacceptedmoves, dp)/real(nmovetrials, dp))
-  else
-     call json_add(json_val, 'current_move_ratio', 'nan')
-  end if
-  call json_add(json_val, 'nscalingtrials', nscalingtrials)
-  call json_add(json_val, 'nacceptedscalings', nacceptedscalings)
-  if (nscalingtrials > 0) then
-     call json_add(json_val, 'current_scaling_ratio', &
-          real(nacceptedscalings, dp)/real(nscalingtrials, dp))
-  else
-     call json_add(json_val, 'current_scaling_ratio', 'nan')
-  end if
-  
+         volume(simbox) * pressure)
+  call json_add(json_val, 'ensemble', ensemble)
   !! Write group names.
   call json_create_array(json_child, 'groups')
   do i = 1, size(group_names)
      call json_create_string(group_name, group_names(i), '')
      call json_add(json_child, group_name)
   end do
-
   call json_add(json_val, json_child)
 
   !! Write pair interactions
@@ -443,7 +377,8 @@ subroutine mce_to_json(json_val, coordinates_json)
   do j = 1, size(pair_interactions, 2)
      do i = 1, j
         call json_create_object(pair_ia_element, '')
-        call json_add(pair_ia_element, 'participants', [group_names(i), group_names(j)])
+        call json_add(pair_ia_element, 'participants', &
+             [group_names(i), group_names(j)])
         call pair_interactions(i, j)%ptr%to_json(pair_ia_element)
         call json_add(pair_ia_json, pair_ia_element)
      end do
@@ -465,7 +400,10 @@ subroutine mce_to_json(json_val, coordinates_json)
   end if
 
   call particlemover_to_json(json_val)
-  call mc_sweep_to_json(json_val)
+  call nvt_engine_to_json(json_val)
+  if (ensemble == 'npt') then
+     call npt_engine_to_json(json_val)
+  end if
 
   !! Write box
   call json_create_object(box_json, 'box')
@@ -531,28 +469,6 @@ subroutine makerestartpoint
 end subroutine
 
 
-subroutine writestate(writer, unit, simbox, groups)
-  type(factory), intent(in) :: writer
-  integer, intent(in) :: unit
-  type(poly_box), intent(in) :: simbox
-  type(particlegroup_ptr), intent(in) :: groups(:)
-  type(particledat), allocatable :: particles(:)
-  integer :: n, i
-  n = 0
-  do i = 1, size(groups)
-     n = n + size(groups(i)%ptr%particles)
-  end do
-  allocate(particles(n))
-  n = 0
-  do i = 1, size(groups)
-     particles(n + 1:n + size(groups(i)%ptr%particles)) = &
-          groups(i)%ptr%particles
-     n = n + size(groups(i)%ptr%particles)
-  end do
-  call factory_writestate(writer, unit, simbox, particles)  
-end subroutine writestate
-
-
 !> All actions done during both the equilibration and production sweeps
 !! should be gathered inside this routine for clarity. 
 subroutine runproductiontasks
@@ -598,63 +514,22 @@ end subroutine
 !> Resets the counters that are used to monitor acceptances of trial
 !! moves. 
 subroutine resetcounters
-  nacceptedmoves = 0
-  nmovetrials = 0
-  nscalingtrials = 0 
-  nacceptedscalings = 0
+  call nvt_engine_reset_counters()
+  if (ensemble == 'npt') then
+     call npt_engine_reset_counters()
+  end if
 end subroutine resetcounters
 
 !> Adjusts the maximum values for trial moves of particles and trial
 !! scalings of the simulation volume. Should be used only during
 !! equilibration run. 
 subroutine updatemaxvalues
-  real(dp) :: newdthetamax
-  real(dp) :: newdximax
   !! Adjust scaling
-  if (nscalingtrials > 0) then
-     call set_maxscaling(newmaxvalue(nscalingtrials, nacceptedscalings, &
-          scalingratio, get_maxscaling()))
+  if (ensemble == 'npt') then
+     call npt_engine_update_max_scaling()
   end if
-  if (nmovetrials > 0) then
-     call getmaxmoves(newdximax, newdthetamax)
-     !! Adjust translation
-     newdximax = newmaxvalue(nmovetrials, nacceptedmoves, moveratio, newdximax)
-     
-     !! Update the minimum cell side length of the cell list because the
-     !! maximum translation has changed: 
-     
-     !! This should adjust rotations < pi/2 to move the particle end as much as
-     !! a random translation. 4.4 is the assumed molecule length-to-breadth 
-     !! ratio.
-     newdthetamax = 2._dp * asin(newdximax/4.4_dp) 
-     call setmaxmoves(newdximax, newdthetamax)
-  end if
+  call nvt_engine_update_max_moves()
 end subroutine updatemaxvalues
-  
-!> Returns a new trial move parameter value calculated from the desired
-!! acceptance ratio.
-!! 
-!! @param ntrials the total number of trials of the kind of move in
-!!        question.
-!! @param naccepted number of accepted trials.
-!! @param desiredratio the desired acceptance ratio for trial moves.
-!! @param oldvalue the old value of the parameter setting the maximum
-!!        size for the trial move in question.
-!!
-function newmaxvalue(ntrials, naccepted, desiredratio, oldvalue) &
-     result(newvalue)
-  integer, intent(in) :: ntrials
-  integer, intent(in) :: naccepted
-  real(dp), intent(in) :: desiredratio
-  real(dp), intent(in) :: oldvalue
-  real(dp) :: newvalue
-  real(dp), parameter :: multiplier = 1.05_dp
-  if (real(naccepted, dp) / real(ntrials, dp) > desiredratio) then
-     newvalue = oldvalue * multiplier
-  else 
-     newvalue = oldvalue / multiplier
-  end if
-end function newmaxvalue
   
 !> Check that @p simbox is large enough if it is periodic.
 subroutine check_simbox(simbox)

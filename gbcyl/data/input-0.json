@@ -20,6 +20,7 @@
   "nscalingtrials": 4,
   "nacceptedscalings": 1,
   "current_scaling_ratio": 0.25E+0,
+  "ensemble": "npt",
   "groups": [
     "gb",
     "lj"

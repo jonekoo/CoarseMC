@@ -6,25 +6,23 @@
   "move_adjusting_period": 5,
   "pt_period": 1,
   "restartperiod": 10000,
-  "pressure": 0.2E+1,
   "temperature": 0.9E+0,
   "move_ratio": 0.33E+0,
-  "scaling_ratio": 0.25E+0,
+  "ensemble": "nvt",
   "groups": [
     "lj"
   ],
   "pair_interactions": [
     {
       "participants": ["lj", "lj"],
-      "r_cutoff": 0.55E+1,
+      "r_cutoff": 2.5,
       "type": "lj",
-      "lj_sigma_0": 0.869E+0,
-      "lj_epsilon_0": 0.358E+0
+      "lj_sigma_0": 1.0,
+      "lj_epsilon_0": 1.0
      }
   ],
   "max_translation": 0.218287458838194E+0,
   "max_rotation": 0.992623185307094E-1,
-  "max_scaling": 0.19799315994394E+3,
   "box": {
   	 "type": "rectangular",
   	 "lx": 36.0,

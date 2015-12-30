@@ -111,6 +111,8 @@ parallel_src = \
   m_gblj_interaction.f90 \
   m_interaction_factory.f90 \
   m_particlejson_parser.f90 \
+  m_nvt_engine.f90 \
+  m_npt_engine.f90 \
   mc_engine.f90 
 
 ## Below: Listings of source files needed by programs
