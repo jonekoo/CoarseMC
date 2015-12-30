@@ -82,7 +82,7 @@ energy_src = \
   class_simplelist.f90
 
 ## Use dsyev from LAPACK
-LDADD = $(top_builddir)/lapack/lapack_routine/libdsyev.la $(ldadd_mtstream) $(ldadd_hyp2f1)
+LDADD = $(top_builddir)/lapack/lapack_routine/libdsyev.la $(ldadd_mtstream) $(ldadd_hyp2f1) $(top_builddir)/claf90/libclaf.la
 eigens_src = eigens_dsyev.f90
 
 ## Use hyp2f1 from cephes
@@ -94,7 +94,7 @@ bin_PROGRAMS += test_hyp2f1 test_zhangI
 test_hyp2f1_SOURCES =  m_hyp2f1_negint.f90 test_hyp2f1.f90
 test_zhangI_SOURCES = num_kind.f90 utils.f90 m_hyp2f1_negint.f90 cylinder_integrals.f90 test_zhangI.f90 ljwall_cephes.f90
 
-ptgbcyl_LDADD = $(LDADD) ${top_builddir}/claf90/libclaf.la
+##ptgbcyl_LDADD = $(LDADD) ${top_builddir}/claf90/libclaf.la
 
 utils_src = \
   num_kind.f90 \
