@@ -69,6 +69,7 @@ lapack/lapack_routine/Makefile
 lapack/Makefile
 src/Makefile
 data/Makefile
+Examples/Makefile
 ])
 AC_OUTPUT
 
