@@ -1,0 +1,33 @@
+This example input is for a small number of Xe atoms (LJ particles) dissolved
+in a liquid crystal (Gay-Berne particles), confined to a cylindrical cavity. 
+It is similar to what was used in the paper
+
+J. Karjalainen, J. Vaara, M. Straka, and P. Lantto. 
+Phys. Chem. Chem. Phys., 17:7158–7171, 2015.
+
+How to run:
+
+1) Serial simulation
+
+To run the simulation with one core:
+mpirun -np 1 ../../src/ptgbcyl
+
+
+2) Domain decomposition with OpenMP and 4 threads:
+
+To use 4 threads for domain decomposition set the OMP_NUM_THREADS variable
+(assuming bash here):
+
+export OMP_NUM_THREADS=4
+mpirun -np 1 ../../src/ptgbcyl
+
+
+3) Parallel tempering and domain decomposition:
+
+To use two replicas and parallel tempering, with each replica having two
+threads:
+
+export OMP_NUM_THREADS=2
+mpirun -np 2 ../../src/ptgbcyl
+
+
