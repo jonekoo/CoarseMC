@@ -1,13 +1,14 @@
 module m_point
-  use particle, only: particledat
+  use m_particle, only: particle
   use num_kind, only: dp
   use particle_mover, only: transmove, rotate
   use json_module, only: json_value, json_add, json_create_array, CK
   include 'rng.inc'
   use m_json_wrapper, only: get_parameter
+  use utils, only: fmt_char_dp
   implicit none
 
-  type, extends(particledat) :: point
+  type, extends(particle) :: point
    contains
      procedure :: from_str => point_from_str
      procedure :: downcast_assign => point_downcast_assign
@@ -20,7 +21,9 @@ module m_point
      procedure :: coordinates_to_json => point_coordinates_to_json
      procedure :: from_json => point_from_json
      procedure, nopass :: description => point_description
+     procedure :: to_unit => point_to_unit
   end type point
+
 
 contains
   
@@ -43,11 +46,12 @@ contains
 
   pure subroutine point_downcast_assign(this, a_particle, err)
     class(point), intent(inout) :: this
-    class(particledat), intent(in) :: a_particle
+    class(particle), intent(in) :: a_particle
     integer, intent(out), optional :: err
     select type (a_particle)
     type is (point)
        this = a_particle
+       if (present(err)) err = 0
     class default
        if (present(err)) err = 3
     end select
@@ -95,5 +99,12 @@ contains
     call get_parameter(json_val, '[2]', this%y)
     call get_parameter(json_val, '[3]', this%z)
   end subroutine point_from_json
+
+  subroutine point_to_unit(this, unit)
+    class(point), intent(in) :: this
+    integer, intent(in) :: unit
+    write(unit, '(A,3(' // fmt_char_dp() // ',1X))', advance='no') &
+         'point', this%x, this%y, this%z
+  end subroutine point_to_unit
 
 end module m_point

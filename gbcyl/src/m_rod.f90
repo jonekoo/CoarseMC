@@ -1,28 +1,35 @@
 module m_rod
   use iso_fortran_env, only: output_unit
-  use particle, only: particledat
+  use m_particle, only: particle
+  use m_point, only: point
   use num_kind, only: dp
   use utils, only: fmt_char_dp
   use particle_mover, only: transmove, rotate
-  include 'rng.inc'
   use json_module, only: json_create_array, CK, json_value, json_add
   use m_json_wrapper, only: get_parameter
+  include 'rng.inc'
   implicit none
   
-  type, extends(particledat) :: rod
+  type, extends(point) :: rod
+     real(dp) :: ux = 0._dp
+     real(dp) :: uy = 0._dp
+     real(dp) :: uz = 1._dp
    contains
-     procedure :: rod_from_str
-     procedure :: downcast_assign => rod_downcast_assign
-     procedure :: rod_assign
-     generic :: assignment(=) => rod_assign
-     procedure :: rod_equals
-     generic :: operator(==) => rod_equals
      procedure, nopass :: typestr => rod_typestr
-     procedure :: to_stdout => rod_to_stdout
-     procedure :: move => rod_move
+     procedure, nopass :: description => rod_description
+
+     generic :: assignment(=) => rod_assign
+     procedure :: rod_assign
+     procedure :: downcast_assign => rod_downcast_assign
+     generic :: operator(==) => rod_equals
+     procedure :: rod_equals
+     
+     procedure :: rod_from_str
+     procedure :: to_unit => rod_to_unit
      procedure :: coordinates_to_json => rod_coordinates_to_json
      procedure :: from_json => rod_from_json
-     procedure, nopass :: description => rod_description
+     procedure :: orientation => rod_orientation
+     procedure :: move => rod_move
   end type rod
 
 contains
@@ -47,11 +54,12 @@ contains
 
   pure subroutine rod_downcast_assign(this, a_particle, err)
     class(rod), intent(inout) :: this
-    class(particledat), intent(in) :: a_particle
+    class(particle), intent(in) :: a_particle
     integer, intent(out), optional :: err
     select type (a_particle)
     type is (rod)
        this = a_particle
+       if (present(err)) err = 0
     class default
        if (present(err)) err = 3
     end select
@@ -77,11 +85,12 @@ contains
          (this%uy == another%uy) .and. (this%uz == another%uz)
   end function rod_equals
   
-  subroutine rod_to_stdout(this)
+  subroutine rod_to_unit(this, unit)
     class(rod), intent(in) :: this
-    write(output_unit, '(6(' // fmt_char_dp() // ',1X))', advance='no') &
-         this%x, this%y, this%z, this%ux, this%uy, this%uz 
-  end subroutine rod_to_stdout
+    integer, intent(in) :: unit
+    write(unit, '(A,6(' // fmt_char_dp() // ',1X))', advance='no') &
+         'rod', this%x, this%y, this%z, this%ux, this%uy, this%uz 
+  end subroutine rod_to_unit
 
   pure subroutine rod_move(this, genstate)    
     class(rod), intent(inout) :: this
@@ -123,4 +132,10 @@ contains
          error_ub=1._dp)
   end subroutine rod_from_json
 
+  pure function rod_orientation(this) 
+    class(rod), intent(in) :: this
+    real(dp), dimension(3) :: rod_orientation
+    rod_orientation = [this%ux, this%uy, this%uz]
+  end function rod_orientation
+  
 end module m_rod
