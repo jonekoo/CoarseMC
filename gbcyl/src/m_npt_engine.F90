@@ -1,32 +1,23 @@
 module m_npt_engine
-  use iso_fortran_env, only: dp => REAL64, output_unit, error_unit
-  use class_poly_box, only: poly_box, minimage, isxperiodic, isyperiodic, &
-       iszperiodic
-  use particle, only: particledat, position, setposition, &
-       moveparticle_2, pair_interaction, pair_interaction_ptr, &
-       single_interaction, single_interaction_ptr, &
-       particlearray_wrapper, wrapper_delete, particlearray_to_json
-  use class_parameterizer, only: parameterizer, getparameter
-  use class_parameter_writer, only: parameter_writer, writeparameter, &
-       writecomment
-  use genvoltrial
+  use num_kind, only: dp
+  use iso_fortran_env, only: output_unit, error_unit
+  use class_poly_box, only: poly_box
+  use m_particle, only: pair_interaction_ptr, single_interaction_ptr
+  use genvoltrial, only: genvoltrial_scale
   use utils, only: splitstr, join, acceptchange
   !$ use omp_lib
-  use class_simplelist, only: simplelist, new_simplelist, simplelist_update, &
-       simplelist_nbr_cells, flat_index, simplelist_deallocate, &
-       simplelist_nbrmask, simplelist_cell_nbrmask
-  include 'rng.inc'
   use json_module
   use m_json_wrapper, only: get_parameter
-  use m_particlegroup
   use m_nvt_engine, only: temperature, newmaxvalue
+  use m_particlegroup, only: particlegroup_ptr, particlegroup, total_energy
+  include 'rng.inc'
   implicit none  
 
   !> The simulation pressure. Only meaningful in a constant-pressure
   !! simulation.
   real(dp), save :: pressure = -1._dp
   
-!> The maximum absolute change of volume in a trial volume update.
+  !> The maximum absolute change of volume in a trial volume update.
   real(dp), save :: maxscaling = 100._dp
   
   !> The types of trial volume updates.
@@ -45,25 +36,7 @@ module m_npt_engine
   real(dp), save :: scalingratio
     
 contains
-  
-  !> Initializes the module by getting the module parameters from the
-  !! @p reader object.
-  !!
-  !! @param reader the object which gets parameters by name e.g. from an
-  !!        input file.
-  !! @param the_simbox the simulation box defining the boundary
-  !!        conditions and volume.
-  !! @param the_particles the particles to be updated with the MC moves.
-  !!
-  subroutine npt_engine_init(reader)
-    type(parameterizer), intent(in) :: reader
-    character(len = 200), save :: scalingtype = "z"
-    call getparameter(reader, 'scaling_type', scalingtype)
-    call parsescalingtype(scalingtype)
-    call getparameter(reader, 'max_scaling', maxscaling)
-    is_initialized = .true.
-  end subroutine npt_engine_init
-  
+   
   subroutine npt_engine_init_json(json_val)
     type(json_value), pointer, intent(in) :: json_val
     allocate(scalingtypes(0))
@@ -155,9 +128,28 @@ contains
     type(single_interaction_ptr) :: single_ias(:)
     real(dp), intent(out) :: e_total
     integer :: n_trials, n_accepted
+    integer :: i_group
+#ifdef DEBUG
+    do i_group = 1, size(groups)
+       if (.not. groups(i_group)%ptr%check_particles(simbox)) then
+          write(error_unit, *) 'groups(', i_group, &
+               '): some particles are not in the box before npt_update!'
+          stop
+       end if
+    end do
+#endif
     call update_volume(simbox, groups, genstate, pair_ias,&
          single_ias, temperature, pressure, e_total, n_trials, &
          n_accepted)
+#ifdef DEBUG
+    do i_group = 1, size(groups)
+       if (.not. groups(i_group)%ptr%check_particles(simbox)) then
+          write(error_unit, *) 'groups(', i_group, &
+               '): some particles are not in the box after npt_update!'
+          stop
+       end if
+    end do
+#endif
     nscalingtrials = nscalingtrials + n_trials
     nacceptedscalings = nacceptedscalings + n_accepted
   end subroutine npt_update
@@ -217,7 +209,7 @@ subroutine movevol(simbox, groups, scalingtype, genstate, pair_ias, &
      nparticles = nparticles + size(groups(i)%ptr%particles)
   end do
   !! Store old volume and simulation box
-  Vo = volume(simbox)
+  Vo = simbox%volume()
   oldbox = simbox
   
   !! It seems that total energy may drift (WHY?!) if it is not updated here:
@@ -232,7 +224,7 @@ subroutine movevol(simbox, groups, scalingtype, genstate, pair_ias, &
   do i = 1, size(groups)
      call groups(i)%ptr%scalepositions(oldbox, simbox)
   end do
-  Vn = volume(simbox)
+  Vn = simbox%volume()
   
   !! Calculate potential energy in the scaled system.
   call total_energy(groups, simbox, pair_ias, single_ias, &
