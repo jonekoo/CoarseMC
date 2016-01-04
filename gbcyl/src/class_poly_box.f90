@@ -18,7 +18,6 @@ public :: getx, gety, getz
 public :: setx, sety, setz
 public :: isxperiodic, isyperiodic, iszperiodic
 public :: setxperiodicity, setyperiodicity, setzperiodicity
-public :: volume
 public :: pbox_read
 public :: pbox_write
 public :: pbox_from_json
@@ -40,6 +39,12 @@ type poly_box
   contains
     procedure :: from_json => pbox_from_json
     procedure :: to_json => pbox_to_json
+    procedure :: volume => pbox_volume
+    procedure :: to_unit => pbox_to_unit
+    procedure :: pbox_minimage
+    procedure :: pbox_minimagexyz
+    generic :: minimage => pbox_minimage, pbox_minimagexyz
+    procedure :: check_position => pbox_check_position
 end type poly_box
 
 interface new_box
@@ -102,10 +107,6 @@ interface setzperiodicity
   module procedure pbox_setzperiodicity
 end interface
 
-interface volume
-  module procedure pbox_volume
-end interface
-
 interface gettype
   module procedure pbox_gettype
 end interface
@@ -152,7 +153,7 @@ contains
 
   subroutine pbox_to_json(this, json_val)
     class(poly_box), intent(in) :: this
-    type(json_value), pointer, intent(in) :: json_val
+    type(json_value), pointer, intent(inout) :: json_val
     if (this%typeid == trim(adjustl(typeids(1)))) then
        call rectangularbox_to_json(this, json_val)
     else if (this%typeid == trim(adjustl(typeids(2)))) then
@@ -166,7 +167,7 @@ contains
 
   subroutine rectangularbox_to_json(this, json_val)
     class(poly_box), intent(in) :: this
-    type(json_value), pointer, intent(in) :: json_val
+    type(json_value), pointer, intent(inout) :: json_val
     call json_add(json_val, 'type', trim(adjustl(typeids(1))))
     call json_add(json_val, 'lx', this%lx)
     call json_add(json_val, 'ly', this%ly)
@@ -175,14 +176,23 @@ contains
 
   subroutine cylindricalbox_to_json(this, json_val)
     class(poly_box), intent(in) :: this
-    type(json_value), pointer, intent(in) :: json_val
+    type(json_value), pointer, intent(inout) :: json_val
     call json_add(json_val, 'type', trim(adjustl(typeids(2))))
     call json_add(json_val, 'diameter', this%lx)
     call json_add(json_val, 'length', this%lz)
-    call json_add(json_val, 'periodic', .true.)
+    call json_add(json_val, 'periodic', this%zperiodic)
   end subroutine cylindricalbox_to_json
 
-!> Returns a poly_box with the given typeid @p boxtype. @p lx and, 
+  subroutine pbox_to_unit(this, unit)
+    class(poly_box), intent(in) :: this
+    integer, intent(in) :: unit
+    write(unit, '(A, 3(' // fmt_char_dp() // '),3L3)') &
+         trim(adjustl(this%typeid)), &
+         this%lx, this%ly, this%lz, this%xperiodic, this%yperiodic, &
+         this%zperiodic
+  end subroutine pbox_to_unit
+
+  !> Returns a poly_box with the given typeid @p boxtype. @p lx and, 
 !! optionally, @p ly and @p lz give the dimensions of the box. If
 !! @p boxtype == 'rectangular' all three dimensions are considered. If
 !! @p boxtype == 'cylinder', the diameter of the cylinder is set as the
@@ -252,7 +262,7 @@ end function new_cylinder
 
 !> Writes the poly_box @p bp to the given output @p unit.
 subroutine pbox_write(unit, bp)
-  type(poly_box), intent(in) :: bp
+  class(poly_box), intent(in) :: bp
   integer, intent(in) :: unit
   write(unit, '(A15, 3' // fmt_char_dp() // ',3L3)', advance='no') bp%typeid, &
        bp%lx, bp%ly, bp%lz, bp%xperiodic, bp%yperiodic, bp%zperiodic
@@ -273,7 +283,7 @@ end function pbox_istypeid
 !! @p ios /= 0.
 subroutine pbox_read(unit, bp, ios)
   integer, intent(in) :: unit
-  type(poly_box), intent(inout) :: bp
+  class(poly_box), intent(inout) :: bp
   integer :: ios
   read(unit, *, iostat=ios) bp%typeid, bp%lx, bp%ly, bp%lz, bp%xperiodic, &
        bp%yperiodic, bp%zperiodic
@@ -286,53 +296,53 @@ end subroutine pbox_read
 
 !> Returns the typeid of the @p abox in a string.
 function pbox_gettype(abox)
-  type(poly_box), intent(in) :: abox
+  class(poly_box), intent(in) :: abox
   character(len=len(abox%typeid)) pbox_gettype
   pbox_gettype = abox%typeid
 end function pbox_gettype
 
 !> Returns the size of @p abox in the x-direction. 
 real(dp) elemental function pbox_getx(abox)
-  type(poly_box), intent(in) :: abox
+  class(poly_box), intent(in) :: abox
   pbox_getx = abox%lx
 end function pbox_getx
 
 !> Returns the size of @p abox in the y-direction. 
 real(dp) elemental function pbox_gety(abox)
-  type(poly_box), intent(in) :: abox
+  class(poly_box), intent(in) :: abox
   pbox_gety = abox%ly
 end function pbox_gety
 
 !> Returns the size of @p abox in the z-direction. 
 real(dp) elemental function pbox_getz(abox)
-  type(poly_box), intent(in) :: abox
+  class(poly_box), intent(in) :: abox
   pbox_getz = abox%lz
 end function pbox_getz
 
 !> Returns true if @p abox is periodic in the x-direction.
 elemental function pbox_isxperiodic(abox) result(isperiodic)
-  type(poly_box), intent(in) :: abox
+  class(poly_box), intent(in) :: abox
   logical :: isperiodic
   isperiodic = abox%xperiodic
 end function pbox_isxperiodic
 
 !> Returns true if @p abox is periodic in the y-direction.
 elemental function pbox_isyperiodic(abox) result(isperiodic)
-  type(poly_box), intent(in) :: abox
+  class(poly_box), intent(in) :: abox
   logical :: isperiodic
   isperiodic = abox%yperiodic
 end function pbox_isyperiodic
 
 !> Returns true if @p abox is periodic in the z-direction.
 elemental function pbox_iszperiodic(abox) result(isperiodic)
-  type(poly_box), intent(in) :: abox
+  class(poly_box), intent(in) :: abox
   logical :: isperiodic
   isperiodic = abox%zperiodic
 end function pbox_iszperiodic
 
 !> Sets the length of @p abox to @p x in the x-direction.
 pure subroutine pbox_setx(abox, x)
-  type(poly_box), intent(inout) :: abox
+  class(poly_box), intent(inout) :: abox
   real(dp), intent(in) :: x
   abox%lx = x
   if (abox%typeid == 'cylindrical') abox%ly = x
@@ -340,14 +350,14 @@ end subroutine pbox_setx
   
 !> Sets the length of @p abox to @p y in the y-direction.
 pure subroutine pbox_sety(abox, y)
-  type(poly_box), intent(inout) :: abox
+  class(poly_box), intent(inout) :: abox
   real(dp), intent(in) :: y
   abox%ly = y
 end subroutine pbox_sety
 
 !> Sets the length of @p abox to @p z in the z-direction.
 pure subroutine pbox_setz(abox, z)
-  type(poly_box), intent(inout) :: abox
+  class(poly_box), intent(inout) :: abox
   real(dp), intent(in) :: z
   abox%lz = z
 end subroutine pbox_setz
@@ -355,7 +365,7 @@ end subroutine pbox_setz
 !> Sets the periodicity of @p abox to @p isperiodic in the
 !! x-direction.
 pure subroutine pbox_setxperiodicity(abox, isperiodic)
-  type(poly_box), intent(inout) :: abox
+  class(poly_box), intent(inout) :: abox
   logical, intent(in) :: isperiodic
   abox%xperiodic = isperiodic
 end subroutine pbox_setxperiodicity
@@ -363,7 +373,7 @@ end subroutine pbox_setxperiodicity
 !> Sets the periodicity of @p abox to @p isperiodic in the
 !! y-direction.
 pure subroutine pbox_setyperiodicity(abox, isperiodic)
-  type(poly_box), intent(inout) :: abox
+  class(poly_box), intent(inout) :: abox
   logical, intent(in) :: isperiodic
   abox%yperiodic = isperiodic
 end subroutine pbox_setyperiodicity
@@ -371,7 +381,7 @@ end subroutine pbox_setyperiodicity
 !> Sets the periodicity of @p abox to @p isperiodic in the
 !! z-direction.
 pure subroutine pbox_setzperiodicity(abox, isperiodic)
-  type(poly_box), intent(inout) :: abox
+  class(poly_box), intent(inout) :: abox
   logical, intent(in) :: isperiodic
   abox%zperiodic = isperiodic
 end subroutine pbox_setzperiodicity
@@ -379,7 +389,7 @@ end subroutine pbox_setzperiodicity
 !> Returns the volume of @p simbox.
 pure function pbox_volume(simbox)
   real(dp) :: pbox_volume
-  type(poly_box), intent(in) :: simbox
+  class(poly_box), intent(in) :: simbox
   if (simbox%typeid == 'rectangular') then
      pbox_volume = simbox%lx * simbox%ly * simbox%lz
   else if (simbox%typeid == 'cylindrical') then
@@ -394,7 +404,7 @@ end function pbox_volume
 !! @p simbox.
 pure function pbox_mindistance(simbox, ri, rj)
   real(dp) :: pbox_mindistance
-  type(poly_box), intent(in) :: simbox
+  class(poly_box), intent(in) :: simbox
   real(dp), dimension(3), intent(in) :: ri
   real(dp), dimension(3), intent(in) :: rj
   real(dp), dimension(3) :: rij
@@ -405,7 +415,7 @@ end function pbox_mindistance
 !> Returns the minimum image vector in @p simbox corresponding to @p r.
 pure function pbox_minimage(simbox, r) result(mi)
   real(dp), dimension(3) :: mi
-  type(poly_box), intent(in) :: simbox
+  class(poly_box), intent(in) :: simbox
   real(dp), dimension(3), intent(in) :: r
   !! Make periodic transformations
   mi = r
@@ -436,32 +446,23 @@ end function pbox_minimage
 !> Returns the minimum image vector in @p simbox corresponding to @p r.
 pure function pbox_minimagexyz(simbox, x, y, z) result(mi)
   real(dp), dimension(3) :: mi
-  type(poly_box), intent(in) :: simbox
+  class(poly_box), intent(in) :: simbox
   real(dp), intent(in) :: x, y, z
   !! Make periodic transformations
   mi = [x, y, z]
-  if (simbox%xperiodic) then
-     if (mi(1) < -0.5 * simbox%lx) then
-        mi(1) = mi(1)+simbox%lx 
-     else if(mi(1) >= 0.5 * simbox%lx) then
-        mi(1) = mi(1) - simbox%lx
-     end if
-  end if
-  if (simbox%yperiodic) then
-     if (mi(2) < -0.5 * simbox%ly) then
-        mi(2) = mi(2) + simbox%ly 
-     else if(mi(2) >= 0.5 * simbox%ly) then
-        mi(2) = mi(2) - simbox%ly
-     end if
-  end if
-  if (simbox%zperiodic) then
-     !! This is faster than the solution above:
-     if (mi(3) < -0.5 * simbox%lz) then
-        mi(3) = mi(3) + simbox%lz 
-     else if(mi(3) >= 0.5 * simbox%lz) then
-        mi(3) = mi(3) - simbox%lz
-     end if
-  end if
+  mi = simbox%minimage(mi)
 end function pbox_minimagexyz
+
+pure function pbox_check_position(this, position) result(res)
+  class(poly_box), intent(in) :: this
+  real(dp), intent(in) :: position(3)
+  logical :: res
+  res = position(1) >= -0.5 * this%lx .and. &
+       position(1) <= 0.5 * this%lx .and. &
+       position(2) >= -0.5 * this%ly .and. &
+       position(2) <= 0.5 * this%ly .and. &
+       position(3) >= -0.5 * this%lz .and. &
+       position(3) <= 0.5 * this%lz
+end function pbox_check_position
 
 end module
