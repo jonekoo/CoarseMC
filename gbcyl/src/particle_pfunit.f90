@@ -1,9 +1,10 @@
 module particle_pfunit
-  use particle
+  use m_particle
   use json_module
   use pfunit
-  use m_rod
-  use m_point
+  use m_rod, only: rod
+  use m_point, only: point
+  use m_particledat, only: particledat
   use m_particlejson_parser
   implicit none
 
@@ -64,7 +65,7 @@ contains
   
   subroutine test_rodarray_json_io
     type(rod) :: out(2)
-    class(particledat), allocatable :: in(:)
+    class(particle), allocatable :: in(:)
     type(json_value), pointer :: json_val
     
 
@@ -84,7 +85,7 @@ contains
   
   subroutine test_pointarray_json_io
     type(point) :: out(2)
-    class(particledat), allocatable :: in(:)
+    class(particle), allocatable :: in(:)
     type(json_value), pointer :: json_val
     
 
@@ -101,5 +102,50 @@ contains
     end select
     
   end subroutine test_pointarray_json_io
+
+
+  subroutine test_point_downcast
+    class(particle), allocatable :: somepoint
+    class(particle), allocatable :: another
+    integer :: err
+    allocate(somepoint, source=point(x=1.0, y=2.0, z=3.0))
+    allocate(another, source=point())
+    call another%downcast_assign(somepoint, err)
+    call assertEqual(0, err, 'point downcast failed')
+    select type (somepoint)
+    type is (point)
+       select type (another)
+       type is (point)
+          call assertTrue(somepoint == another, 'assignment did not work')
+       class default
+          call assertTrue(.false., 'another is not point')
+       end select
+    class default
+       call assertTrue(.false., 'somepoint is not point')
+    end select
+  end subroutine test_point_downcast
+  
+
+  subroutine test_rod_downcast
+    class(particle), allocatable :: somerod
+    class(particle), allocatable :: another
+    integer :: err
+    allocate(somerod, source=rod(x=1.0, ux=1.0, uz=0.0))
+    allocate(another, source=rod())
+    call another%downcast_assign(somerod, err)
+    call assertEqual(0, err, 'rod downcast failed')
+    select type (somerod)
+    type is (rod)
+       select type (another)
+       type is (rod)
+          call assertTrue(somerod == another, 'assignment did not work')
+       class default
+          call assertTrue(.false., 'another is not rod')
+       end select
+    class default
+       call assertTrue(.false., 'somerod is not rod')
+    end select
+
+  end subroutine test_rod_downcast
   
 end module particle_pfunit

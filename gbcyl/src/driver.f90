@@ -68,6 +68,14 @@ program main
         TestCase1Step('Test writing and reading point array from json.', &
         test_pointarray_json_io))
    
+   call add(particle_suite, &
+        TestCase1Step('Test downcasting from particle to point.', &
+        test_point_downcast))
+   call add(particle_suite, &
+        TestCase1Step('Test downcasting from particle to point.', &
+        test_point_downcast))
+
+
    
    ! Run the tests and accumulate the results in "result"
    result = newTestResult(mode=MODE_USE_STDOUT)
