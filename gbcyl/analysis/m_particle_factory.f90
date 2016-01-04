@@ -9,8 +9,8 @@ module m_particle_factory
   use num_kind, only: dp
   use m_rod, only: rod
   use m_point, only: point
-  use particle, only: particledat, readparticle, writeparticle, &
-       particlearray_wrapper
+  use m_particledat, only: particledat, readparticle, writeparticle
+  use m_particle, only: particlearray_wrapper
   use class_poly_box, only: poly_box, pbox_read, pbox_write
   use utils, only: fmt_char_dp, fmt_char_int
   use m_fileunit, only: fileunit_getfreeunit
