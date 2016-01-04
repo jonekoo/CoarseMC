@@ -9,7 +9,8 @@ module class_pair_potential
   use m_gayberne
   use m_gblj
   use m_lj
-  use particle, only: particledat, pair_interaction, position
+  use m_particle, only: particle
+  use m_particledat, only: particledat
   use class_poly_box, only: poly_box, minimage
   use class_parameterizer
   use class_parameter_writer
@@ -19,7 +20,7 @@ module class_pair_potential
   use m_point, only: point
   implicit none
   
-  type, extends(pair_interaction) :: conditional_pair_interaction
+  type :: conditional_pair_interaction
      real(dp) :: cutoff = 5.5_dp
      class(rod_interaction), allocatable :: p_rod_ia
      class(sphere_interaction), allocatable :: p_sphere_ia
@@ -223,14 +224,14 @@ contains
   pure subroutine cpi_pair_potential_2(this, particlei, particlej, &
        simbox, energy, err)
     class(conditional_pair_interaction), intent(in) :: this
-    class(particledat), intent(in) :: particlei, particlej
+    class(particle), intent(in) :: particlei, particlej
     type(poly_box), intent(in) :: simbox
     real(dp), intent(out) :: energy
     integer, intent(out) :: err
     err = 0
     call this%pair_potential(particlei, particlej, &
-         minimage(simbox, position(particlej) - position(particlei)), energy, &
-         err)
+         minimage(simbox, particlej%position() - particlei%position()), &
+         energy, err)
   end subroutine cpi_pair_potential_2
   
   !> Calculates the interaction energy of a pair of particles. 
@@ -243,8 +244,8 @@ contains
   pure subroutine cpi_pair_potential(this, particlei, particlej, rij, energy,&
        err)
     class(conditional_pair_interaction), intent(in) :: this
-    class(particledat), intent(in) :: particlei 
-    class(particledat), intent(in) :: particlej
+    class(particle), intent(in) :: particlei 
+    class(particle), intent(in) :: particlej
     real(dp), intent(in) :: rij(3)
     real(dp), intent(out) :: energy
     integer, intent(out) :: err
