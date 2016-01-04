@@ -1,6 +1,6 @@
 module m_lj_interaction
   use m_lj, only: lj_potential, lj_from_json
-  use particle, only: pair_interaction, particledat
+  use m_particle, only: pair_interaction, particle
   use num_kind, only: dp
   use json_module
   use m_json_wrapper, only: get_parameter
@@ -41,24 +41,14 @@ contains
   pure subroutine lj_pair_potential(this, particlei, particlej, rij, &
        energy, err)
     class(lj_interaction), intent(in) :: this
-    class(particledat), intent(in) :: particlei, particlej
+    class(particle), intent(in) :: particlei, particlej
     real(dp), intent(in) :: rij(3)
     real(dp), intent(out) :: energy
     integer, intent(out) :: err
     logical :: overlap
     err = 0
-    select type (particlei)
-    type is (point)
-       select type (particlej)
-       type is (point)
-          call this%pef%potential(norm2(rij), energy, overlap)
-          if (overlap) err = 1
-       class default
-         err = 33
-       end select
-    class default
-      err = 34
-    end select
+    call this%pef%potential(norm2(rij), energy, overlap)
+    if (overlap) err = 1
   end subroutine lj_pair_potential
 
   pure function lj_get_cutoff(this) result(cutoff)
@@ -69,16 +59,10 @@ contains
 
   pure function lj_pair_force(this, particlei, particlej, rij) result(f)
     class(lj_interaction), intent(in) :: this
-    class(particledat), intent(in) :: particlei, particlej
+    class(particle), intent(in) :: particlei, particlej
     real(dp), intent(in) :: rij(3)
     real(dp) :: f(3)
-    select type (particlei)
-    type is (point)
-       select type (particlej)
-       type is (point)
-          f = this%pef%force(rij)
-       end select
-    end select
+    f = this%pef%force(rij)
   end function lj_pair_force
 
 end module m_lj_interaction

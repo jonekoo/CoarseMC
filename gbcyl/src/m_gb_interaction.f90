@@ -1,6 +1,6 @@
 module m_gb_interaction
   use m_gayberne, only: gayberne, gb_from_json
-  use particle, only: pair_interaction, particledat
+  use m_particle, only: pair_interaction, particle
   use num_kind, only: dp
   use json_module
   use class_parameter_writer, only: parameter_writer, writeparameter
@@ -41,18 +41,18 @@ contains
   pure subroutine gb_pair_potential(this, particlei, particlej, rij, &
        energy, err)
     class(gb_interaction), intent(in) :: this
-    class(particledat), intent(in) :: particlei, particlej
+    class(particle), intent(in) :: particlei, particlej
     real(dp), intent(in) :: rij(3)
     real(dp), intent(out) :: energy
     integer, intent(out) :: err
     logical :: overlap
     err = 0
     select type (particlei)
-    type is (rod)
+    class is (rod)
        select type (particlej)
-       type is (rod)
-          call this%pef%potential(particlei%orientation(), particlej%orientation(), &
-               rij, energy, overlap)
+       class is (rod)
+          call this%pef%potential(particlei%orientation(), &
+               particlej%orientation(), rij, energy, overlap)
           if (overlap) err = 1
        class default
          err = 77
@@ -70,14 +70,15 @@ contains
 
   pure function gb_pair_force(this, particlei, particlej, rij) result(f)
     class(gb_interaction), intent(in) :: this
-    class(particledat), intent(in) :: particlei, particlej
+    class(particle), intent(in) :: particlei, particlej
     real(dp), intent(in) :: rij(3)
     real(dp) :: f(3)
     select type (particlei)
-    type is (rod)
+    class is (rod)
        select type (particlej)
-       type is (rod)
-          f = this%pef%force(particlei%orientation(), particlej%orientation(), rij)
+       class is (rod)
+          f = this%pef%force(particlei%orientation(), &
+               particlej%orientation(), rij)
        end select
     end select
   end function gb_pair_force

@@ -1,6 +1,6 @@
 module m_gblj_interaction
   use m_gblj
-  use particle, only: pair_interaction, particledat
+  use m_particle, only: pair_interaction, particle
   use num_kind, only: dp
   use json_module
   use class_parameter_writer, only: parameter_writer, writeparameter
@@ -42,31 +42,25 @@ contains
   pure subroutine gblj_pair_potential(this, particlei, particlej, rij, &
        energy, err)
     class(gblj_interaction), intent(in) :: this
-    class(particledat), intent(in) :: particlei, particlej
+    class(particle), intent(in) :: particlei, particlej
     real(dp), intent(in) :: rij(3)
     real(dp), intent(out) :: energy
     integer, intent(out) :: err
     logical :: overlap
     err = 0
     select type (particlei)
-    type is (rod)
-       select type (particlej)
-       type is (point)
+    class is (rod)
           call this%pef%potential(particlei%orientation(), rij, energy, overlap)
           if (overlap) err = 1
-       class default
-         err = 77
-       end select
-    type is (point)
+    class default
        select type (particlej)
-       type is (rod)
-          call this%pef%potential(particlej%orientation(), -rij, energy, overlap)
+       class is (rod)
+          call this%pef%potential(particlej%orientation(), -rij, energy, &
+               overlap)
           if (overlap) err = 1
        class default
          err = 79
        end select
-    class default
-      err = 78
     end select
   end subroutine gblj_pair_potential
 
@@ -78,7 +72,7 @@ contains
 
   pure function gblj_pair_force(this, particlei, particlej, rij) result(f)
     class(gblj_interaction), intent(in) :: this
-    class(particledat), intent(in) :: particlei, particlej
+    class(particle), intent(in) :: particlei, particlej
     real(dp), intent(in) :: rij(3)
     real(dp) :: f(3)
     f = 0._dp
