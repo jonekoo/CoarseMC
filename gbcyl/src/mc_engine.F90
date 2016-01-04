@@ -11,20 +11,17 @@ module mc_engine
        nvt_engine_to_json, nvt_engine_init_json
   use mt_stream
   use m_fileunit
-  use class_poly_box, only: poly_box, volume, getx, gety, getz
+  use class_poly_box, only: poly_box, getx, gety, getz
   use class_parameterizer
   use class_parameter_writer
-  use particle, only: particledat, pair_interaction_ptr, &
+  use m_particle, only: particle, pair_interaction_ptr, &
        particlearray_wrapper, single_interaction_ptr
   use particle_mover, only: particlemover_init, particlemover_writeparameters,&
        get_max_translation, getmaxmoves, setmaxmoves, particlemover_to_json
   use beta_exchange, only: write_stats, reset_counters, &
        beta_exchange_init => init, be_finalize => finalize, try_beta_exchanges
-  use class_pair_potential, only: conditional_pair_interaction
-  use num_kind
+  use num_kind, only: dp
   use iso_fortran_env, only: error_unit, output_unit
-  use particlewall, only: ljwall_interaction
-  use utils, only: splitstr, join
   use json_module
   use m_json_wrapper, only: get_parameter
   use m_interaction_factory, only: create_pair_interaction, &
@@ -254,7 +251,7 @@ subroutine create_groups(json_val, simbox, group_names, pair_interactions, &
   integer :: i, j
   real(dp) :: max_cutoff = 0._dp
   type(json_value), pointer :: groups_json, groups_json_element
-  class(particledat), allocatable :: particles(:)
+  class(particle), allocatable :: particles(:)
   !! Find maximum cutoff radius for pair interactions to be used when 
   !! determining the cell sizes of the cell list.
   do i = 1, size(pair_interactions, 2)
@@ -284,7 +281,7 @@ end subroutine create_groups
 !!
 subroutine finalize(id)
   integer, intent(in) :: id
-  integer :: i
+  integer :: i, j
   close(coordinateunit)
   call makerestartpoint
   if (ensemble == 'npt') then
@@ -294,8 +291,35 @@ subroutine finalize(id)
   do i = 0, size(mts) - 1
      call delete(mts(i))
   end do
+  !! Delete interactions
   if (allocated(mts)) deallocate(mts)
-  if (id == 0) write (*, *) 'Program ptgbcyl was finalized succesfully.'
+  do i = 1, size(single_interactions)
+     if (associated(single_interactions(i)%ptr)) then
+        deallocate(single_interactions(i)%ptr)
+        single_interactions(i)%ptr => null()
+     end if
+  end do
+  deallocate(single_interactions)
+  do j = 1, size(pair_interactions, 2)
+     do i = 1, size(pair_interactions, 1)
+        if (associated(pair_interactions(i, j)%ptr)) then
+           deallocate(pair_interactions(i, j)%ptr)
+           pair_interactions(i, j)%ptr => null()
+           pair_interactions(j, i)%ptr => null()
+        end if
+     end do
+  end do
+  deallocate(pair_interactions)
+  !! Delete groups
+  do i = 1, size(groups)
+     if (associated(groups(i)%ptr)) then
+        deallocate(groups(i)%ptr)
+        groups(i)%ptr => null()
+     end if
+  end do
+  deallocate(groups)
+  if (id == 0) write (output_unit, *) &
+       'Program ptgbcyl was finalized succesfully.'
 end subroutine 
 
   
@@ -314,8 +338,9 @@ subroutine sweep(simbox, groups, genstates, isweep)
   type(mt_state), intent(inout) :: genstates(0:)
   integer, intent(in) :: isweep
   real(dp) :: beta, dE
-  integer :: n_trials, n_accepted, err
+  integer :: err
   dE = 0.
+  write(output_unit, *) 'Move particles'
   call nvt_update(groups, genstates, simbox, pair_interactions, &
        single_interactions, dE)
   write(output_unit, *) "etotal + dE = ", etotal, " + ", dE, " = ", etotal + dE
@@ -323,19 +348,23 @@ subroutine sweep(simbox, groups, genstates, isweep)
        single_interactions, etotal, err)
   write(output_unit, *) "etotal updated = ", etotal
   if (ensemble == 'npt') then
+     write(output_unit, *) 'Make volume move(s)'
      call npt_update(simbox, groups, genstates(0), pair_interactions, &
           single_interactions, etotal)
   end if
   call check_simbox(simbox)
   if (mod(isweep, pt_period) == 0) then
      beta = 1._dp / temperature
-     if (ensemble == 'npt') then
-        call try_beta_exchanges(beta, etotal + pressure * volume(simbox), 3, &
+     select case (ensemble)
+     case ('npt')
+        call try_beta_exchanges(beta, etotal + pressure * simbox%volume(), 3,&
              genstates(0)) 
-     else 
-        !! Assuming NVT ensemble.
+     case ('nvt')
         call try_beta_exchanges(beta, etotal, 3, genstates(0))
-     end if
+     case default
+        write(error_unit, *) 'Warning: Unknown ensemble. ' // &
+             'Parallel tempering disabled.'
+     end select
      temperature = 1._dp / beta
   end if
 end subroutine sweep
@@ -359,10 +388,10 @@ subroutine mce_to_json(json_val, coordinates_json)
   call json_add(json_val, 'pt_period', pt_period)
   call json_add(json_val, 'restartperiod', restartperiod)
   call json_add(json_val, 'seed', seed)
-  call json_add(json_val, 'volume', volume(simbox))
+  call json_add(json_val, 'volume', simbox%volume())
   call json_add(json_val, 'total_energy', etotal)
   call json_add(json_val, 'enthalpy', etotal + &
-         volume(simbox) * pressure)
+         simbox%volume() * pressure)
   call json_add(json_val, 'ensemble', ensemble)
   !! Write group names.
   call json_create_array(json_child, 'groups')
@@ -559,7 +588,7 @@ subroutine create_pair_interactions_json(json_val, group_names, pair_ias)
   type(json_value), pointer :: pair_ia_json, pair_ia_element
   character(len=len(group_names)), allocatable :: participants(:)
   logical :: found
-  integer :: i, j, k, l, astat
+  integer :: i, j, k, l
   call json_get(json_val, 'pair_interactions', pair_ia_json, found)
   if (found) then
      allocate(pair_ias(size(group_names), size(group_names)))
@@ -579,21 +608,14 @@ subroutine create_pair_interactions_json(json_val, group_names, pair_ias)
                       'Warning: only the first interaction with participants ', &
                       participants, ' is used.'
               else
-                 allocate(pair_ias(k, l)%ptr, &
-                      source=create_pair_interaction(pair_ia_element), &
-                      stat=astat)
-                 if (astat /= 0) then
-                    write(error_unit, *) 'create_pair_interactions_json could ' // &
-                         'not allocate interaction between ', group_names(k), &
-                         ' and ', group_names(l), '.'
-                    stop 'create_pair_interactions_json unable to continue.'
-                 end if
+                 pair_ias(k, l)%ptr => create_pair_interaction(pair_ia_element)
                  if (k /= l) then
                     pair_ias(l, k)%ptr => pair_ias(k, l)%ptr
                  end if
               end if
            else
-              write(error_unit, *) 'ERROR: Pair interaction has invalid participant.'
+              write(error_unit, *) &
+                   'ERROR: Pair interaction has invalid participant.'
               stop 'create_pair_interactions_json unable to continue.'
            end if
         else
@@ -610,8 +632,8 @@ subroutine create_pair_interactions_json(json_val, group_names, pair_ias)
   do j = 1, size(group_names)
      do i = 1, size(group_names)
         if (.not. associated(pair_ias(i, j)%ptr)) then
-           write(error_unit, *) 'Interaction between ', group_names(i), " and ", &
-                group_names(j), 'is not defined.'
+           write(error_unit, *) 'Interaction between ', group_names(i), &
+                " and ", group_names(j), 'is not defined.'
            stop 'create_pair_interactions_json unable to continue.'
         end if
      end do
@@ -626,7 +648,7 @@ subroutine create_single_interactions_json(json_val, group_names, single_ias)
   type(json_value), pointer :: single_ia_json, single_ia_element
   character(kind=CK, len=:), allocatable :: participant
   logical :: found
-  integer :: i, j, k, astat
+  integer :: i, j, k
   call json_get(json_val, 'single_interactions', single_ia_json, found)
   allocate(single_ias(size(group_names)))
   if (found) then
@@ -640,20 +662,14 @@ subroutine create_single_interactions_json(json_val, group_names, single_ias)
         if (k > 0) then
            if (associated(single_ias(k)%ptr)) then
               write(error_unit, *) &
-                   'Warning: only the first single interaction with participant ', &
-                   participant, ' is used.'
+                   'Warning: only the first single interaction with ' // &
+                   'participant ', participant, ' is used.'
            else
-              allocate(single_ias(k)%ptr, &
-                   source=create_single_interaction(single_ia_element), &
-                   stat=astat)
-              if (astat /= 0) then
-                 write(error_unit, *) 'create_single_interactions_json could ' // &
-                      'not allocate interaction to ', trim(adjustl(group_names(k))), '.'
-                 stop 'create_single_interactions_json unable to continue.'
-              end if
+              single_ias(k)%ptr => create_single_interaction(single_ia_element)
            end if
         else
-           write(error_unit, *) 'ERROR: Single interaction has invalid participant.'
+           write(error_unit, *) &
+                'ERROR: Single interaction has invalid participant.'
            stop 'create_single_interactions_json unable to continue.'
         end if
      end do
