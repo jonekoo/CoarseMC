@@ -1,6 +1,6 @@
 module pov
 use num_kind
-use particle
+use m_particledat
 use class_poly_box
 use utils, only: fmt_char_dp
 implicit none

@@ -6,7 +6,7 @@
 !!
 program total_psi6
   use num_kind
-  use particle, only : particledat
+  use m_particledat, only : particledat
   use orientational_ordering
   use psi6_module, only : psi6_bulk
   use class_poly_box, only: poly_box

@@ -1,14 +1,15 @@
 module xfunc_module
-implicit none
-contains
-  function rho(p) 
-  use particle
+  use m_particledat
   use num_kind
   implicit none
+
+contains
+
+  function rho(p) 
   real(dp) :: rho
   type(particledat), intent(in) :: p
     real(dp), dimension(3) :: pos
-    pos = position(p)
+    pos = p%position()
     rho = sqrt(pos(1)**2 + pos(2)**2)
   end function rho
 

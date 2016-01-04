@@ -7,7 +7,7 @@
 !! @see Micheletti et. al. Journal of Chemical Physics 123, 224705.
 !!
 module particlewall
-  use particle, only: particledat, position, orientation, single_interaction 
+  use m_particle, only: particle, single_interaction 
   use num_kind
   use class_poly_box
   use class_parameterizer
@@ -151,7 +151,7 @@ contains
   !! inside the wall @p overlap == true.
   pure subroutine ljwall_ia_potential(this, particlei, simbox, energy, err)
     class(ljwall_interaction), intent(in) :: this
-    class(particledat), intent(in) :: particlei
+    class(particle), intent(in) :: particlei
     type(poly_box), intent(in) :: simbox
     real(dp), intent(out) :: energy
     integer, intent(out) :: err
@@ -174,14 +174,14 @@ contains
   !! See module description for details.
   pure function ljwall_ia_force(this, particlei, simbox) result(f)
     class(ljwall_interaction), intent(in) :: this
-    class(particledat), intent(in) :: particlei
+    class(particle), intent(in) :: particlei
     type(poly_box), intent(in) :: simbox
     real(dp) :: f(3)
     f = 0.
     select type (particlei)
-    class is (rod)
+    type is (rod)
       f = this%rod_force(particlei, simbox)
-    class is (point)
+    type is (point)
       f = this%point_force(particlei, simbox)
     end select
   end function
@@ -298,16 +298,18 @@ contains
       fu = 1.
     end if
 
-    f_a = position(gbparticle) + orientation(gbparticle) * this%LJdist
+    f_a = gbparticle%position() + gbparticle%orientation() * this%LJdist
     f_a(3) = 0._dp
     f_a = f_a / sqrt(dot_product(f_a, f_a))
 
-    f_b = position(gbparticle) - orientation(gbparticle) * this%LJdist
+    f_b = gbparticle%position() - gbparticle%orientation() * this%LJdist
     f_b(3) = 0._dp
     f_b = f_b / sqrt(dot_product(f_b, f_b))
 
-    f = fu * (f_a * ljcylinderforce(this%eps, this%wall_density, this%sig, this%alpha_a, rsite_a, r_cylinder) + &
-    f_b * ljcylinderforce(this%eps, this%wall_density, this%sig, this%alpha_b, rsite_b, r_cylinder))
+    f = fu * (f_a * ljcylinderforce(this%eps, this%wall_density, this%sig,&
+         this%alpha_a, rsite_a, r_cylinder) + &
+         f_b * ljcylinderforce(this%eps, this%wall_density, this%sig,&
+         this%alpha_b, rsite_b, r_cylinder))
   end function
 
 

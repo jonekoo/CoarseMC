@@ -9,7 +9,7 @@
 program smctau1
 
 !! These are needed for the types read from configuration files
-use particle, only: particledat
+use m_particledat, only: particledat
 use class_poly_box, only: poly_box
 
 !! For printing

@@ -1,7 +1,8 @@
 program xe_nmr
   use num_kind, only: dp
-  use particle, only : particledat
-  use orientational_ordering, only: orientation_parameter, eigens, cycle_largest_to_3rd
+  use m_particledat, only : particledat
+  use orientational_ordering, only: orientation_parameter, eigens, &
+       cycle_largest_to_3rd
   use class_poly_box, only: poly_box
   use m_particle_factory, only: factory, factory_readstate
   use m_shielding, only: gbxe_shielding_local, xexe_shielding_local, &

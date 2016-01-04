@@ -2,7 +2,7 @@ module verlet
   !! Module for calculating pair interactions of particles using a Verlet 
   !! neighbour list. 
   use num_kind
-  use particle, only: particledat, position
+  use m_particledat, only: particledat
   use class_poly_box
   use class_parameterizer
   use class_parameter_writer
@@ -106,7 +106,8 @@ module verlet
     type(poly_box), intent(in) :: simbox
     type(particledat), dimension(:), intent(in) :: particles
     integer, intent(in) :: i 
-    if (any(minimage(simbox, position(particles(i))-vl%xyzlist(:,i)) > updatethreshold)) then
+    if (any(minimage(simbox, particles(i)%position()-vl%xyzlist(:,i)) > &
+         updatethreshold)) then
       call update(vl, simbox, particles)
     end if
   end subroutine
@@ -134,8 +135,8 @@ module verlet
     end do 
     do i = 1, nparticles - 1
       do j = i + 1, nparticles
-        rijvec = minimage(simbox, position(particles(j)) - &
-        position(particles(i)))
+        rijvec = minimage(simbox, particles(j)%position() - &
+        particles(i)%position())
         if(dot_product(rijvec, rijvec) < rlist*rlist ) then
           vl%neighbourcounts(i) = vl%neighbourcounts(i) + 1
           vl%neighbourcounts(j) = vl%neighbourcounts(j) + 1 

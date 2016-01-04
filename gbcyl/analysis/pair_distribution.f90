@@ -9,7 +9,7 @@
 !!
 program pair_distribution
   use num_kind, only: dp
-  use particle, only : particledat
+  use m_particledat, only : particledat
   use m_particle_factory, only: factory_readstate, factory
   use class_poly_box, only: poly_box
   use distribution
@@ -78,7 +78,7 @@ program pair_distribution
           call distribution_func(simbox, particles, mask_i, particles%rod,&
           maxbin, delr, histogram, distance_1d_cyl, slice_volume)
         else 
-          slice_area = volume(simbox) / getz(simbox)
+          slice_area = simbox%volume() / getz(simbox)
           call distribution_func(simbox, particles, mask_i, particles%rod,&
           maxbin, delr, histogram, distance_1d, slice_volume)
         end if

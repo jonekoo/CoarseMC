@@ -7,7 +7,7 @@
 program analysis
   use m_particle_factory
   use num_kind
-  use particle, only : particledat
+  use m_particledat, only : particledat
   use pov
   use m_fileunit
   use class_poly_box

@@ -7,7 +7,7 @@
 program remove_every_2nd
   use m_particle_factory
   use num_kind, only: dp
-  use particle, only : particledat
+  use m_particledat, only : particledat
   use class_poly_box
   implicit none
   type(particledat), allocatable :: particles(:)

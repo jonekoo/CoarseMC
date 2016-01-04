@@ -1,6 +1,6 @@
 module orientational_ordering
   use num_kind
-  use particle, only: particledat, orientation
+  use m_particledat, only: particledat, orientation
   use utils, only: eigensystem
   implicit none
 

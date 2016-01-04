@@ -5,7 +5,7 @@
 !!
 program tau1_program
   use num_kind
-  use particle, only : particledat
+  use m_particledat, only : particledat
   use tau1_module, only: tau1_routine
   use orientational_ordering, only: orientation_parameter
   use utils

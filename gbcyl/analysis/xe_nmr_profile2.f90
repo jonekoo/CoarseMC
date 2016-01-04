@@ -1,6 +1,6 @@
 program xe_nmr_profile2
   use num_kind, only: dp
-  use particle, only : particledat
+  use m_particledat, only : particledat
   use orientational_ordering
   use class_poly_box
   use m_particle_factory

@@ -1,5 +1,5 @@
 module psi6_module
-use particle
+use m_particledat
 use class_poly_box
 use num_kind
 implicit none
@@ -132,7 +132,7 @@ function psi6(simbox, particles, i, lvec)
     !rij = minimum_image(rij, Lx, Ly, Lz)       
     !! :TODO: Check if there's a reason for calculating distance the way it's
     !! :TODO: done above
-    rij = minimage(simbox, position(particles(j)) - position(particles(i)))
+    rij = minimage(simbox, particles(j)%position() - particles(i)%position())
     r = sqrt(dot_product(rij, rij))
     !! Bates and Luckhurst weighting
     ! wij = 1 if r < 1.4 

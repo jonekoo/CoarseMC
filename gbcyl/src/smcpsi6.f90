@@ -8,7 +8,7 @@
 !! Usage: smctau1 < configurationfile
 !!
 program smcpsi6
-use particle
+use m_particle
 use class_poly_box
 use utils, only: fmt_char_dp
 use num_kind

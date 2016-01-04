@@ -9,7 +9,7 @@
 !!
 program analysis
   use iso_fortran_env, only: dp => REAL64
-  use particle, only : particledat
+  use m_particledat, only : particledat
   use m_particle_factory, only: factory, factory_readstate
   use class_poly_box
   use gr3dweighted

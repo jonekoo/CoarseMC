@@ -1,6 +1,6 @@
 module tau1_module
 use iso_fortran_env, only: dp => REAL64, sp => REAL32
-use particle
+use m_particledat
 use tau1_negative
 implicit none
 private
@@ -10,7 +10,7 @@ public :: tau1
 
 interface tau1_routine
   subroutine max_tau1(particles, direction, tau1_max, layer_distance)
-    use particle
+    use m_particledat
     use num_kind
     implicit none
     type(particledat), intent(in) :: particles(:)
@@ -33,7 +33,7 @@ real(dp) function tau1_p(particles, direction, layer_distance) result(tau1_value
   real(sp) :: rs(size(particles))
   integer :: i
   do i=1, size(particles) 
-    rs(i)=dot_product(real(position(particles(i)), sp), direction)
+    rs(i)=dot_product(real(particles(i)%position(), sp), direction)
   end do
   tau1_value=tau1(rs, layer_distance) 
 end function

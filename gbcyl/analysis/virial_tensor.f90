@@ -7,7 +7,7 @@ program virial_tensor
 !! input at the beginning of the program. 
 !!
 use m_particle_factory !! for reading configurations.
-use particle !! for particletype.
+use m_particle !! for particletype.
 use class_poly_box !! for simulation box handling.
 use class_parameterizer !! for reading parameters.
 use m_fileunit !! to get a free output unit.
@@ -28,7 +28,7 @@ integer :: i, j, k, l
 real(dp), dimension(3, 3) :: w
 real(dp), dimension(3) :: rij, deriv
 real(dp) :: cutoff
-class(pair_interaction), allocatable :: pair_ia
+class(conditional_pair_interaction), allocatable :: pair_ia
 read(*, *) idchar
 reader = new_parameterizer('inputparameters.'//trim(adjustl(idchar)), &
      logfile="virial_tensor_log."//trim(adjustl(idchar)))
@@ -62,7 +62,7 @@ do
       forall (k=1:3, l=1:3) w(k, l) = w(k, l) + rij(k) * deriv(l)
     end do
   end do
-  w(:,:) = w(:,:)/volume(simbox)
+  w(:,:) = w(:,:)/simbox%volume()
   !forall(k=1:3) w(k, k) = w(k, k) + &
   !  real(nparticles,dp)*temperature/volume(simbox) 
   !  !! the above line may be sensitive to changes in epsilon0

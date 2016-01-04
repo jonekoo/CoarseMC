@@ -4,7 +4,7 @@
 !! At return, @p tau1_max and @p layer_distance contain the order
 !! parameter and the average distance between the layers.
 subroutine max_tau1(particles, direction, tau1_max, layer_distance)
-  use particle
+  use m_particledat
   use num_kind
   use simplemin
   use tau1_negative
@@ -30,7 +30,7 @@ subroutine max_tau1(particles, direction, tau1_max, layer_distance)
   !! 2.2. bracket with mnbrak
   if(.not. allocated(rs)) allocate(rs(n_particles))
   do i = 1, n_particles
-    rs(i) = dot_product(real(position(particles(i)),sp), direction)
+    rs(i) = dot_product(real(particles(i)%position(),sp), direction)
   end do
   !! Calculate initial estimate for the global minimum
   call init(rs)
