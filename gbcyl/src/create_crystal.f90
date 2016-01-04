@@ -1,21 +1,22 @@
 program create_crystal
   use utils, only: splitstr, join
   use m_crystal
-  use particle
-  use m_particle_factory
+  use m_particle, only: particle, particlearray_to_json
   use class_poly_box
   use iso_fortran_env
   use json_module
+  use num_kind, only: dp
+  use m_point, only: point
+  use m_rod, only: rod
   implicit none
   integer :: nx = -1, ny = -1, nz = -1
   real(8), allocatable :: xs(:, :, :), ys(:, :, :), zs(:, :, :) 
   real(8) :: a = 1.0, d = 3.6
   real(8), allocatable :: rs(:, :) !(3, nx * ny * nz)
   type(poly_box) :: simbox
-  class(particledat), allocatable :: particles(:)
+  class(particle), allocatable :: particles(:)
   integer :: i
   real(8) :: h != sqrt(3.0) / 2 * a
-  type(factory) :: f
   integer :: unit = 12
   character(len=80) :: ofile = "configurations.txt"
   character(len=15) :: boxtype = "rectangular"
@@ -75,7 +76,7 @@ program create_crystal
   end select
 
   do i = 1, nx * ny * nz
-     call setposition(particles(i), rs(:, i))
+     call particles(i)%set_position(rs(:, i))
   end do
 
   call json_initialize()
@@ -94,15 +95,9 @@ program create_crystal
      call particlearray_to_json(groups_json_element, particles(indices))
      call json_add(groups_json, groups_json_element)
   else
-     if (.false.) then
-        open(unit=unit, file=ofile, action='write')
-        call factory_writestate(f, unit, simbox, particles)
-        close(unit)
-     else
-        call json_create_object(groups_json_element, '')
-        call particlearray_to_json(groups_json_element, particles)
-        call json_add(groups_json, groups_json_element)
-     end if
+     call json_create_object(groups_json_element, '')
+     call particlearray_to_json(groups_json_element, particles)
+     call json_add(groups_json, groups_json_element)
   end if
 
   call json_create_object(box_json, 'box')
@@ -162,7 +157,7 @@ subroutine print_help
 end subroutine
 
 subroutine cylinder_mask(theparticles, cutradius, themask)
-  type(particledat), intent(in) :: theparticles(:)
+  type(particle), intent(in) :: theparticles(:)
   real(dp), intent(in) :: cutradius
   logical, intent(out) :: themask(size(theparticles))
   themask = .false.
