@@ -22,26 +22,14 @@ program gbcyl
   integer :: nargs
   
   call mpi_init(ierr)
+  call mpi_comm_rank(MPI_COMM_WORLD, id, ierr)
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
+
   call json_initialize()
   if (ierr /= 0) then
     stop 'MPI initialization failed. Check your MPI environment!'
   end if
-  call mpi_comm_rank(MPI_COMM_WORLD, id, ierr)
-  call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
-  !call mce_init(id, ntasks)
-
-  !nargs = command_argument_count()
-  !if (nargs < 1) then
-  !   write(error_unit, *) 'ERROR: parameter file not given as input.'
-  !   write(error_unit, *) 'Examples:'
-  !   write(error_unit, *) &
-  !        'If the files are input-0000.json input-0001.json etc:'
-  !   write(error_unit, *) 'mpirun -np 1 ./ptgbcyl input-_I4_.json'
-  !   write(error_unit, *) 'If the files are input-0.json input-1.json etc:'
-  !   write(error_unit, *) 'mpirun -np 1 ./ptgbcyl input-_I_.json'
-  !   stop
-  !end if
-  !call get_command_argument(1, input_filename)
+  
   call cla_init
   call cla_register(key='-i', longkey='--input', &
        description='input parameter file', &
@@ -73,7 +61,7 @@ program gbcyl
 contains
   subroutine parse_filename(input_filename, replica_filename)
     character(len=*), intent(in) :: input_filename
-    character(len=:), allocatable :: replica_filename
+    character(len=:), allocatable, intent(inout) :: replica_filename
     character(len=20) :: idchar
     integer :: begin
     begin = index(input_filename, '_I_')
