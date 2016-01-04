@@ -7,7 +7,7 @@ module m_particlegroup
   use iso_fortran_env, only: dp => REAL64, output_unit, error_unit
   use class_poly_box, only: poly_box, minimage, isxperiodic, isyperiodic, &
        iszperiodic
-  use particle, only: particledat, position, setposition, &
+  use m_particle, only: particle, &
        moveparticle_2, pair_interaction, pair_interaction_ptr, &
        single_interaction, single_interaction_ptr, &
        particlearray_wrapper, wrapper_delete, particlearray_to_json
@@ -27,11 +27,12 @@ module m_particlegroup
 
   type particlegroup
      character(len=:), allocatable :: name
-     class(particledat), allocatable :: particles(:)
+     class(particle), allocatable :: particles(:)
      type(simplelist) :: sl
    contains
      procedure :: to_json => particlegroup_to_json
      procedure :: scalepositions
+     procedure :: check_particles => particlegroup_check_particles
      final :: particlegroup_finalize
   end type particlegroup
 
@@ -42,13 +43,13 @@ module m_particlegroup
   interface particlegroup
      module procedure create_particlegroup
   end interface particlegroup
-
+  
 contains
 
   function create_particlegroup(simbox, particles, min_cell_length, &
        min_boundary_width, name) result(group)
     type(poly_box), intent(in) :: simbox
-    class(particledat), intent(in) :: particles(:)
+    class(particle), intent(in) :: particles(:)
     real(dp), intent(in) :: min_cell_length, min_boundary_width
     character(kind=CK, len=*), intent(in) :: name
     type(particlegroup) :: group
@@ -242,10 +243,27 @@ subroutine scalepositions(this, oldbox, newbox)
   class(particlegroup), intent(inout) :: this
   type(poly_box), intent(in) :: oldbox
   type(poly_box), intent(in) :: newbox
-  this%particles(:)%x = this%particles(:)%x * getx(newbox) / getx(oldbox)
-  this%particles(:)%y = this%particles(:)%y * gety(newbox) / gety(oldbox)
-  this%particles(:)%z = this%particles(:)%z * getz(newbox) / getz(oldbox)
+  integer :: i
+  !! Don't turn the loop below to array syntax. At least GCC6.0.0 (BETA) can
+  !! not handle these arrays correctly.
+  do i = 1, size(this%particles)
+     this%particles(i)%x = this%particles(i)%x * getx(newbox) / getx(oldbox)
+     this%particles(i)%y = this%particles(i)%y * gety(newbox) / gety(oldbox)
+     this%particles(i)%z = this%particles(i)%z * getz(newbox) / getz(oldbox)
+  end do
   call simplelist_update(this%sl, newbox, this%particles)
 end subroutine scalepositions
+
+
+function particlegroup_check_particles(this, simbox) result(res)
+  class(particlegroup), intent(in) :: this
+  class(poly_box), intent(in) :: simbox
+  logical :: res
+  integer :: i
+  res = .true.
+  do i = 1, size(this%particles)
+     res = res .and. simbox%check_position(this%particles(i)%position())
+  end do
+end function particlegroup_check_particles
 
 end module m_particlegroup
