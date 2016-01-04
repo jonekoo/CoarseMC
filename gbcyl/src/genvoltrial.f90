@@ -7,7 +7,7 @@
 !!      121(22):11183, 2004.
 !!
 module genvoltrial
-use class_poly_box, only: poly_box, getx, gety, getz, setx, sety, setz, volume
+use class_poly_box, only: poly_box, getx, gety, getz, setx, sety, setz
 use num_kind, only: dp
 implicit none
 
@@ -60,7 +60,7 @@ function genvoltrial_scale1d(simbox, maxscaling, genstate, axis) &
   
   call rng(genstate, r)
   dV = (2._dp * real(r, dp) - 1._dp) * maxscaling
-  Vo = volume(simbox)
+  Vo = simbox%volume()
   Vn = Vo + dV
   scaling1d = Vn/Vo
   if (axis == 'z') then
@@ -96,7 +96,7 @@ function genvoltrial_scale2d(simbox, maxscaling, genstate, plane) &
   !! This assumes a rectangular simbox !!
   call rng(genstate, r)
   dV = (2._dp * real(r, dp) - 1._dp) * maxscaling
-  Vo = volume(simbox)
+  Vo = simbox%volume()
   Vn = Vo + dV
   scaling1d = sqrt(Vn/Vo)
   if (plane == 'xy' .or. plane == 'yx') then
@@ -133,7 +133,7 @@ function genvoltrial_scale3d(simbox, maxscaling, genstate) result(scaling)
   !! This assumes a rectangular simbox !!
   call rng(genstate, r)
   dV = (2._dp * real(r, dp) - 1._dp) * maxscaling
-  Vo = volume(simbox)
+  Vo = simbox%volume()
   Vn = Vo + dV
   scaling1d = (Vn/Vo)**(1._dp/3._dp)
   call setx(simbox, getx(simbox)*scaling1d)
