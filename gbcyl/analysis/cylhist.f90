@@ -20,7 +20,7 @@
 !! 
 program cylhist
   use num_kind
-  use particle
+  use m_particle
   use orientational_ordering
   use tau1_module
   use tau1_negative

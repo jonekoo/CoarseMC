@@ -1,6 +1,6 @@
 program doublezsize
 use class_poly_box
-use particle
+use m_particle
 use m_particle_factory
 implicit none
 

@@ -1,6 +1,6 @@
 module cylindrical_layerorientation
   use num_kind, only: dp
-  use particle
+  use m_particledat
   use utils
   use orientational_ordering, only: orientational_ordering_eigens => eigens
   use layernormal
@@ -25,7 +25,7 @@ module cylindrical_layerorientation
     temp_particles(1:n_particles) = particles(1:n_particles)
     do i = 1, n_particles
       if(temp_particles(i)%rod) then 
-        call setorientation(temp_particles(i), unitvec(localnormal(simbox, particles, i, cutoff), position(temp_particles(i))))
+        call setorientation(temp_particles(i), unitvec(localnormal(simbox, particles, i, cutoff), temp_particles(i)%position()))
       end if
     end do
     call orientational_ordering_eigens(temp_particles, n_particles, &

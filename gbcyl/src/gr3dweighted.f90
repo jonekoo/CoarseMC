@@ -1,6 +1,6 @@
 module gr3dweighted
 use num_kind, only: dp
-use particle
+use m_particledat
 use class_poly_box
 implicit none
 
@@ -48,7 +48,7 @@ histogram, weightedhistogram)
 
   do i = 1, N-1
     do j = i+1, N
-      r = mindistance(simbox, position(particles(i)), position(particles(j)))
+      r = mindistance(simbox, particles(i)%position(), particles(j)%position())
       bin = int(r/delr) + 1
       if(bin <= maxbin) then !! :TODO: Could this condition be removed 
         weightedhistogram(bin) = weightedhistogram(bin) + 2._dp * &
@@ -60,7 +60,7 @@ histogram, weightedhistogram)
     end do
   end do
 
-  density = real(N, dp)/volume(simbox)
+  density = real(N, dp)/simbox%volume()
   !! Normalize by n_ideal_gas = bin_volume*ideal_gas_density and N
   do bin = 1, maxbin
      !rlow = real(bin-1, dp)*delr

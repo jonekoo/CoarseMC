@@ -1,6 +1,6 @@
 module distribution
 use class_poly_box
-use particle
+use m_particledat
 use num_kind
 implicit none
 
@@ -69,16 +69,18 @@ subroutine distribution_func(simbox, particles, mask_i, mask_j, maxbin, delr,&
      if (.not. mask_i(i)) cycle
      do j=1, size(particles)
            if (.not. mask_j(j) .or. j==i) cycle
-           rij = minimage(simbox, position(particles(j)) - position(particles(i)))
+           rij = minimage(simbox, particles(j)%position() - &
+                particles(i)%position())
            r = distance_func(rij)
            bin = int(r/delr) + 1
            !! :NOTE: this last line must be serial, or "locking" 
-           if(bin <= maxbin .and. bin > 0) histogram(bin) = histogram(bin) + 1._dp
+           if(bin <= maxbin .and. bin > 0) &
+                histogram(bin) = histogram(bin) + 1._dp
      end do
   end do
   
   !! Ideal gas density for particles j
-  density_j = real(count(mask_j), dp) / volume(simbox)
+  density_j = real(count(mask_j), dp) / simbox%volume()
   !! Normalize by n_ideal_gas = bin_volume*ideal_gas_density and N
   do bin = 1, maxbin
      rlow = real(bin - 1,dp) * delr

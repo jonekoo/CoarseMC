@@ -7,7 +7,7 @@
 program analysis
   use m_particle_factory
   use num_kind, only: dp
-  use particle, only : particledat
+  use m_particledat, only : particledat
   use class_poly_box
   use utils
 !  use orientational_ordering

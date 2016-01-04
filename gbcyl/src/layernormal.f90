@@ -1,7 +1,7 @@
 module layernormal
 use iso_fortran_env, only: dp => REAL64, sp => REAL32
 use utils, only: cross_product
-use particle
+use m_particledat, only: particledat
 use class_poly_box
 implicit none
 
@@ -95,21 +95,21 @@ function localnormal(simbox, particles, i, cutoff) result(normal)
   !! Find out the neighbours of particle i
   nneighbours = 0
   do j = 1, nparticles
-    if (cutoff <= mindistance(simbox, position(particles(i)), &
-    position(particles(j)))) cycle
+    if (cutoff <= mindistance(simbox, particles(i)%position(), &
+    particles(j)%position())) cycle
     if (j == i) cycle
     nneighbours = nneighbours + 1
     neighbours(nneighbours) = particles(j) 
-    call setposition(neighbours(nneighbours), minimage(simbox, &
-    position(neighbours(nneighbours)) - position(particles(i))))
+    call neighbours(nneighbours)%set_position(minimage(simbox, &
+    neighbours(nneighbours)%position() - particles(i)%position()))
   end do
   do j = 1, nneighbours
-    rij = position(neighbours(j))
+    rij = neighbours(j)%position()
     urij = rij / sqrt(dot_product(rij, rij))
     !! :NOTE: The following loop could probably be optimized since now j and k
     !! :NOTE: go through the same indices.
     do k = 1, nneighbours
-      rik = position(neighbours(k))
+      rik = neighbours(k)%position()
       if (k == j) cycle
       urik = rik / sqrt(dot_product(rik, rik))
       cp = cross_product(urij, urik)

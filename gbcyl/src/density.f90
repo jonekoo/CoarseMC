@@ -8,7 +8,7 @@ program analysis
   use m_particle_factory
   use class_poly_box
   use num_kind, only: dp
-  use particle, only : particledat
+  use m_particledat, only : particledat
   implicit none
   type(particledat), allocatable :: particles(:)
   integer :: io_status
@@ -20,7 +20,7 @@ program analysis
     if (io_status < 0) then
       exit
     else
-      write(*,*) real(size(particles), dp)/volume(simbox)
+      write(*,*) real(size(particles), dp)/simbox%volume()
     end if
   end do
 end program analysis

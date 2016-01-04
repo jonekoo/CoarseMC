@@ -7,7 +7,7 @@ use num_kind
 use m_constants
 use m_rank2_tensor
 use class_poly_box
-use particle
+use m_particledat
 use utils
 use class_parameterizer
 use particlewall
@@ -62,7 +62,7 @@ pure function gblj_tensor(tensor, simbox, gb_particle, xe_particle) &
   type(rank2_tensor) :: local_tensor
   real(dp) :: rij(3), ui(3)
 
-  rij = minimage(simbox, position(xe_particle) - position(gb_particle))
+  rij = minimage(simbox, xe_particle%position() - gb_particle%position())
   ui = orientation(gb_particle)
   local_tensor%axes = gblj_axes(rij, ui)
   local_tensor%components = tensor(dot_product(rij, &
@@ -118,7 +118,7 @@ pure function ljlj_tensor(tensor, simbox, xe, another) result(t)
   real(dp) :: rij(3)
   type(rank2_tensor) :: t
  
-  rij = minimage(simbox, position(another) - position(xe))
+  rij = minimage(simbox, another%position() - xe%position())
   t%axes = ljlj_axes(rij)
   t%components = tensor(sqrt(dot_product(rij, rij)))
 end function
@@ -170,7 +170,7 @@ pure function ljwall_tensor(tensor, simbox, xe) result(t)
   type(particledat), intent(in) :: xe
   type(rank2_tensor) :: t
   real(dp) :: r(3), cyl_radius
-  r = position(xe)
+  r = xe%position()
   cyl_radius = getx(simbox) / 2._dp
   t%components = tensor(sqrt(r(1)**2 + r(2)**2), cyl_radius)
   t%axes = ljwall_axes(r)

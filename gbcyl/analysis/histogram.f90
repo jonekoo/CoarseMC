@@ -1,6 +1,6 @@
 module histogram
 use num_kind
-use particle
+use m_particledat
 use xfunc_module, only: rho
 implicit none
 private
@@ -60,8 +60,6 @@ end function
 !!
 subroutine make_bin(particles, n_particles, bin_indices, i_bin, &
      bin_particles, n_bin_particles)
-use particle
-implicit none
 type(particledat), dimension(:), intent(in) :: particles
 integer, intent(in) :: n_particles
 integer, dimension(:), intent(in) :: bin_indices
@@ -82,9 +80,6 @@ end subroutine make_bin
 
 subroutine bin_indices_uniform_width(particles, n_particles, xfunc, &
      bin_width, indices, offset, direction)
-use num_kind
-use particle
-implicit none
 type(particledat), dimension(:), intent(in) :: particles
 integer, intent(in) :: n_particles
 real(dp) :: bin_width
@@ -93,7 +88,7 @@ integer, intent(in), optional :: direction
 interface 
   function xfunc(prtcl)
   use num_kind
-  use particle
+  use m_particledat
   implicit none
   real(dp) :: xfunc 
   type(particledat), intent(in) :: prtcl  
