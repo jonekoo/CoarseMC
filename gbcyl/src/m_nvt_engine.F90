@@ -4,27 +4,23 @@
 !! with OpenMP, the domain decomposition algorithm is used for the
 !! particle moves and energy calculations. 
 module m_nvt_engine
-  use iso_fortran_env, only: dp => REAL64, output_unit, error_unit
-  use class_poly_box, only: poly_box, minimage, isxperiodic, isyperiodic, &
-       iszperiodic
-  use particle, only: particledat, position, setposition, &
-       moveparticle_2, pair_interaction, pair_interaction_ptr, &
+  use num_kind, only: dp
+  use iso_fortran_env, only: output_unit, error_unit
+  use class_poly_box, only: poly_box
+  use m_particle, only: particle, &
+       pair_interaction, pair_interaction_ptr, &
        single_interaction, single_interaction_ptr, &
-       particlearray_wrapper, wrapper_delete, particlearray_to_json
-  use class_parameterizer, only: parameterizer, getparameter
-  use class_parameter_writer, only: parameter_writer, writeparameter, &
-       writecomment
-  use genvoltrial
+       particlearray_wrapper
   use utils, only: splitstr, join, acceptchange
   !$ use omp_lib
   use class_simplelist, only: simplelist, new_simplelist, simplelist_update, &
        simplelist_nbr_cells, flat_index, simplelist_deallocate, &
        simplelist_nbrmask, simplelist_cell_nbrmask
   include 'rng.inc'
-  use json_module
+  use json_module, only: json_get, json_value, json_add
   use m_json_wrapper, only: get_parameter
-  use m_particlegroup
-  use particle_mover
+  use m_particlegroup, only: particlegroup, particlegroup_ptr
+  use particle_mover, only: setmaxmoves, getmaxmoves
   implicit none  
 
   type, extends(particlearray_wrapper) :: domain
@@ -125,6 +121,13 @@ contains
     integer :: ix, iy, iz, jx, jy, jz, n_trials_d, n_accepted_d, i_group, i
     type(domain), allocatable :: ds(:)
     do i_group = 1, size(groups)
+#ifdef DEBUG
+       if (.not. groups(i_group)%ptr%check_particles(simbox)) then
+          write(error_unit, *) 'groups(', i_group, &
+               '): some particles are not in the box before moves!'
+          stop
+       end if
+#endif
        call simplelist_update(groups(i_group)%ptr%sl, simbox, &
             groups(i_group)%ptr%particles)
     end do
@@ -192,13 +195,21 @@ contains
        !$OMP BARRIER
     end do
     !$OMP END PARALLEL
+
     do i_group = 1, size(groups)
+#ifdef DEBUG
+       if (.not. groups(i_group)%ptr%check_particles(simbox)) then
+          write(error_unit, *) 'groups(', i_group, &
+               '): some particles are not in the box!'
+          stop
+       end if
+#endif
        call simplelist_update(groups(i_group)%ptr%sl, simbox, &
             groups(i_group)%ptr%particles)
     end do
   end subroutine make_particle_moves
   
-
+  
   subroutine nvt_engine_reset_counters()
     nacceptedmoves = 0
     nmovetrials = 0
@@ -223,7 +234,7 @@ contains
     nbr_mask(this%sl%indices(1:d%n_cell, jx, jy, jz)) = .false.
     
     !! GFortran 6.0.0 is not fine with pack from a polymorphic
-    !! array class(particledat) so we'll use a workaround.
+    !! array class(particle) so we'll use a workaround.
     !! Put particles in jx, jy, jz first in temp_particles:
     allocate(helper, source=[this%sl%indices(1:d%n_cell, jx, jy, jz), &
          pack([(i, i = 1, size(this%particles))], nbr_mask)])
@@ -253,7 +264,7 @@ contains
     real(dp), intent(out) :: dE
     integer, intent(out), optional :: n_trials, n_accepted
     integer :: j
-    class(particledat), allocatable :: newparticle
+    class(particle), allocatable :: newparticle
     integer :: err
     real(dp) :: enew
     real(dp) :: eold
@@ -265,9 +276,17 @@ contains
          source=domains(i_d)%arr(1))
     do j = 1, domains(i_d)%n_cell
        domains(i_d)%mask(j) = .false.
+#ifdef DEBUG
+       call newparticle%downcast_assign(domains(i_d)%arr(j), err)
+       if (err /= 0) then
+          write(error_unit, *) 'newparticle%downcast_assign: err=', err
+          stop 'domain_move unable to continue'
+       end if
+#else
        call newparticle%downcast_assign(domains(i_d)%arr(j))
+#endif
        call newparticle%move(genstates(1))
-       call setposition(newparticle, minimage(simbox, newparticle%x, &
+       call newparticle%set_position(simbox%minimage(newparticle%x, &
             newparticle%y, newparticle%z))
        call newparticle%energy(domains, pair_ias(:, i_d), simbox, &
             single_ias(i_d)%ptr, enew, err)
@@ -275,15 +294,24 @@ contains
           call domains(i_d)%arr(j)%energy(domains, pair_ias(:, i_d), simbox, &
                single_ias(i_d)%ptr, eold, err)
           if (err /= 0) then
-             call domains(i_d)%arr(j)%to_stdout()
-             call newparticle%to_stdout()
              write(error_unit, *) 'ERROR: err=', err, ' domain=', i_d, &
                   ' old particle ', j
+             if (err == 1) write(error_unit, *) &
+                  'Particle energy calculation resulted in overlap before move.'
              stop 'Stopped by domain_move.'
           end if
           call acceptchange(eold, enew, temperature, genstates(1), isaccepted)
           if(isaccepted) then
+#ifdef DEBUG
+             call domains(i_d)%arr(j)%downcast_assign(newparticle, err)
+             if (err /= 0) then
+                write(error_unit, *) 'domains(', i_d, &
+                     '%arr(', j, ')%downcast_assign: err = ', err
+                stop 'domain_move unable to continue'
+             end if
+#else
              call domains(i_d)%arr(j)%downcast_assign(newparticle)
+#endif
              dE = dE + enew - eold
              n_accepted = n_accepted + 1
           end if
