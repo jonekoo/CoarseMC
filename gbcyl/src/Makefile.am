@@ -61,9 +61,10 @@ model_src = \
   check_parameter.inc \
   class_poly_box.f90 \
   particle_mover.f90 \
-  particle.f90 \
+  m_particle.f90 \
   m_point.f90 \
   m_rod.f90 \
+  m_particledat.f90 \
   m_particle_factory.f90 
 
 m_json_wrapper.$(OBJEXT) : m_json_wrapper.f90 check_parameter.inc process_not_found.inc
@@ -77,7 +78,6 @@ energy_src = \
   m_gblj.f90 \
   ljcylinder.f90 \
   particlewall.f90 \
-  class_pair_potential.f90 \
   verlet.f90 \
   class_simplelist.f90
 
@@ -111,8 +111,8 @@ parallel_src = \
   m_gblj_interaction.f90 \
   m_interaction_factory.f90 \
   m_particlejson_parser.f90 \
-  m_nvt_engine.f90 \
-  m_npt_engine.f90 \
+  m_nvt_engine.F90 \
+  m_npt_engine.F90 \
   mc_engine.f90 
 
 ## Below: Listings of source files needed by programs
@@ -479,6 +479,7 @@ virial_tensor_SOURCES = \
   ${energy_src} \
   utils.f90 \
   m_fileunit.f90 \
+  class_pair_potential.f90 \
   virial_tensor.f90
 
 #onwallpressure_SOURCES = \
@@ -514,7 +515,7 @@ driver_SOURCES = \
   m_gayberne.f90 \
   gayberne_pfunit.f90 \
   particle_mover.f90 \
-  particle.f90 \
+  m_particle.f90 \
   class_poly_box.f90 \
   m_sphere_interaction.f90 \
   m_lj.f90 \
@@ -524,6 +525,7 @@ driver_SOURCES = \
   utils_pfunit.f90 \
   m_point.f90 \
   m_rod.f90 \
+  m_particledat.f90 \
   m_particlejson_parser.f90 \
   particle_pfunit.f90 \
   driver.F90  
