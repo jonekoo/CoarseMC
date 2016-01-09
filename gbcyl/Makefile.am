@@ -1,4 +1,4 @@
-dist_doc_DATA = README DoxygenLayout.xml
+dist_doc_DATA = README LICENSE DoxygenLayout.xml
 
 include $(top_srcdir)/aminclude.am
 
