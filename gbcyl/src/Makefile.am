@@ -27,6 +27,7 @@ bin_PROGRAMS = \
   print_xewall_coupling \
   print_xewall_shielding \
   print_xeslab_shielding \
+  test_create_particlegroup \
   create_crystal
 #  pressurezz 
 
@@ -43,7 +44,8 @@ dist_bin_SCRIPTS = \
   replaceparameter.py \
   slowcool.py \
   gbs2ljs.py \
-  set_inputparameters.py
+  set_inputparameters.py \
+  update_json.py
 
 ldadd_mtstream = ${top_builddir}/mt_stream_f90-1.11/libmt_stream.la
 
@@ -123,6 +125,15 @@ ptgbcyl_SOURCES = \
   $(energy_src) \
   $(parallel_src) \
   gbcyl.f90 
+
+test_create_particlegroup_SOURCES = \
+  $(utils_src) \
+  $(model_src) \
+  $(energy_src) \
+  m_particlegroup.f90 \
+  m_particlejson_parser.f90 \
+  test_create_particlegroup.f90
+
 
 create_crystal_SOURCES = \
   m_fileunit.f90 \
@@ -528,7 +539,7 @@ driver_SOURCES = \
   m_particledat.f90 \
   m_particlejson_parser.f90 \
   particle_pfunit.f90 \
-  driver.F90  
+  driver.f90  
 
 
 driver_FCFLAGS = -I${PFUNIT_DIR}/mod \
