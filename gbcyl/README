@@ -1,90 +1,116 @@
-This is ptgbcyl A parallel-tempering, constant NPT Metropolis Monte Carlo 
-simulation program for a bulk Gay-Berne (GB) liquid crystal or one confined in
-a cylindrical cavity.
+Introduction
+------------
 
-The copyright belongs to Jouni Karjalainen for most of the code but there are
-routines some modules and subroutines that have different copyright ownership.
-Where appropriate, these are documented in the source files. 
+This is PTGBCYL, a Monte Carlo simulation package for coarse-grained
+molecular models.
+
+The copyright belongs to Jouni Karjalainen (jouni.m.karjalainen@gmail.com)
+for most of the code. Some included libraries, modules or subroutines have
+different licensing. Where appropriate, these are documented in the
+source files. 
 
 
-Compiling
+
+Building
 ---------
 
-This example is assuming that a bourne shell eg. bash is used and that you have
-a working fortran compiler with MPI. OpenMPI 1.7.x or newer is recommended.
+Requirements:
 
-Here we assume that the name of the fortran compiler wrapper including the MPI
-directories is mpif90. LD_LIBRARY_PATH may have to be set to pass the compiler
-tests made by the configure script. 
+The program is known to work with GCC 6.0.0 + OpenMPI 1.10.1 and Intel
+Fortran 16.0.0 + Intel MPI 5.1.1. Older versions of the compilers may
+lack support for some Fortran 2003/2008 features used in the program.
+A C compiler is also needed.
 
-Give the following commands in the shell. To see more options use command
+
+Examples:
+
+This example is assuming that a bourne shell eg. bash is used and that
+the MPI wrappers for your Fortran and C compilers are called mpif90 and
+mpicc, respectively.
+
+Give the following commands in the shell at the top folder of the package: 
+
+GNU:
+./configure --prefix=yourinstallationpath FC=mpif90 \
+FCFLAGS="-fno-range-check -O2" CC=mpicc CFLAGS="-O2" F77=mpif90 \
+FFLAGS="-O2"
+make
+
+Intel:
+./configure --prefix=yourinstallationpath FC=mpif90 \
+FCFLAGS="-standard-semantics -O2" CC=mpicc CFLAGS="-O2" F77=mpif90 \
+FFLAGS="-O2"
+make
+
+Note that the compiler flags "-standard-semantics" (Intel) and
+"-fno-range-check" (GNU) are mandatory. The --prefix option is
+optional and needed only if you want to install the binaries with
+
+make install
+
+To see more configuration options, use command
 ./configure --help
 
 
-./configure --prefix=yourinstallationpath FC=mpif90 \
-[FCFLAGS=your compiler options] 
-make 
-make install
-
-The executables should be now installed to yourinstallationpath/bin/
-Example parameter file gbcyl.in and example starting configurations have been 
-installed to yourinstallationpath/share/
-
-
-Optimizations
--------------
+Optimization:
 
 Use of compiler/linker flags for interprocedural optimization is highly
-recommended to reduce the run time! (-ipo or similar with the Intel compiler)
+recommended to reduce the run time! For Intel Fortran the options is -ipo.
 
 When using interprocedural optimization you may have to compile the mt_stream
 library first without it by going to the mt_stream-1.11 folder and giving the 
 command make FCFLAGS=[your options without the interprocedural optimization] 
 
-Example with ifort:
-
-./configure --prefix=yourinstallationpath FC=mpif90 FCFLAGS="-ipo -standard-semantics"
-(cd mt_stream-1.11 && make FCFLAGS=-ip)
-make
-make install
-
-
-Example for GCC without the interprocedural optimization:
-
-./configure --prefix=yourinstallationpath FC=mpif90 FCFLAGS="-O2 -g"
-(cd mt_stream_f90-1.11 && make FCFLAGS="-O2 -g -fno-range-check")
-make
-make install
 
 
 Usage
 -----
 
-A new simulation:
+Prerequisities:
 
-You need the following files:
-1. program binary: ptgbcyl (default)
-2. parameter files for each cpu/replica for parallel tempering: 
-   inputparameters.0, inputparameters.1, ...  
-   Each of the parameter files must have different temperature!
-3. file to read the starting configuration of the molecules for each cpu: 
-   inputconfiguration.0, inputconfiguration.1, ...
-   The configuration files can all be similar or different. 
+PTGBCYL input files are in JSON format. The distribution contains example input
+files in the folder Examples. 
 
-Copy parameter file and starting configuration to the directory where you want 
-to run the program and have the program output files.
+To run a simulation, you need the following files:
+1. program binary: ptgbcyl (default name)
+2. input files for each replica for parallel tempering. By default,
+   a simulation with N replicas will look for files named
+   input-0.json, input-1.json, etc.
+   All input files should contain different values for temperature.
 
+Copy input files to the directory where you want to run the program (and
+have the output files).
+ 
 
+Running the simulation:
 
-Example of a parallel tempering run with 8 replicas and two OpenMP threads for
-domain decomposition. The specific way to run the program will probably depend
-on the system you are working at
+Example of a parallel tempering run with 8 replicas and two OpenMP
+threads for domain decomposition:
 
 export $OMP_NUM_THREADS=2
-mpirun -np 8 ./ptgbcyl
+mpirun -np 8 ./ptgbcyl -i ptgbcyl-_I_.json
+
+Here, the input is contained in the files ptgbcyl-in-0.json,...,
+ptgbcyl-in-7.json. The specific way to run the program will depend on the
+platform you are working on. Here, it is assumed that mpirun is used.
+
+The program will periodically output files restart-0.json,
+restart-1.json, etc., which can be used to restart the simulation. It
+will also periodically record particle coordinates and simulation
+parameters to files output-0.json, output-1.json, etc. The name of the
+restart and output files can be defined similarly as the input file with
+options -r and -o, respectively:
+
+mpirun -np 2 ./ptgbcyl -i myinputfile-_I_.json -r myrestartfile-_I_.json \
+-o myoutputfile-_I_.json
 
 
-The program will periodically output restartparameters.0, restartparameters.1,
-... and restartconfigurations.0, restartconfigurations.1,... You can replace 
-the corresponding input files with these to e.g. restart an interrupted 
-simulation.
+Note about processing the results:
+
+When parallel tempering is used, the results, say in file output-2.json
+contain the state of replica 2. A common task is to analyze some
+property at a single, constant temperature. For this one needs to gather
+data from multiple output files.
+
+
+
