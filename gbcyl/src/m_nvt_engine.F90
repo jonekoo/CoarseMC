@@ -239,7 +239,7 @@ contains
     allocate(helper, source=[this%sl%indices(1:d%n_cell, jx, jy, jz), &
          pack([(i, i = 1, size(this%particles))], nbr_mask)])
     
-    allocate(d%arr(n_local), mold=this%particles(1))
+    allocate(d%arr(n_local), mold=this%particles(1:n_local))
     do i = 1, n_local
        call d%arr(i)%downcast_assign(this%particles(helper(i)))
     end do
