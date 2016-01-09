@@ -6,7 +6,7 @@
 module m_particlegroup
   use iso_fortran_env, only: dp => REAL64, output_unit, error_unit
   use class_poly_box, only: poly_box, minimage, isxperiodic, isyperiodic, &
-       iszperiodic
+       iszperiodic, getx, gety, getz
   use m_particle, only: particle, &
        moveparticle_2, pair_interaction, pair_interaction_ptr, &
        single_interaction, single_interaction_ptr, &
@@ -14,7 +14,6 @@ module m_particlegroup
   use class_parameterizer, only: parameterizer, getparameter
   use class_parameter_writer, only: parameter_writer, writeparameter, &
        writecomment
-  use genvoltrial
   use utils, only: splitstr, join, acceptchange
   !$ use omp_lib
   use class_simplelist, only: simplelist, new_simplelist, simplelist_update, &
