@@ -1,120 +1,181 @@
 {
-  "n_equilibration_sweeps": 100000,
-  "n_production_sweeps": 200000,
-  "production_period": 400,
-  "move_adjusting_period": 100,
-  "pt_period": 10,
-  "restartperiod": 10000,
-  "seed": 432512,
-  "ensemble": "npt",
-  "groups": [
-    "gb",
-    "lj"
-  ],
-  "pair_interactions": [
-    {
-      "participants": [
-        "gb",
-        "gb"
-      ],
-      "r_cutoff": 0.55E+1,
-      "type": "gayberne",
-      "gb_kappa_sigma": 0.44E+1,
-      "gb_kappa_epsilon": 0.2E+2,
-      "gb_mu": 0.1E+1,
-      "gb_nu": 0.1E+1,
-      "gb_sigma_0": 0.1E+1,
-      "gb_epsilon_0": 0.1E+1,
-      "gb_hardcore": 0.6E+0
+    "n_equilibration_sweeps description": "The number of the first MC sweeps used to adjust particle (and volume) trial moves. Non-negative integer.",
+    "n_equilibration_sweeps": 100000,
+    "n_production_sweeps description": "The number of MC sweeps after the equilibration usually used to collect results. Non-negative integer.",
+    "n_production_sweeps": 200000,
+    "production_period description": "Program outputs to the output files output-0.json etc. every 1/production_period sweeps. Positive integer.", 
+    "production_period": 400,
+    "move_adjusting_period description": "Particle moves are adjusted every move_adjusting_period:th sweep during equilibration sweeps. Positive integer.",
+    "move_adjusting_period": 100,
+    "pt_period description": "Parallel tempering moves are attempted every pt_period:th sweep. Positive integer.",
+    "pt_period": 10,
+    "restartperiod description": "Restart files are updated every restartperiod:th sweep. Positive integer.",
+    "restartperiod": 10000,
+    "seed description": "The Mersenne Twister random number generator seed. (Large) positive integer.",
+    "seed": 432512,
+    "ensemble description": "Constant-pressure constant-temperature (NPT) or constant-temperature constant volume (NVT). Possible values are npt or nvt. Parallel tempering is disabled if the ensemble has not been defined.",
+    "ensemble": "npt",
+    "groups description": "The names of the particle groups to be used in the simulation. Group names can not be more than 20 characters long and should not contain non-ASCII characters.",
+    "groups": [
+	"gb",
+	"lj"
+    ],
+    "pair_interactions description": "The list of pair interactions between particles. Every pair of groups can and must have only one pair interaction, set by the participants list in each of the interactions.",
+    "pair_interactions": [
+	{
+	    "participants description": "The names of the groups to which the pair interaction is applied. Two same names means the interaction is applied between particles of the same group. The order of names in the list is insignificant.",
+	    "participants": [
+		"gb",
+		"gb"
+	    ],
+	    "r_cutoff description": "Cutoff radius of the interaction. Positive real.",
+	    "r_cutoff": 0.55E+1,
+	    "type description": "The type of the pair interaction. Currently the possible types are gayberne (Gay-Berne), lj (Lennard-Jones) and gblj (Interaction between a rod-like Gay-Berne particle and a point-like LJ particle).", 
+	    "type": "gayberne",
+	    "gb_kappa_sigma description": "$\\kappa$ of the Gay-Berne potential. Positive real.",
+	    "gb_kappa_sigma": 0.44E+1,
+	    "gb_kappa_epsilon description": "$\\kappa'$ of the Gay-Berne potential. Positive real.",
+	    "gb_kappa_epsilon": 0.2E+2,
+	    "gb_mu description": "$\\mu$ of the Gay-Berne potential. Positive real.", 
+	    "gb_mu": 0.1E+1,
+	    "gb_nu description": "$\\nu$ of the Gay-Berne potential. Positive real.",
+	    "gb_nu": 0.1E+1,
+	    "gb_sigma_0 description": "The range parameter $\\sigma_0$ of the Gay-Berne potential. Positive real.",
+	    "gb_sigma_0": 0.1E+1,
+	    "gb_epsilon_0 description": "The well-depth parameter $\\epsilon_0$ of the Gay-Berne potential. Positive real.", 
+	    "gb_epsilon_0": 0.1E+1,
+	    "gb_hardcore description": "If the anisotropic distance R of two Gay-Berne particles is $R$ < gb_hardcore, the particles are considered to overlap and the configuration (trial move) is rejected. Used to prevent numerical errors. Positive real.", 
+	    "gb_hardcore": 0.6E+0	  
+	},
+	{
+	    "participants": [
+		"gb",
+		"lj"
+	    ],
+	    "r_cutoff": 0.55E+1,
+	    "type": "gblj",
+	    "gblj_epsilon_0 description": "The well-depth parameter $\\epsilon_0$ of the GB-LJ potential. Positive real.",
+	    "gblj_epsilon_0": 0.155E+1,
+	    "gblj_sigma_0 description": "The range parameter $\\sigma_0$ of the GB-LJ potential. Positive real.",
+	    "gblj_sigma_0": 0.8E+0,
+	    "gblj_mu description": "The $mu$ parameter of the GB-LJ potential. Positive real.",
+	    "gblj_mu": 0.35E+0,
+	    "gblj_ee_to_es": "The ratio $\\epsilon_e/\\epsilon_s$ of the well-depths in the end and side configurations for the GB-LJ potential. Positive real.",
+	    "gblj_ee_to_es": 0.16E+0,
+	    "gblj_se_to_ss description" : "The ratio $\\sigma_e/\\sigma_s$ of the contact distances in the end and side configurations for the GB-LJ potential. Positive real.",
+	    "gblj_se_to_ss": 0.332E+1,
+	    "gblj_hardcore description": "If the anisotropic distance R of a Gay-Berne particle and a LJ particle is $R < $gblj_hardcore, the particles are considered to overlap and the configuration (trial move) is rejected. Used to prevent numerical errors. Positive real.",
+	    "gblj_hardcore": 0.300000011920929E+0
+	},
+	{
+	"participants": [
+            "lj",
+            "lj"
+	],
+	    "r_cutoff": 0.55E+1,
+	    "type": "lj",
+	    "lj_sigma_0 description": "The range parameter $\\sigma_0$ of the Lennard-Jones potential. Positive real.",
+	    "lj_sigma_0": 0.869E+0,
+	    "lj_epsilon_0 description": "The well-depth of the Lennard-Jones potential. Positive real.", 
+	    "lj_epsilon_0": 0.358E+0
+	}
+    ],
+    "single_interactions description": "A list of interactions that consider a single particle at a time. This could include e.g. particle-wall interactions or interactions with external electric/magnetic fields. Can be left out if the model contains no such interactions. Each particle group can have only one single-particle interaction.",
+    "single_interactions": [
+	{
+	    "participant description": "The name of the group that this interaction considers. ", 
+	    "participant": "gb",
+	    "type description": "Type of the interaction. ljwall_interaction is interaction for a particle inside an infinitely long  and thick cylinder, consisting of smoothly and evenly distributed Lennard-Jones particles.",
+	    "type": "ljwall_interaction",
+	    "wall_density description": "Number of virtual particles in the wall per unit volume. Positive real.",
+	    "wall_density": 0.1E+1,
+	    "rodwall description":"The type of interaction for rod-like particles with the wall. Possible values: ljdimer-wall",
+	    "rodwall": "ljdimer-wall",
+	    "alpha_A description": "$\\alpha_A$ is the relative strength of the attractive term for interaction site A.",
+	    "alpha_A": 0.1E+1,
+	    "alpha_B description": "$\\alpha_B$ is the strength of the attractive term for interaction site B. Positive real.",
+	    "alpha_B": 0.1E+1,
+	    "LJ_dist description": "distance of the interaction centers from the center of the rod. Positive real.",
+	    "LJ_dist": 0.17E+1,
+	    "is_uniform_alignment description": "if true alignment of particles along the z-direction is favored. Possible values: true, false",
+	    "is_uniform_alignment": false,
+	    "sigwall description": "The range parameter $\\sigma_w$ of the rodwall interaction. Positive real.",
+	    "sigwall": 0.1E+1,
+	    "epswall description": "The well-depth parameter $\\epsilon_w$ of the rodwall interaction. Positive real.",
+	    "epswall": 0.1E+1,
+	    "pointwall description": "The type of interaction for point-like particles with the wall. Possible values: ljcylinder", 
+	    "pointwall": "ljcylinder",
+	    "alpha_LJ description": "$\\alpha_{LJ}$ is the relative strength of the attractive term in the interaction. Positive real.",
+	    "alpha_LJ": 0.1E+1,
+	    "sigwall_LJ": "The range parameter $\\sigma_w$ of the interaction. Positive real.",
+	    "sigwall_LJ": 0.8E+0,
+	    "epswall_LJ": "The well-depth parameter $\\epsilon_w$ of the interaction. Positive real.",
+	    "epswall_LJ": 0.8715820312499998E+0
+	},
+	{
+	    "participant": "lj",
+	    "type": "ljwall_interaction",
+	    "wall_density": 0.1E+1,
+	    "rodwall": "ljdimer-wall",
+	    "alpha_A": 0.1E+1,
+	    "alpha_B": 0.1E+1,
+	    "LJ_dist": 0.17E+1,
+	    "is_uniform_alignment": false,
+	    "sigwall": 0.1E+1,
+	    "epswall": 0.1E+1,
+	    "pointwall": "ljcylinder",
+	    "alpha_LJ": 0.1E+1,
+	    "sigwall_LJ": 0.8E+0,
+	    "epswall_LJ": 0.8715820312499998E+0
+	}
+    ],
+    "max_translation description": "The maximum translation of a particle in a trial move. Positive real.",
+    "max_translation": 0.218287458838194E+0,
+    "max_rotation description": "The maximum rotation angle in radians for a rod-like particle in a trial move. Positive real.",
+    "max_rotation": 0.992623185307094E-1,
+    "temperature description": "The simulation temperature. Positive real.",
+    "temperature": 0.198E+1,
+    "move_ratio description": "The desired acceptance ratio for trial moves of single particles. Positive real.",
+    "move_ratio": 0.33E+0,
+    "max_scaling description": "The maximum change in volume in one trial volume scaling (NPT). Positive real.",
+    "max_scaling": 0.19799315994394E+3,
+    "scaling_types": "The list of volume scaling trial moves to be attempted. Only effective if ensemble == npt. A list of strings. Possible values in list: x, y, z, xy, xz, yz, xyz",
+    "scaling_types": [
+	"z"
+    ],
+    "pressure description": "The simulation pressure. Only effective if ensemble == npt. Positive real.",
+    "pressure": 0.2E+1,
+    "scaling_ratio description": "The desired acceptance ratio for volume scaling. Only effective if ensemble == npt. Positive real.",
+    "scaling_ratio": 0.25E+0,
+    "box description": "The simulation box in which the particles reside.",
+    "box": {
+	"type description": "The type of the box. Possible values: rectangular, cylindrical",
+	"type": "cylindrical",
+	"diameter description": "The diameter of the cylindrical box.",
+	"diameter": 0.36E+2,
+	"length description": "The length of the cylindrical box.", 
+	"length": 0.551262578081317E+2,
+	"periodic description": "Priodicity of the cylindrical box in the direction of the length. Non-periodic cylindrical box is experimental and not tested. Possible values: true, false",
+	"periodic": true
     },
-    {
-      "participants": [
-        "gb",
-        "lj"
-      ],
-      "r_cutoff": 0.55E+1,
-      "type": "gblj",
-      "gblj_epsilon_0": 0.155E+1,
-      "gblj_sigma_0": 0.8E+0,
-      "gblj_mu": 0.35E+0,
-      "gblj_ee_to_es": 0.16E+0,
-      "gblj_se_to_ss": 0.332E+1,
-      "gblj_hardcore": 0.300000011920929E+0
-    },
-    {
-      "participants": [
-        "lj",
-        "lj"
-      ],
-      "r_cutoff": 0.55E+1,
-      "type": "lj",
-      "lj_sigma_0": 0.869E+0,
-      "lj_epsilon_0": 0.358E+0
-    }
-  ],
-  "single_interactions": [
-    {
-      "participant": "gb",
-      "type": "ljwall_interaction",
-      "wall_density": 0.1E+1,
-      "rodwall": "ljdimer-wall",
-      "alpha_A": 0.1E+1,
-      "alpha_B": 0.1E+1,
-      "LJ_dist": 0.17E+1,
-      "is_uniform_alignment": false,
-      "sigwall": 0.1E+1,
-      "epswall": 0.1E+1,
-      "pointwall": "ljcylinder",
-      "alpha_LJ": 0.1E+1,
-      "sigwall_LJ": 0.8E+0,
-      "epswall_LJ": 0.8715820312499998E+0
-    },
-    {
-      "participant": "lj",
-      "type": "ljwall_interaction",
-      "wall_density": 0.1E+1,
-      "rodwall": "ljdimer-wall",
-      "alpha_A": 0.1E+1,
-      "alpha_B": 0.1E+1,
-      "LJ_dist": 0.17E+1,
-      "is_uniform_alignment": false,
-      "sigwall": 0.1E+1,
-      "epswall": 0.1E+1,
-      "pointwall": "ljcylinder",
-      "alpha_LJ": 0.1E+1,
-      "sigwall_LJ": 0.8E+0,
-      "epswall_LJ": 0.8715820312499998E+0
-    }
-  ],
-  "max_translation": 0.218287458838194E+0,
-  "max_rotation": 0.992623185307094E-1,
-  "temperature": 0.198E+1,
-  "move_ratio": 0.33E+0,
-  "max_scaling": 0.19799315994394E+3,
-  "scaling_types": [
-    "z"
-  ],
-  "pressure": 0.2E+1,
-  "scaling_ratio": 0.25E+0,
-  "box": {
-    "type": "cylindrical",
-    "diameter": 0.36E+2,
-    "length": 0.551262578081317E+2,
-    "periodic": true
-  },
-  "particle_groups": [
-    {
-      "name": "gb",
-      "type": "rod",
-      "description": [
-        "x",
-        "y",
-        "z",
-        "ux",
-        "uy",
-        "uz"
-      ],
-      "coordinates": [
+    "particle_groups description": "The list of particle groups. Must contain all the groups with names listed in parameter groups.",
+    "particle_groups": [
+	{
+	    "name description": "The name of the particle group. Used to connect interactions to the group. String of 20 characters or less.",
+	    "name": "gb",
+	    "type description": "Type of particles in the group. Possible values: rod, point", 
+	    "type": "rod",
+	    "description description": "Describes the order of coordinates for the type of particle in the list 'coordinates'. Can be left out.",
+	    "description": [
+		"x",
+		"y",
+		"z",
+		"ux",
+		"uy",
+		"uz"
+	    ],
+	    "coordinates description": "The list of coordinates by particle.", 
+	    "coordinates": [
 [
         -0.760949044242099E+1,
         -0.121543594386228E+2,
