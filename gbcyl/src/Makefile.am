@@ -45,7 +45,9 @@ dist_bin_SCRIPTS = \
   slowcool.py \
   gbs2ljs.py \
   set_inputparameters.py \
-  update_json.py
+  convert_to_json.py \
+  update_json.py \
+  reorder_output.py
 
 ldadd_mtstream = ${top_builddir}/mt_stream_f90-1.11/libmt_stream.la
 
