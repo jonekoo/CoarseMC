@@ -54,8 +54,14 @@ To see more configuration options, use command
 
 Optimization:
 
-Use of compiler/linker flags for interprocedural optimization is highly
+Use of compiler/linker flags for interprocedural optimization (IPO) is highly
 recommended to reduce the run time! For Intel Fortran the options is -ipo.
+With this option one must also change the linker and archiver to the Intel
+xild and xiar as follows:
+
+./configure --prefix=yourinstallationpath FC=mpif90 \
+FCFLAGS="-standard-semantics -O2 -ipo" CC=mpicc CFLAGS="-O2" F77=mpif90 \
+FFLAGS="-O2" LD=xild AR=xiar
 
 When using interprocedural optimization you may have to compile the mt_stream
 library first without it by going to the mt_stream-1.11 folder and giving the 
@@ -69,7 +75,7 @@ Usage
 Prerequisities:
 
 PTGBCYL input files are in JSON format. The distribution contains example input
-files in the folder Examples. 
+files in the folder Examples.
 
 To run a simulation, you need the following files:
 1. program binary: ptgbcyl (default name)
@@ -79,7 +85,8 @@ To run a simulation, you need the following files:
    All input files should contain different values for temperature.
 
 Copy input files to the directory where you want to run the program (and
-have the output files).
+have the output files). The recommended way to modify the input files is to use
+the provided script update_json.py.
  
 
 Running the simulation:
