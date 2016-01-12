@@ -269,7 +269,8 @@ subroutine simplelist_nbr_cells(sl, ix, iy, iz, nbr_cells, n_nbr_cells)
   integer, intent(in) :: ix, iy, iz
   integer, intent(out) :: nbr_cells(3, 27)
   integer, intent(out) :: n_nbr_cells
-  integer :: x, xl, y, yl, z, zl
+  integer :: x, xl, y, yl, z, zl, k
+  logical :: is_new
   associate(simbox => sl%cached_box)
     n_nbr_cells = 0
     nbr_cells = -1
@@ -285,8 +286,18 @@ subroutine simplelist_nbr_cells(sl, ix, iy, iz, nbr_cells, n_nbr_cells)
                    zl=z
                    if (iszperiodic(simbox)) zl=mod(sl%nz+zl,sl%nz)
                    if (zl>=0 .and. zl<=sl%nz-1) then
-                      n_nbr_cells = n_nbr_cells + 1
-                      nbr_cells(:, n_nbr_cells) = [xl, yl, zl]
+                      !! Check if this cell is already in:
+                      is_new = .true.
+                      do k = 1, n_nbr_cells
+                         if (all(nbr_cells(:, k) == [xl, yl, zl])) then
+                            is_new = .false.
+                            exit
+                         end if
+                      end do
+                      if (is_new) then
+                         n_nbr_cells = n_nbr_cells + 1
+                         nbr_cells(:, n_nbr_cells) = [xl, yl, zl]
+                      end if
                    end if
                 end do
              end if
