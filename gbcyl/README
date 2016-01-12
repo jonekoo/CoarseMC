@@ -112,12 +112,52 @@ mpirun -np 2 ./ptgbcyl -i myinputfile-_I_.json -r myrestartfile-_I_.json \
 -o myoutputfile-_I_.json
 
 
-Note about processing the results:
+
+Processing the results
+----------------------
 
 When parallel tempering is used, the results, say in file output-2.json
 contain the state of replica 2. A common task is to analyze some
 property at a single, constant temperature. For this one needs to gather
-data from multiple output files.
+data from multiple output files. This can be done with the provided
+script reorder_output.py. Running the script as e.g.
+
+python reorder_output.py output-*.json
+
+will produce files sorted-0.json sorted-1.json,... each containing data
+at a single temperature. Note that this process can take from a few
+minutes to a few hours, depending on the amount of data.
+
+
+
+Package folders (in alphabetical order)
+---------------------------------------
+
+BLAS:
+Basic Linear Algebra Subprograms. Used by some of the analysis
+tools.
+
+cephes:
+Mathematical library of special functions. Used by the ljwall_interaction.
+
+claf90:
+Library for command-line parsing. Used by the main program.
+
+doxygen-doc:
+Created if doxygen is available
+
+Examples:
+Contains example input files for simulations.
+
+lapack:
+Linear Algebra PACKage. Used by some of the analysis tools.
+
+mt_stream_f90-1.11:
+Multiple Stream Mersenne Twister Pseudo-Random Number Generator
+
+src:
+The program source code and accompanied scripts for processing input and
+output files
 
 
 
