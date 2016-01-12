@@ -60,7 +60,7 @@
 	    "gblj_sigma_0": 0.8E+0,
 	    "gblj_mu description": "The $mu$ parameter of the GB-LJ potential. Positive real.",
 	    "gblj_mu": 0.35E+0,
-	    "gblj_ee_to_es": "The ratio $\\epsilon_e/\\epsilon_s$ of the well-depths in the end and side configurations for the GB-LJ potential. Positive real.",
+	    "gblj_ee_to_es description": "The ratio $\\epsilon_e/\\epsilon_s$ of the well-depths in the end and side configurations for the GB-LJ potential. Positive real.",
 	    "gblj_ee_to_es": 0.16E+0,
 	    "gblj_se_to_ss description" : "The ratio $\\sigma_e/\\sigma_s$ of the contact distances in the end and side configurations for the GB-LJ potential. Positive real.",
 	    "gblj_se_to_ss": 0.332E+1,
@@ -107,9 +107,9 @@
 	    "pointwall": "ljcylinder",
 	    "alpha_LJ description": "$\\alpha_{LJ}$ is the relative strength of the attractive term in the interaction. Positive real.",
 	    "alpha_LJ": 0.1E+1,
-	    "sigwall_LJ": "The range parameter $\\sigma_w$ of the interaction. Positive real.",
+	    "sigwall_LJ description": "The range parameter $\\sigma_w$ of the interaction. Positive real.",
 	    "sigwall_LJ": 0.8E+0,
-	    "epswall_LJ": "The well-depth parameter $\\epsilon_w$ of the interaction. Positive real.",
+	    "epswall_LJ description": "The well-depth parameter $\\epsilon_w$ of the interaction. Positive real.",
 	    "epswall_LJ": 0.8715820312499998E+0
 	},
 	{
@@ -139,7 +139,7 @@
     "move_ratio": 0.33E+0,
     "max_scaling description": "The maximum change in volume in one trial volume scaling (NPT). Positive real.",
     "max_scaling": 0.19799315994394E+3,
-    "scaling_types": "The list of volume scaling trial moves to be attempted. Only effective if ensemble == npt. A list of strings. Possible values in list: x, y, z, xy, xz, yz, xyz",
+    "scaling_types description": "The list of volume scaling trial moves to be attempted. Only effective if ensemble == npt. A list of strings. Possible values in list: x, y, z, xy, xz, yz, xyz",
     "scaling_types": [
 	"z"
     ],
