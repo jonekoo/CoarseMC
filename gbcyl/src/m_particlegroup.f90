@@ -53,7 +53,8 @@ contains
     character(kind=CK, len=*), intent(in) :: name
     type(particlegroup) :: group
     group%name = name
-    allocate(group%particles(size(particles)), source=particles)
+    allocate(group%particles(size(particles)), &
+         source=particles(1:size(particles)))
     !$ if (.true.) then
     !$ call new_simplelist(group%sl, simbox, group%particles, min_cell_length, &
     !$& min_boundary_width, is_nx_even = isxperiodic(simbox), &
@@ -99,6 +100,7 @@ subroutine total_energy(groups, simbox, pair_ias, single_ias, energy, &
   integer :: j_group
   energy = 0._dp
   err = 0
+  !write(*, *) 'nx, ny, nz = ', groups(1)%ptr%sl%nx, groups(1)%ptr%sl%ny, groups(1)%ptr%sl%nz
   if (size(groups) == 0) return
   !$OMP PARALLEL default(shared) reduction(+:energy, err)& 
   !$OMP& private(energy_j, i, nbr_cells, n_nbr_cells)
@@ -109,6 +111,7 @@ subroutine total_energy(groups, simbox, pair_ias, single_ias, energy, &
            if (err == 0) then
               do i_group = 1, size(groups)
                  !! 1. compute inside ix, iy, iz in i_group
+                 !write(*, *) "compute inside ", ix, iy, iz, " in ", i_group
                  call cell_energy(groups(i_group)%ptr, ix, iy, iz, simbox, &
                       pair_ias(i_group, i_group)%ptr, single_ias(i_group)%ptr, &
                       energy_j, err)
@@ -120,6 +123,8 @@ subroutine total_energy(groups, simbox, pair_ias, single_ias, energy, &
               do i_group = 1, size(groups) - 1
                  !! 2. compute with ix, ix, y in j_group > i_group
                  do j_group = i_group + 1, size(groups)
+                    !write(*, *) "compute with ", ix, iy, iz, " in ", j_group, &
+                    !  " > ", i_group
                     call cell_pair_energy(groups(i_group)%ptr, ix, iy, iz, &
                          groups(j_group)%ptr, ix, iy, iz, simbox, &
                          pair_ias(i_group, j_group)%ptr, energy_j, err)
@@ -175,6 +180,7 @@ subroutine cell_energy(this, ix, iy, iz, simbox, pair_ia, single_ia, &
   real(dp) :: energy_ij, rij(3)
   energy = 0
   err = 0
+  !write(*, *) "compute inside ", this%name, ix, iy, iz
   do i = 1, this%sl%counts(ix, iy, iz) - 1
      associate(particlei => this%particles(this%sl%indices(i, ix, iy, iz)))
      do j = i + 1, this%sl%counts(ix, iy, iz)
@@ -213,7 +219,8 @@ subroutine cell_pair_energy(this, ix, iy, iz, another, jx, jy, jz, simbox, &
   integer, intent(out) :: err
   integer :: i, j
   real(dp) :: energy_ij, rij(3)
-
+  !write(*, *) "compute ", this%name, ix, iy, iz, " with ", &
+  !     another%name, jx, jy, jz
   energy = 0
   do i = 1, this%sl%counts(ix, iy, iz)
      associate(particlei => this%particles(this%sl%indices(i, ix, iy, iz)))
