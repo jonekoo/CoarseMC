@@ -63,7 +63,6 @@ Makefile
 claf90/Makefile
 mt_stream_f90-1.11/Makefile
 cephes/Makefile
-ftnunit/Makefile
 BLAS/Makefile
 lapack/lapack_routine/Makefile
 lapack/Makefile
