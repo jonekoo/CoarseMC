@@ -45,8 +45,8 @@ dist_bin_SCRIPTS = \
   slowcool.py \
   gbs2ljs.py \
   set_inputparameters.py \
-  convert_to_json.py \
   update_json.py \
+  convert_to_json.py \
   reorder_output.py
 
 ldadd_mtstream = ${top_builddir}/mt_stream_f90-1.11/libmt_stream.la
@@ -117,7 +117,7 @@ parallel_src = \
   m_particlejson_parser.f90 \
   m_nvt_engine.F90 \
   m_npt_engine.F90 \
-  mc_engine.f90 
+  mc_engine.F90 
 
 ## Below: Listings of source files needed by programs
 
