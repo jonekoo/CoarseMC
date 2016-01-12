@@ -1,8 +1,5 @@
-!> This is the main program of the ptgbcyl simulation software for
-!! coarse-grained particles. 
-!!
-!! @todo create two different simulation programs: with MPI and without
-!!       using e.g. conditional compilation.
+!> This is the main program of the PTGBCYL Monte Carlo simulation
+!! program for coarse-grained particles. 
 !!
 program gbcyl
   use mc_engine
@@ -50,7 +47,7 @@ program gbcyl
  
   call cla_get('--restart-file', restart_filename)
   call parse_filename(restart_filename, parameter_restartfile)
- 
+
   call mce_init_json(id, ntasks, parameter_infile, parameter_outfile, &
        parameter_restartfile)
 
