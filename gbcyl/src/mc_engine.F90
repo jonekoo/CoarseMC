@@ -340,15 +340,21 @@ subroutine sweep(simbox, groups, genstates, isweep)
   real(dp) :: beta, dE
   integer :: err
   dE = 0.
+#ifdef DEBUG
   write(output_unit, *) 'Move particles'
+#endif
   call nvt_update(groups, genstates, simbox, pair_interactions, &
        single_interactions, dE)
+#ifdef DEBUG
   write(output_unit, *) "etotal + dE = ", etotal, " + ", dE, " = ", etotal + dE
   call total_energy(groups, simbox, pair_interactions, &
        single_interactions, etotal, err)
   write(output_unit, *) "etotal updated = ", etotal
+#endif
   if (ensemble == 'npt') then
+#ifdef DEBUG
      write(output_unit, *) 'Make volume move(s)'
+#endif
      call npt_update(simbox, groups, genstates(0), pair_interactions, &
           single_interactions, etotal)
   end if
