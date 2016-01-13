@@ -9,17 +9,18 @@ def main():
     d_master = json.load(f)
     f.close()
     # Load "slave" json to be updated
-    fn_slave = sys.argv[2]
-    f = open(fn_slave, 'r')
-    d_slave = json.load(f)
-    f.close()
+    fn_slaves = sys.argv[2:]
+    for fn_slave in fn_slaves:
+        f = open(fn_slave, 'r')
+        d_slave = json.load(f)
+        f.close()
 
-    d_slave.update(d_master)
+        d_slave.update(d_master)
 
-    # Overwrite "slave" file.
-    f = open(fn_slave, 'w')
-    json.dump(d_slave, f)
-    f.close()
+        # Overwrite "slave" file.
+        f = open(fn_slave, 'w')
+        json.dump(d_slave, f)
+        f.close()
 
 if __name__=='__main__':
     main()
