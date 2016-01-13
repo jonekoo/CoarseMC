@@ -25,20 +25,10 @@
 module cla
 
   use kinds
-#ifdef f2003
   use, intrinsic :: iso_fortran_env, only : &
        stdin => input_unit, &
        stdout => output_unit, &
        stderr => error_unit
-  !       input_unit  => stdin, &
-  !       output_unit => stdout, &
-  !       error_unit  => stderr
-#else
-#define stdin  5
-#define stdout 6
-#define stderr 0
-#endif
-  
   implicit none
 
   ! Command Line Arguments
