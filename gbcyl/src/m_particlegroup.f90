@@ -75,7 +75,8 @@ contains
 
   end subroutine particlegroup_to_json
   
-  impure elemental subroutine particlegroup_finalize(group)
+
+  subroutine particlegroup_finalize(group)
     type(particlegroup), intent(inout) :: group
     call simplelist_deallocate(group%sl)
     if(allocated(group%particles)) deallocate(group%particles)

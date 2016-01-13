@@ -69,14 +69,15 @@ contains
     end if
   end subroutine nvt_engine_to_json
 
-  impure elemental subroutine domain_assign(this, src)
+  
+  subroutine domain_assign(this, src)
     class(domain), intent(inout) :: this
     type(domain), intent(in) :: src
     this%particlearray_wrapper = src%particlearray_wrapper
     this%n_cell = src%n_cell
   end subroutine domain_assign
 
-  impure elemental subroutine domain_delete(this)
+  subroutine domain_delete(this)
     type(domain), intent(inout) :: this
     this%n_cell = 0
   end subroutine domain_delete
@@ -182,7 +183,9 @@ contains
                                  )%downcast_assign(ds(i_group)%arr(i))
                          end do
                       end do
-                      call domain_delete(ds)
+                      do i_group = 1, size(groups)
+                         call domain_delete(ds(i_group))
+                      end do
                    end do
                 end do
              end do
@@ -247,7 +250,8 @@ contains
     allocate(d%mask(n_local), source=.true.)
   end function create_domain
   
-  impure elemental subroutine delete_domain(this)
+
+  subroutine delete_domain(this)
     class(domain), intent(inout) :: this
     this%n_cell = 0
   end subroutine delete_domain

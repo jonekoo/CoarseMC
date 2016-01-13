@@ -386,13 +386,15 @@ contains
     this%z = vec(3)
   end subroutine particle_set_position
   
-  impure elemental subroutine wrapper_delete(this)
+
+  subroutine wrapper_delete(this)
     type(particlearray_wrapper), intent(inout) :: this
     if (allocated(this%arr)) deallocate(this%arr)
     if (allocated(this%mask)) deallocate(this%mask)
   end subroutine wrapper_delete
   
-  impure elemental subroutine wrapper_assign(this, src)
+
+  subroutine wrapper_assign(this, src)
     class(particlearray_wrapper), intent(inout) :: this
     type(particlearray_wrapper), intent(in) :: src
     if(.not. allocated(src%arr)) stop &
