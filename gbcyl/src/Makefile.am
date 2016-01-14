@@ -47,7 +47,8 @@ dist_bin_SCRIPTS = \
   set_inputparameters.py \
   update_json.py \
   convert_to_json.py \
-  reorder_output.py
+  reorder_output.py \
+  json_average.py
 
 ldadd_mtstream = ${top_builddir}/mt_stream_f90-1.11/libmt_stream.la
 
