@@ -20,7 +20,11 @@ def main():
     all_results = {}
     for fn in fns:
         print "Processing file " + fn
-        f = open(fn, 'r')
+        try:
+            f = open(fn, 'r')
+        except IOError:
+            print __doc__
+            return 1
         json_str = f.read()
         f.close()
         splitted = json_str.split("}\n{")
