@@ -28,6 +28,7 @@ module m_nvt_engine
   contains
     procedure :: domain_assign
     generic :: assignment(=) => domain_assign
+    procedure :: delete => domain_manual_delete
     final :: domain_delete
   end type
 
@@ -82,6 +83,12 @@ contains
     this%n_cell = 0
   end subroutine domain_delete
 
+  subroutine domain_manual_delete(this)
+    class(domain), intent(inout) :: this
+    call this%particlearray_wrapper%delete()
+    this%n_cell = 0
+  end subroutine domain_manual_delete
+
 
   subroutine nvt_update(groups, genstates, simbox, pair_ias, single_ias, dE)
     type(particlegroup_ptr), intent(inout) :: groups(:)
@@ -119,7 +126,8 @@ contains
     !! no performance gained and depending on the system large automatic arrays
     !! may cause a stack overflow.
     real(dp) :: dE_d
-    integer :: ix, iy, iz, jx, jy, jz, n_trials_d, n_accepted_d, i_group, i
+    integer :: ix, iy, iz, jx, jy, jz, n_trials_d, n_accepted_d, i_group, i,&
+    	    n_max
     type(domain), allocatable :: ds(:)
     do i_group = 1, size(groups)
 #ifdef DEBUG
@@ -142,10 +150,17 @@ contains
     !! 2 x 2 x 2 cube of cells.
     !$OMP PARALLEL shared(groups, simbox, genstates, pair_ias, single_ias)& 
     !$OMP& private(thread_id, n_threads, n_trials_d, n_accepted_d, ds, dE_d, &
-    !$OMP& i_group)&
+    !$OMP& i_group, n_max)&
     !$OMP& reduction(+:dE, n_accepted, n_trials) 
     !$ thread_id = omp_get_thread_num()
     allocate(ds(size(groups)))
+    do i_group = 1, size(groups)
+      n_max = maxval(groups(i_group)%ptr%sl%counts) * 27
+      allocate(ds(i_group)%arr(n_max), source=groups(i_group)%ptr%particles(1))
+      allocate(ds(i_group)%mask(n_max), source = .false.)
+      ds(i_group)%n_cell = 0
+      ds(i_group)%n = 0
+    end do  	 
     do iz=0, min(1, groups(1)%ptr%sl%nz-1)
        do iy=0, min(1, groups(1)%ptr%sl%ny-1)
           do ix=0, min(1, groups(1)%ptr%sl%nx-1)
@@ -156,8 +171,8 @@ contains
                       
                       !! Collect temp_particles for all groups
                       do i_group = 1, size(groups)
-                         ds(i_group) = create_domain(groups(i_group)%ptr, &
-                              simbox, jx, jy, jz)
+			 call set_domain(groups(i_group)%ptr, &
+			       simbox, jx, jy, jz, ds(i_group))
                       end do
                       !! Move particles
                       do i_group = 1, size(groups)
@@ -173,18 +188,11 @@ contains
                       !! Synchronize
                       !! :TODO: Generalize to a sync domain operation?
                       do i_group = 1, size(groups)
-                         !! Cray compiler does not accept this since "An actual
-                         !! argument must be definable when associated with a
-                         !! dummy argument that has intent(out) or 
-                         !! intent(inout)."
                          do i = 1, ds(i_group)%n_cell
                             call groups(i_group)%ptr%particles(&
                                  groups(i_group)%ptr%sl%indices(i, jx, jy, jz)&
                                  )%downcast_assign(ds(i_group)%arr(i))
                          end do
-                      end do
-                      do i_group = 1, size(groups)
-                         call domain_delete(ds(i_group))
                       end do
                    end do
                 end do
@@ -197,6 +205,9 @@ contains
        end do
        !$OMP BARRIER
     end do
+    do i_group = 1, size(groups)
+       call ds(i_group)%delete()
+    end do	   
     !$OMP END PARALLEL
 
     do i_group = 1, size(groups)
@@ -218,44 +229,49 @@ contains
     nmovetrials = 0
   end subroutine nvt_engine_reset_counters
   
-  
-  function create_domain(this, simbox, jx, jy, jz) result(d)
+  subroutine set_domain(this, simbox, jx, jy, jz, d)
     type(particlegroup), intent(in) :: this
     type(poly_box), intent(in) :: simbox
     integer, intent(in) :: jx, jy, jz
-    type(domain) :: d
+    type(domain), intent(inout) :: d
     logical, allocatable :: nbr_mask(:)
-    integer :: n_local
     integer :: i
     integer, allocatable :: helper(:)
-    
+    d%mask = .false.
     allocate(nbr_mask(size(this%particles)), source=.false.)
     d%n_cell = this%sl%counts(jx, jy, jz)
     call simplelist_cell_nbrmask(this%sl, simbox, jx, jy, jz, nbr_mask)
-    n_local = count(nbr_mask)
+    d%n = count(nbr_mask)
     !! Remove particles in jx, jy, jz from mask:
     nbr_mask(this%sl%indices(1:d%n_cell, jx, jy, jz)) = .false.
-    
     !! GFortran 6.0.0 is not fine with pack from a polymorphic
     !! array class(particle) so we'll use a workaround.
-    !! Put particles in jx, jy, jz first in temp_particles:
     allocate(helper, source=[this%sl%indices(1:d%n_cell, jx, jy, jz), &
          pack([(i, i = 1, size(this%particles))], nbr_mask)])
-    
-    allocate(d%arr(n_local), mold=this%particles(1:n_local))
-    do i = 1, n_local
+    if (allocated(nbr_mask)) deallocate(nbr_mask)
+    do i = 1, d%n
        call d%arr(i)%downcast_assign(this%particles(helper(i)))
     end do
-    
-    allocate(d%mask(n_local), source=.true.)
-  end function create_domain
-  
+    d%mask(1:d%n) = .true.
+  end subroutine set_domain  
 
-  subroutine delete_domain(this)
-    class(domain), intent(inout) :: this
-    this%n_cell = 0
-  end subroutine delete_domain
   
+  !> Moves particle in a single cell of a domain. Part of the domain 
+  !! decomposition algorithm.
+  !!
+  !! @param domains are the subsystems of particles corresponding to
+  !! 	    groups given to the make_particle_moves algorithm.
+  !! @param i_d is the index of the domain to be moved in @p domains.
+  !! @param genstates the random number generator states.
+  !! @param simbox the simulation box.
+  !! @param temperature the simulation temperature.
+  !! @param pair_ias the pair interactions concerning domains(i_d)
+  !! @param single_ias the single-particle interaction concerning 
+  !! 	    domains(i_d). 
+  !! @param dE the total change in energy due to the moves.
+  !! @param n_trials the number of trial moves that were performed.
+  !! @param n_accepted the number of accepted moves of n_trials.
+  !!
   subroutine domain_move(domains, i_d, genstates, simbox, temperature, &
        pair_ias, single_ias, dE, n_trials, n_accepted)
     type(domain), intent(inout) :: domains(:)
