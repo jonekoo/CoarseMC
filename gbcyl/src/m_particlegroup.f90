@@ -181,7 +181,6 @@ subroutine cell_energy(this, ix, iy, iz, simbox, pair_ia, single_ia, &
   real(dp) :: energy_ij, rij(3)
   energy = 0
   err = 0
-  !write(*, *) "compute inside ", this%name, ix, iy, iz
   do i = 1, this%sl%counts(ix, iy, iz) - 1
      associate(particlei => this%particles(this%sl%indices(i, ix, iy, iz)))
      do j = i + 1, this%sl%counts(ix, iy, iz)
