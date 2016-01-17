@@ -127,9 +127,11 @@ module m_particle
   type particlearray_wrapper
      class(particle), allocatable :: arr(:)
      logical, allocatable :: mask(:)
+     integer :: n = 0
    contains
      procedure :: wrapper_assign
      generic :: assignment(=) => wrapper_assign
+     procedure :: delete => wrapper_manual_delete
      final :: wrapper_delete
   end type particlearray_wrapper
 
@@ -316,8 +318,8 @@ contains
        if (err /= 0) exit
        !! Select the calculated interactions by cutoff already here
        if (allocated(rijs)) deallocate(rijs)
-       allocate(rijs(3, size(nbrs(i_nbr)%arr)))
-       do i = 1, size(nbrs(i_nbr)%arr)
+       allocate(rijs(3, nbrs(i_nbr)%n))
+       do i = 1, nbrs(i_nbr)%n
           !! :NOTE: The chosen way is better than
           !! :NOTE: rij = minimage(simbox, position(particlei), 
           !! position(particlej)) It is significantly faster to use direct
@@ -332,13 +334,13 @@ contains
        end do !! ifort does not vectorize
        
        if (allocated(cutoff_mask)) deallocate(cutoff_mask)
-       allocate(cutoff_mask(size(nbrs(i_nbr)%arr)))
-       do i = 1, size(nbrs(i_nbr)%arr)
+       allocate(cutoff_mask(nbrs(i_nbr)%n))
+       do i = 1, nbrs(i_nbr)%n
           cutoff_mask(i) = dot_product(rijs(:, i), rijs(:, i)) < rcutoff**2
        end do
        cutoff_mask = cutoff_mask .and. nbrs(i_nbr)%mask
        
-       do i = 1, size(nbrs(i_nbr)%arr)
+       do i = 1, nbrs(i_nbr)%n
           if (cutoff_mask(i)) then
              call pair_ias(i_nbr)%ptr%pair_potential(this, nbrs(i_nbr)%arr(i), &
                   rijs(:, i), e, err)
@@ -391,7 +393,13 @@ contains
     type(particlearray_wrapper), intent(inout) :: this
     if (allocated(this%arr)) deallocate(this%arr)
     if (allocated(this%mask)) deallocate(this%mask)
+    this%n = 0
   end subroutine wrapper_delete
+  
+  subroutine wrapper_manual_delete(this)
+    class(particlearray_wrapper), intent(inout) :: this
+    call wrapper_delete(this)
+  end subroutine wrapper_manual_delete
   
 
   subroutine wrapper_assign(this, src)
@@ -401,10 +409,14 @@ contains
          'ERROR: wrapper_assign: src%arr not allocated!'
     if (.not. allocated(src%mask)) stop &
          'ERROR: wrapper_assign: src%mask not allocated!'
+    !! @todo This could possibly be optimized by not making the (re)allocation
+    !!       every time, but only when size increases or type of particles
+    !!       changes.
     if (allocated(this%arr)) deallocate(this%arr)
     allocate(this%arr(size(src%arr)), source=src%arr)
     if (allocated(this%mask)) deallocate(this%mask)
-    allocate(this%mask, source=src%mask)
+    allocate(this%mask(size(src%mask)), source=src%mask)
+    this%n = src%n
   end subroutine wrapper_assign
   
 end module m_particle
