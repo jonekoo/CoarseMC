@@ -182,12 +182,10 @@ subroutine mce_from_json(json_val)
        nproductionsweeps, error_lb=0)
   call get_parameter(json_val, 'production_period', &
        productionperiod, error_lb=1)
-  call get_parameter(json_val, 'i_sweep', isweep, error_lb=0, &
-       warn_ub=nequilibrationsweeps + nproductionsweeps)  
+  call get_parameter(json_val, 'i_sweep', isweep, error_lb=0)  
   call get_parameter(json_val, 'move_adjusting_period', &
        moveadjustperiod, error_lb=1)
-  call get_parameter(json_val, 'pt_period', pt_period, error_lb=1, &
-       warn_ub=nequilibrationsweeps + nproductionsweeps)
+  call get_parameter(json_val, 'pt_period', pt_period, error_lb=1)
   call get_parameter(json_val, 'restartperiod', restartperiod, error_lb=1)
   call get_parameter(json_val, 'seed', seed, warn_lb=1000)
   allocate(group_names(0))
@@ -377,9 +375,9 @@ subroutine sweep(simbox, groups, genstates, isweep)
 end subroutine sweep
 
 
-subroutine mce_to_json(json_val, coordinates_json)
+subroutine mce_to_json(json_val)
   type(json_value), pointer, intent(out) :: json_val
-  type(json_value), pointer, intent(out), optional :: coordinates_json
+  !type(json_value), pointer, intent(out), optional :: coordinates_json
   integer :: i, j
   type(json_value), pointer :: json_child, group_name, pair_ia_json, &
        pair_ia_element, group_json, group_json_element, box_json, &
@@ -453,11 +451,7 @@ subroutine mce_to_json(json_val, coordinates_json)
      call groups(i)%ptr%to_json(group_json_element)
      call json_add(group_json, group_json_element)
   end do
-  if (present(coordinates_json)) then
-     call json_add(coordinates_json, group_json)
-  else
-     call json_add(json_val, group_json)
-  end if
+  call json_add(json_val, group_json)
 end subroutine mce_to_json
 
 
@@ -499,7 +493,7 @@ end subroutine
 subroutine makerestartpoint
   type(json_value), pointer :: parameters_json
   parameters_json => null()
-  call mce_to_json(parameters_json) !, coordinates_json)
+  call mce_to_json(parameters_json)
   call json_print(parameters_json, fn_parameters_restart)
   call json_destroy(parameters_json)
 end subroutine
