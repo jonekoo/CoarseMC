@@ -155,8 +155,10 @@ contains
     !$ thread_id = omp_get_thread_num()
     allocate(ds(size(groups)))
     do i_group = 1, size(groups)
-      n_max = maxval(groups(i_group)%ptr%sl%counts) * 27
-      allocate(ds(i_group)%arr(n_max), source=groups(i_group)%ptr%particles(1))
+      n_max = min(maxval(groups(i_group)%ptr%sl%counts) * 27, &
+        size(groups(i_group)%ptr%particles))
+      allocate(ds(i_group)%arr(n_max), &
+        source=groups(i_group)%ptr%particles(1:n_max))
       allocate(ds(i_group)%mask(n_max), source = .false.)
       ds(i_group)%n_cell = 0
       ds(i_group)%n = 0
