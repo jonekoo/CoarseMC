@@ -14,8 +14,9 @@ import json
 import numpy
 
 def main():
+    filename = sys.argv[1]
     try:
-        f = open(sys.argv[1], 'r')
+        f = open(filename, 'r')
     except IOError:
         print __doc__
         return 1
@@ -25,11 +26,11 @@ def main():
     temperature = d[0]["temperature"]
     for g in d[0]["particle_groups"]:
         n += len(g["coordinates"])
-    print "T= ", d[0]["temperature"], "N= ", n, "<E_tot>= ", 
+    print filename, ": ", "T= ", d[0]["temperature"], "N= ", n, "<E_tot>/N= ", 
     data = []
     for item in d:
         data.append(item["total_energy"])
-        if item["temperature"] /= temperature:
+        if item["temperature"] != temperature:
             print 'ERROR: file contains several temperatures. See usage.'
             return
     print numpy.average(data) / n
