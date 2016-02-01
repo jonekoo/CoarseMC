@@ -10,10 +10,18 @@ etc. Together they contain the same information as the input files of
 the script but now a single file contains only the output at a single
 temperature. The files are indexed in order of ascending temperature.
 
-Note: memory required is about the same as the input files combined.
+Note 1) ujson is used if it is available. Encoding is ~10 times faster
+        with ujson as compared to the json module in Python 2.7.9.
+Note 2) memory required is roughly the same as the size of the input
+        files combined.
 """
 import sys
-import json
+try:
+    # Encoding with ujson is around 10 times faster 
+    import ujson as json
+except ImportError:
+    # than with this Python 2.7.9 module.
+    import json
 
 def main():
     fns = sys.argv[1:]
