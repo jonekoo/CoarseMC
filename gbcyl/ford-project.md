@@ -4,6 +4,5 @@ summary: PTGBCYL - a flexible, hybrid-parallel Monte Carlo simulation program fo
 author: Jouni Karjalainen
 display: public
 source: false
-graph: true
 
 For more details see the included manual.
