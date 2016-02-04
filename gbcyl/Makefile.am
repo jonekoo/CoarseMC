@@ -13,7 +13,7 @@ nodist_doc_DATA = @DX_DOCDIR@/html/index.html
 
 $(nodist_doc_DATA): doxygen-doc
 
-DX_CLEANFILES=@DX_DOCDIR@/html/* @DX_DOCDIR@/gbcyl.tag
+DX_CLEANFILES=@DX_DOCDIR@/html/* @DX_DOCDIR@/ptgbcyl.tag
 
 endif
 
