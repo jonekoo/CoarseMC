@@ -6,7 +6,7 @@ module m_particledat
   use particle_mover, only: transmove, rotate
   use json_module, only: json_value, CK, json_get, json_add, json_create_array
   use m_json_wrapper, only: get_parameter
-  include 'rng.inc'
+  use mt_stream, only: rngstate => mt_state
   implicit none
   
   !> Holds data of a uniaxial particle, e.g. Gay-Berne 
