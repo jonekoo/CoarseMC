@@ -45,9 +45,9 @@ model_src = \
   particle_mover.f90 \
   m_particle.f90 \
   m_point.f90 \
-  m_rod.f90 \
-  m_particledat.f90 \
-  m_particle_factory.f90 
+  m_rod.f90 
+
+
 
 noinst_LTLIBRARIES = libmodel.la
 
