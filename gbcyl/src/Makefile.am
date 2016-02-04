@@ -130,7 +130,6 @@ driver_SOURCES = \
   utils_pfunit.f90 \
   m_point.f90 \
   m_rod.f90 \
-  m_particledat.f90 \
   m_particlejson_parser.f90 \
   particle_pfunit.f90 \
   driver.f90  

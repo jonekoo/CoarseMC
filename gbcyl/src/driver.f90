@@ -53,9 +53,6 @@ program main
 
    particle_suite = TestSuite('Tests for particle i/o')
    call add(particle_suite, &
-        TestCase1Step('Test writing and reading particledat from json.', &
-        test_particledat_json_io))
-   call add(particle_suite, &
         TestCase1Step('Test writing and reading rod from json.', &
         test_rod_json_io))
    call add(particle_suite, &

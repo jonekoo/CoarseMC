@@ -4,31 +4,11 @@ module particle_pfunit
   use pfunit
   use m_rod, only: rod
   use m_point, only: point
-  use m_particledat, only: particledat
   use m_particlejson_parser
   implicit none
 
 contains
   
-  subroutine test_particledat_json_io
-    type(json_value), pointer :: json_val
-    type(particledat) :: out, in
-    
-    out%x = 1.
-    out%y = 2.
-    out%z = 3.
-    out%ux = -1./sqrt(2.)
-    out%ux = 1./sqrt(2.)
-    out%uz = 0.
-    out%rod = .true.
-    !! write coordinates to json
-    call out%coordinates_to_json(json_val)
-    
-    !! read coordinates from json
-    call in%from_json(json_val)
-    call assertTrue(out == in, 'Input and output particledat not equal.')
-  end subroutine test_particledat_json_io
-
   subroutine test_rod_json_io
     type(json_value), pointer :: json_val
     type(rod) :: out, in

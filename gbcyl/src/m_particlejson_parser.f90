@@ -3,7 +3,6 @@ module m_particlejson_parser
   use m_particle, only: particle
   use m_point, only: point
   use m_rod, only: rod
-  use m_particledat, only: particledat
   use json_module, only: json_value, json_get_child, json_count, json_get, CK
   use m_json_wrapper, only: get_parameter
   implicit none
@@ -24,8 +23,6 @@ contains
        allocate(particles(n), source=rod())
     else if (typestr == 'point') then
        allocate(particles(n), source=point())
-    else if (typestr == 'particledat') then
-       allocate(particles(n), source=particledat())
     else
        write(error_unit, *) 'ERROR: particlearray_from_json: particle type ', &
             typestr, ' not recognized. Stopping.'
