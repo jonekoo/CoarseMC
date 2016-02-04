@@ -1,35 +1,7 @@
 ## Programs to install
 bin_PROGRAMS = \
   ptgbcyl \
-  orientation_parameter \
-  cylindrical_orientation \
-  tau1 \
-  weighted_rdf \
-  density \
-  psi6 \
-  povanimator \
-  smctau1 \
-  smcpsi6 \
-  cylhist \
-  cylhist2 \
-  cylindrical_layerorientation \
-  virial_tensor \
-  doublezsize \
-  remove_every_2nd \
-  test_simplelist_with_openmp \
-  pair_distribution \
-  xe_nmr \
-  xe_nmr_profile \
-  xe_nmr_profile2 \
-  test_gblj \
-  print_gbxe_qcoupling \
-  print_gbxe_shielding \
-  print_xewall_coupling \
-  print_xewall_shielding \
-  print_xeslab_shielding \
-  test_create_particlegroup \
   create_crystal
-#  pressurezz 
 
 
 ## Scripts to install
@@ -50,12 +22,17 @@ dist_bin_SCRIPTS = \
   reorder_output.py \
   json_average.py
 
-ldadd_mtstream = ${top_builddir}/mt_stream_f90-1.11/libmt_stream.la
-
 AM_FCFLAGS = \
 -I${top_builddir}/mt_stream_f90-1.11 \
 -I${top_builddir}/mt_stream_f90-1.11/f_jump_ahead_coeff \
 -I${top_builddir}/claf90
+
+
+utils_src = \
+  num_kind.f90 \
+  rng.inc \
+  utils.f90 \
+  m_fileunit.f90
 
 model_src = \
   class_parameterizer.f90 \
@@ -72,6 +49,13 @@ model_src = \
   m_particledat.f90 \
   m_particle_factory.f90 
 
+noinst_LTLIBRARIES = libmodel.la
+
+libmodel_la_SOURCES = \
+  $(utils_src) \
+  $(model_src) \
+  $(energy_src)
+
 m_json_wrapper.$(OBJEXT) : m_json_wrapper.f90 check_parameter.inc process_not_found.inc
 
 energy_src = \
@@ -83,31 +67,21 @@ energy_src = \
   m_gblj.f90 \
   ljcylinder.f90 \
   particlewall.f90 \
-  verlet.f90 \
   class_simplelist.f90
 
 ## Use dsyev from LAPACK
-LDADD = $(top_builddir)/lapack/lapack_routine/libdsyev.la $(ldadd_mtstream) $(ldadd_hyp2f1) $(top_builddir)/claf90/libclaf.la
-eigens_src = eigens_dsyev.f90
+LDADD = $(ldadd_mtstream) $(ldadd_hyp2f1) $(top_builddir)/claf90/libclaf.la libmodel.la
 
 ## Use hyp2f1 from cephes
 energy_src += m_hyp2f1_negint.f90 cylinder_integrals.f90 ljwall_cephes.f90
 ldadd_hyp2f1 = $(top_builddir)/cephes/libhyp2f1.la
 
+ldadd_mtstream = ${top_builddir}/mt_stream_f90-1.11/libmt_stream.la
+
 AM_FCFLAGS += -I$(top_builddir)/cephes/cmath
-bin_PROGRAMS += test_hyp2f1 test_zhangI
-test_hyp2f1_SOURCES =  m_hyp2f1_negint.f90 test_hyp2f1.f90
-test_zhangI_SOURCES = num_kind.f90 utils.f90 m_hyp2f1_negint.f90 cylinder_integrals.f90 test_zhangI.f90 ljwall_cephes.f90
 
-##ptgbcyl_LDADD = $(LDADD) ${top_builddir}/claf90/libclaf.la
 
-utils_src = \
-  num_kind.f90 \
-  rng.inc \
-  utils.f90 \
-  m_fileunit.f90
-
-parallel_src = \
+ptgbcyl_SOURCES = \
   genvoltrial.f90 \
   beta_exchange.f90 \
   m_particlegroup.f90 \
@@ -118,408 +92,26 @@ parallel_src = \
   m_particlejson_parser.f90 \
   m_nvt_engine.F90 \
   m_npt_engine.F90 \
-  mc_engine.F90 
-
-## Below: Listings of source files needed by programs
-
-ptgbcyl_SOURCES = \
-  $(utils_src) \
-  $(model_src) \
-  $(energy_src) \
-  $(parallel_src) \
+  mc_engine.F90 \
   gbcyl.f90 
 
-test_create_particlegroup_SOURCES = \
-  $(utils_src) \
-  $(model_src) \
-  $(energy_src) \
-  m_particlegroup.f90 \
-  m_particlejson_parser.f90 \
-  test_create_particlegroup.f90
-
-
 create_crystal_SOURCES = \
-  m_fileunit.f90 \
-  num_kind.f90 \
-  utils.f90 \
-  ${model_src} \
   crystal.f90 \
   parse_cmdline.inc \
   create_crystal.f90
 
-orientation_parameter_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  orientational_ordering.f90 \
-  ${eigens_src} \
-  orientation_parameter.f90 
-
-xe_nmr_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  orientational_ordering.f90 \
-  ${eigens_src} \
-  m_rank2_tensor.f90 \
-  xewall_shielding.f90 \
-  ${energy_src} \
-  m_constants.f90 \
-  m_shielding.f90 \
-  xewall_qcoupling.f90 \
-  m_quadrupole_coupling.f90 \
-  lj_nmr.f90 \
-  xe_nmr.f90 \
-  ljcylinder_tensor.f90 
-
-xe_nmr_profile_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  orientational_ordering.f90 \
-  ${eigens_src} \
-  m_rank2_tensor.f90 \
-  xewall_shielding.f90 \
-  m_constants.f90 \
-  m_shielding.f90 \
-  xewall_qcoupling.f90 \
-  m_quadrupole_coupling.f90 \
-  lj_nmr.f90 \
-  xfunc_module.f90 \
-  histogram.f90 \
-  parse_cmdline.inc \
-  ${energy_src} \
-  xe_nmr_profile.f90 \
-  ljcylinder_tensor.f90 
-
-xe_nmr_profile2_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  orientational_ordering.f90 \
-  ${eigens_src} \
-  m_rank2_tensor.f90 \
-  xewall_shielding.f90 \
-  ${energy_src} \
-  m_constants.f90 \
-  m_shielding.f90 \
-  xewall_qcoupling.f90 \
-  m_quadrupole_coupling.f90 \
-  lj_nmr.f90 \
-  xfunc_module.f90 \
-  histogram.f90 \
-  parse_cmdline.inc \
-  xe_nmr_profile2.f90 \
-  ljcylinder_tensor.f90 
-
-print_xewall_coupling_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  orientational_ordering.f90 \
-  ${eigens_src} \
-  m_rank2_tensor.f90 \
-  xewall_shielding.f90 \
-  ${energy_src} \
-  m_constants.f90 \
-  m_shielding.f90 \
-  xewall_qcoupling.f90 \
-  m_quadrupole_coupling.f90 \
-  print_xewall_coupling.f90 \
-  ljcylinder_tensor.f90 
-
-print_xewall_shielding_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  orientational_ordering.f90 \
-  ${eigens_src} \
-  m_rank2_tensor.f90 \
-  xewall_shielding.f90 \
-  ${energy_src} \
-  m_constants.f90 \
-  m_shielding.f90 \
-  print_xewall_shielding.f90 \
-  ljcylinder_tensor.f90 
-
-print_xeslab_shielding_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  orientational_ordering.f90 \
-  ${eigens_src} \
-  m_rank2_tensor.f90 \
-  xewall_shielding.f90 \
-  ${energy_src} \
-  m_constants.f90 \
-  m_shielding.f90 \
-  print_xewall_shielding.f90 \
-  ljslab_tensor.f90 
-
-print_gbxe_qcoupling_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  orientational_ordering.f90 \
-  ${eigens_src} \
-  m_rank2_tensor.f90 \
-  xewall_shielding.f90 \
-  ${energy_src} \
-  m_constants.f90 \
-  m_shielding.f90 \
-  xewall_qcoupling.f90 \
-  m_quadrupole_coupling.f90 \
-  print_gbxe_qcoupling.f90 \
-  ljcylinder_tensor.f90 
-
-print_gbxe_shielding_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  orientational_ordering.f90 \
-  ${eigens_src} \
-  m_rank2_tensor.f90 \
-  xewall_shielding.f90 \
-  ${energy_src} \
-  m_constants.f90 \
-  m_shielding.f90 \
-  print_gbxe_shielding.f90 \
-  ljcylinder_tensor.f90 
-
-
-remove_every_2nd_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  remove_every_2nd.f90
-
-cylindrical_orientation_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  orientational_ordering.f90 \
-  ${eigens_src} \
-  cylindrical_orientation.f90 \
-  cylindrical_orientation_tensor.f90
-
-cylindrical_layerorientation_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  orientational_ordering.f90 \
-  ${eigens_src} \
-  layernormal.f90 \
-  cylindrical_layerorientation.f90 \
-  cylindrical_layerorientationtensor.f90
-
-povanimator_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  pov.f90 \
-  povanimation.f90
-
-tau1_SOURCES = \
-  num_kind.f90 \
-  simplemin.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  tau1_negative.f90 \
-  utils.f90 \
-  tau1_module.f90 \
-  orientational_ordering.f90 \
-  ${eigens_src} \
-  tau1_program.f90 \
-  max_tau1.f90
-
-pair_distribution_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  distribution.f90 \
-  orientational_ordering.f90 \
-  ${eigens_src} \
-  pair_distribution.f90 
-
-weighted_rdf_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  layernormal.f90 \
-  ${eigens_src} \
-  gr3dweighted.f90 \
-  weighted_rdf.f90 
-
-density_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  density.f90
-
-psi6_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  psi6_module.f90 \
-  orientational_ordering.f90 \
-  ${eigens_src} \
-  psi6.f90 
-
-cylhist_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  xfunc_module.f90 \
-  histogram.f90 \
-  orientational_ordering.f90 \
-  ${eigens_src} \
-  simplemin.f90 \
-  tau1_negative.f90 \
-  tau1_module.f90 \
-  psi6_module.f90 \
-  layernormal.f90 \
-  distribution.f90 \
-  parse_cmdline.inc \
-  cylhist.f90 \
-  max_tau1.f90
-
-cylhist2_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  xfunc_module.f90 \
-  histogram.f90 \
-  orientational_ordering.f90 \
-  ${eigens_src} \
-  simplemin.f90 \
-  tau1_negative.f90 \
-  tau1_module.f90 \
-  psi6_module.f90 \
-  layernormal.f90 \
-  distribution.f90 \
-  parse_cmdline.inc \
-  cylhist2.f90 \
-  max_tau1.f90  
-
-smctau1_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  simplemin.f90 \
-  tau1_negative.f90 \
-  tau1_module.f90 \
-  layernormal.f90 \
-  ${eigens_src} \
-  smctau1.f90 \
-  max_tau1.f90
-
-smcpsi6_SOURCES = \
-  num_kind.f90 \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${model_src} \
-  simplemin.f90 \
-  psi6_module.f90 \
-  layernormal.f90 \
-  ${eigens_src} \
-  smcpsi6.f90
-
 #printpotentials_SOURCES = \
-#  num_kind.f90 \
-#  utils.f90 \
-#  m_fileunit.f90 \
-#  $(model_src) \
-#  ${energy_src} \
 #  printpotentials.f90 
 
 #printforces_SOURCES = \
-#  num_kind.f90 \
-#  utils.f90 \
-#  m_fileunit.f90 \
-#  ${model_src} \
-#  ${energy_src} \
 #  printforces.f90 
 
-test_gblj_SOURCES = \
-  num_kind.f90 \
-  ${model_src} \
-  utils.f90 \
-  m_fileunit.f90 \
-  ${energy_src} \
-  test_gblj.f90 
-
-doublezsize_SOURCES = \
-  num_kind.f90 \
-  ${model_src} \
-  utils.f90 \
-  m_fileunit.f90 \
-  doublezsize.f90
-
-#pressurezz_SOURCES = \
-#  num_kind.f90 \
-#  utils.f90 \
-#  m_fileunit.f90 \
-#  ${model_src} \
-#  ${energy_src} \
-#  genvoltrial.f90 \
-#  m_particlegroup.f90 \
-#  beta_exchange.f90 \
-#  mc_engine.f90 \
-#  pressurezz.f90
-
-virial_tensor_SOURCES = \
-  num_kind.f90 \
-  ${model_src} \
-  ${energy_src} \
-  utils.f90 \
-  m_fileunit.f90 \
-  class_pair_potential.f90 \
-  virial_tensor.f90
-
-#onwallpressure_SOURCES = \
-#  num_kind.f90 \
-#  m_fileunit.f90 \
-#  ${model_src} \
-#  ${energy_src} \
-#  utils.f90 \
-#  onwallpressure.f90
-
-test_simplelist_with_openmp_SOURCES = \
-  num_kind.f90 \
-  ${model_src} \
-  m_fileunit.f90 \
-  utils.f90 \
-  ${energy_src} \
-  test_simplelist_with_openmp.f90
 
 if PFUNIT
 
 driver_SOURCES = \
-  num_kind.f90 \
-  m_fileunit.f90 \
   class_parameterizer.f90 \
-  rng.inc mtfort90.f90 \
-  utils.f90 \
+  rng.inc \
   class_parameter_writer.f90 \
   json_module.F90 \
   m_json_wrapper.f90 \
@@ -533,7 +125,6 @@ driver_SOURCES = \
   class_poly_box.f90 \
   m_sphere_interaction.f90 \
   m_lj.f90 \
-  class_pair_potential.f90 \
   class_simplelist.f90 \
   class_simplelist_pfunit.f90 \
   utils_pfunit.f90 \
@@ -549,7 +140,7 @@ driver_FCFLAGS = -I${PFUNIT_DIR}/mod \
 -I${top_builddir}/mt_stream_f90-1.11 \
 -I${top_builddir}/mt_stream_f90-1.11/f_jump_ahead_coeff
 
-driver_LDADD = ${PFUNIT_DIR}/lib/libpfunit.a ${ldadd_mtstream}
+driver_LDADD = ${PFUNIT_DIR}/lib/libpfunit.a ${ldadd_mtstream} libmodel.la
 
 TESTS = driver
 check_PROGRAMS = driver
@@ -559,5 +150,5 @@ MODEXT = @MODEXT@
 
 mostlyclean-local :
 	-rm -f *.$(MODEXT)
-	-rm -f *_ser.f90
+	-rm -f $(bin_PROGRAMS)
 
