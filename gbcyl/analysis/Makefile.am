@@ -15,13 +15,13 @@ bin_PROGRAMS = \
   cylhist \
   cylhist2 \
   cylindrical_layerorientation \
-  virial_tensor \
   print_gbxe_qcoupling \
   print_gbxe_shielding \
   print_xewall_coupling \
   print_xewall_shielding \
   print_xeslab_shielding \
   pair_distribution
+#  virial_tensor 
 
 MODEXT = @MODEXT@
 
@@ -248,9 +248,9 @@ smcpsi6_SOURCES = \
 #  mc_engine.f90 \
 #  pressurezz.f90
 
-virial_tensor_SOURCES = \
-  class_pair_potential.f90 \
-  virial_tensor.f90
+#virial_tensor_SOURCES = \
+#  class_pair_potential.f90 \
+#  virial_tensor.f90
 
 #onwallpressure_SOURCES = \
 #  onwallpressure.f90
