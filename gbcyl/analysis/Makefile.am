@@ -43,13 +43,16 @@ AM_FCFLAGS += -I$(top_builddir)/cephes/cmath
 AM_FCFLAGS += -I$(top_builddir)/src
 
 eigens_src = eigens_dsyev.f90
+common_src =   m_particledat.f90 m_particle_factory.f90 
 
 orientation_parameter_SOURCES = \
+  $(common_src) \
   orientational_ordering.f90 \
   ${eigens_src} \
   orientation_parameter.f90 
 
 xe_nmr_SOURCES = \
+  $(common_src) \
   orientational_ordering.f90 \
   ${eigens_src} \
   m_rank2_tensor.f90 \
@@ -63,6 +66,7 @@ xe_nmr_SOURCES = \
   ljcylinder_tensor.f90 
 
 xe_nmr_profile_SOURCES = \
+  $(common_src) \
   orientational_ordering.f90 \
   ${eigens_src} \
   m_rank2_tensor.f90 \
@@ -79,6 +83,7 @@ xe_nmr_profile_SOURCES = \
   ljcylinder_tensor.f90 
 
 xe_nmr_profile2_SOURCES = \
+  $(common_src) \
   orientational_ordering.f90 \
   ${eigens_src} \
   m_rank2_tensor.f90 \
@@ -95,6 +100,7 @@ xe_nmr_profile2_SOURCES = \
   ljcylinder_tensor.f90 
 
 print_xewall_coupling_SOURCES = \
+  $(common_src) \
   orientational_ordering.f90 \
   ${eigens_src} \
   m_rank2_tensor.f90 \
@@ -107,6 +113,7 @@ print_xewall_coupling_SOURCES = \
   ljcylinder_tensor.f90 
 
 print_xewall_shielding_SOURCES = \
+  $(common_src) \
   orientational_ordering.f90 \
   ${eigens_src} \
   m_rank2_tensor.f90 \
@@ -117,6 +124,7 @@ print_xewall_shielding_SOURCES = \
   ljcylinder_tensor.f90 
 
 print_xeslab_shielding_SOURCES = \
+  $(common_src) \
   orientational_ordering.f90 \
   ${eigens_src} \
   m_rank2_tensor.f90 \
@@ -127,6 +135,7 @@ print_xeslab_shielding_SOURCES = \
   ljslab_tensor.f90 
 
 print_gbxe_qcoupling_SOURCES = \
+  $(common_src) \
   orientational_ordering.f90 \
   ${eigens_src} \
   m_rank2_tensor.f90 \
@@ -139,6 +148,7 @@ print_gbxe_qcoupling_SOURCES = \
   ljcylinder_tensor.f90 
 
 print_gbxe_shielding_SOURCES = \
+  $(common_src) \
   orientational_ordering.f90 \
   ${eigens_src} \
   m_rank2_tensor.f90 \
@@ -149,12 +159,14 @@ print_gbxe_shielding_SOURCES = \
   ljcylinder_tensor.f90 
 
 cylindrical_orientation_SOURCES = \
+  $(common_src) \
   orientational_ordering.f90 \
   ${eigens_src} \
   cylindrical_orientation.f90 \
   cylindrical_orientation_tensor.f90
 
 cylindrical_layerorientation_SOURCES = \
+  $(common_src) \
   orientational_ordering.f90 \
   ${eigens_src} \
   layernormal.f90 \
@@ -162,10 +174,12 @@ cylindrical_layerorientation_SOURCES = \
   cylindrical_layerorientationtensor.f90
 
 povanimator_SOURCES = \
+  $(common_src) \
   pov.f90 \
   povanimation.f90
 
 tau1_SOURCES = \
+  $(common_src) \
   tau1_negative.f90 \
   tau1_module.f90 \
   orientational_ordering.f90 \
@@ -175,27 +189,32 @@ tau1_SOURCES = \
   max_tau1.f90
 
 pair_distribution_SOURCES = \
+  $(common_src) \
   distribution.f90 \
   orientational_ordering.f90 \
   ${eigens_src} \
   pair_distribution.f90 
 
 weighted_rdf_SOURCES = \
+  $(common_src) \
   layernormal.f90 \
   ${eigens_src} \
   gr3dweighted.f90 \
   weighted_rdf.f90 
 
 density_SOURCES = \
+  $(common_src) \
   density.f90
 
 psi6_SOURCES = \
+  $(common_src) \
   psi6_module.f90 \
   orientational_ordering.f90 \
   ${eigens_src} \
   psi6.f90 
 
 cylhist_SOURCES = \
+  $(common_src) \
   xfunc_module.f90 \
   histogram.f90 \
   orientational_ordering.f90 \
@@ -211,6 +230,7 @@ cylhist_SOURCES = \
   max_tau1.f90
 
 cylhist2_SOURCES = \
+  $(common_src) \
   xfunc_module.f90 \
   histogram.f90 \
   orientational_ordering.f90 \
@@ -226,6 +246,7 @@ cylhist2_SOURCES = \
   max_tau1.f90  
 
 smctau1_SOURCES = \
+  $(common_src) \
   simplemin.f90 \
   tau1_negative.f90 \
   tau1_module.f90 \
@@ -235,6 +256,7 @@ smctau1_SOURCES = \
   max_tau1.f90
 
 smcpsi6_SOURCES = \
+  $(common_src) \
   simplemin.f90 \
   psi6_module.f90 \
   layernormal.f90 \
@@ -242,6 +264,7 @@ smcpsi6_SOURCES = \
   smcpsi6.f90
 
 #pressurezz_SOURCES = \
+#  $(common_src) \
 #  genvoltrial.f90 \
 #  m_particlegroup.f90 \
 #  beta_exchange.f90 \
@@ -249,10 +272,12 @@ smcpsi6_SOURCES = \
 #  pressurezz.f90
 
 #virial_tensor_SOURCES = \
+#  $(common_src) \
 #  class_pair_potential.f90 \
 #  virial_tensor.f90
 
 #onwallpressure_SOURCES = \
+#  $(common_src) \
 #  onwallpressure.f90
 
 
