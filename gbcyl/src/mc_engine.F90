@@ -109,13 +109,26 @@ module mc_engine
   character(len=:), allocatable, save :: ensemble
 
 contains
-  
+
+  !> Initializes the program. Must be called before run or finalize. 
+  !!
+  !! @param id The replica index of the process for parallel 
+  !!        tempering.
+  !! @param n_tasks The number of replicas.
+  !! @param The input file containing parameters and coordinates.
+  !! @param The name of the file to which parameters and coordinates are
+  !!        logged during the simulation.
+  !! @param The name of the file to which the parameters and coordinates are
+  !!        written for checkpointing/restarting.
+  !!
   subroutine mce_init_json(id, n_tasks, parameter_infile, parameter_outfile, &
        parameter_restartfile)
-    integer, intent(in) :: id, n_tasks    
+    integer, intent(in) :: id
+    integer, intent(in) :: n_tasks
     character(len=*), intent(in) :: parameter_infile
     character(len=*), intent(in) :: parameter_outfile
     character(len=*), intent(in) :: parameter_restartfile
+
     type(json_value), pointer :: json_val, box_json
     logical :: status_ok
     character(len=:), allocatable :: error_msg
@@ -200,7 +213,12 @@ subroutine mce_from_json(json_val)
   end if
 end subroutine mce_from_json
 
-
+!> Initializes independen random number generator states for each MPI
+!! process and thread.
+!!
+!! @param id The id of the MPI process.
+!! @param n_tasks The total number of MPI processes.
+!!
 subroutine mce_init_rng(id, n_tasks)
   integer, intent(in) :: id, n_tasks
   integer :: thread_id = 0, n_threads = 1
@@ -238,6 +256,15 @@ subroutine mce_init_rng(id, n_tasks)
 end subroutine mce_init_rng
 
 
+!> Reads and creates the particlegroups from the JSON in json_val.
+!!
+!! @param json_val the json_value containing the list of particlegroups.
+!! @param simbox the simulation box.
+!! @param group_names the names of the groups to be read from JSON.
+!! @param pair_interactions the matrix of interactions to be connected
+!!        to the groups.
+!! @param groups the particlegroups read from JSON.
+!!
 subroutine create_groups(json_val, simbox, group_names, pair_interactions, &
      groups)
   type(json_value), pointer, intent(in) :: json_val
@@ -323,10 +350,11 @@ end subroutine
   
 !> Runs one sweep of Metropolis Monte Carlo updates to the system. A
 !! full Parallel tempering NPT-ensemble sweep consists of trial moves
-!! of particles, trial scaling of the simulation box (barostat) and an
-!! exchange of particle system coordinates with another particle system
-!! (replica) in another temperature (replica exchange).
+!! of particles, trial scaling(s) of the simulation box (barostat) and 
+!! trial swaps of temperature with other replicas.
 !! 
+!! @param simbox the simulation box.
+!! @param groups the particlegroups.
 !! @param genstates random number generator states for all threads.
 !! @param isweep the sweep counter.
 !!  
