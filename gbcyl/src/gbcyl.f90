@@ -1,5 +1,5 @@
 !> This is the main program of the PTGBCYL Monte Carlo simulation
-!! program for coarse-grained particles. 
+!! program for coarse-grained molecular models. 
 !!
 program gbcyl
   use mc_engine
