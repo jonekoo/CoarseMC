@@ -14,10 +14,13 @@ module m_gayberne
   use m_json_wrapper, only: get_parameter
   implicit none
 
+  !> Gay-Berne potential.
+  !! 
+  !! @see Luckhurst & et.al J.Chem.Phys, Vol. 110, No. 14
+  !!
   type, extends(rod_interaction) :: gayberne 
      !> Ratio of contact distances for end-to-end and side-by-side
      !! configurations of two particles.
-     !! @see Luckhurst & et.al J.Chem.Phys, Vol. 110, No. 14
      real(dp) :: kappasigma   = 4.4_dp   !! = sige/sigs
      
      !> Ratio of well-depths for side-by-side and end-to-end
@@ -42,8 +45,8 @@ module m_gayberne
      real(dp) :: epsilon0     = 1._dp
      
      
-     !> Defines the GB distance when the particles overlap in
-     !! gb_potential.
+     !> Defines the GB distance gb_R, below which the particles overlap
+     !! in gb_potential. Use to avoid numerical overflow.
      real(dp) :: hardcore = 0.6_dp
      
      !> Parameters below are derived from parameters above. These are
@@ -106,7 +109,7 @@ contains
     call init_common(this)
   end function initparameterizer
 
-  !> Constructs a gayberne potential using the json in @p json_val.
+  !> Constructs a gayberne potential using the JSON in @p json_val.
   !! 
   function gb_from_json(json_val) result(this)
     type(json_value), pointer, intent(in) :: json_val
@@ -142,45 +145,45 @@ contains
   end subroutine init_common
 
 
-  !> Initializes the module for potential calculation. 
+  !> Constructor.
   !! 
   !! @see M. A. Bates and G. R. Luckhurst, JCP 110(14), 7078, 1999 for
   !! a detailed discussion.
   !!
-  !! @param kappasigmain sets the axis ratio sigma_ee/sigma_ss of the
+  !! @param kappasigma sets the axis ratio sigma_ee/sigma_ss of the
   !!        ellipsoidal molecule.
-  !! @param kappaepsilonin sets the ratio of well depths in
+  !! @param kappaepsilon sets the ratio of well depths in
   !!        side-by-side and end-to-end configurations
   !!        epsilon_ss/epsilon_ee.
-  !! @param muin adjusts how much side by side configuration is
+  !! @param mu adjusts how much side by side configuration is
   !!        favored.
-  !! @param nuin parameter for adjusting how much parallel alignment in
+  !! @param nu parameter for adjusting how much parallel alignment in
   !!        favored.
-  !! @param sigma0in sets the contact distance for two ellipsoids in a
+  !! @param sigma0 sets the contact distance for two ellipsoids in a
   !!        cross configuration. For a one-component Gay-Berne liquid
   !!        this can be set to 1.
-  !! @param epsilon0in sets the well depth for the potential. For a one
+  !! @param epsilon0 sets the well depth for the potential. For a one
   !!        component Gay-Berne liquid this can be set to 1.
   !! @param hardcore can be given to set a hard core to the potential.
   !!        In effect this defines the gb_R at which two particles
   !!        overlap.
   !! 
-  function initold(kappasigmain, kappaepsilonin, muin, nuin, sigma0in, &
-       epsilon0in, hardcore) result(this)
+  function initold(kappasigma, kappaepsilon, mu, nu, sigma0, &
+       epsilon0, hardcore) result(this)
     type(gayberne) :: this
-    real(dp), intent(in) :: kappasigmain
-    real(dp), intent(in) :: kappaepsilonin
-    real(dp), intent(in) :: muin
-    real(dp), intent(in) :: nuin
-    real(dp), intent(in) :: sigma0in
-    real(dp), intent(in) :: epsilon0in
+    real(dp), intent(in) :: kappasigma
+    real(dp), intent(in) :: kappaepsilon
+    real(dp), intent(in) :: mu
+    real(dp), intent(in) :: nu
+    real(dp), intent(in) :: sigma0
+    real(dp), intent(in) :: epsilon0
     real(dp), intent(in), optional :: hardcore
-    this%kappasigma = kappasigmain
-    this%kappaepsilon = kappaepsilonin
-    this%mu = muin
-    this%nu = nuin
-    this%sigma0 = sigma0in
-    this%epsilon0 = epsilon0in
+    this%kappasigma = kappasigma
+    this%kappaepsilon = kappaepsilon
+    this%mu = mu
+    this%nu = nu
+    this%sigma0 = sigma0
+    this%epsilon0 = epsilon0
     if (present(hardcore)) this%hardcore = hardcore
     call init_common(this)
   end function initold

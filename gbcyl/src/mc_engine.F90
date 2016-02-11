@@ -28,6 +28,8 @@ module mc_engine
        create_single_interaction
   use m_particlejson_parser, only: particlearray_from_json
   implicit none
+
+  private :: mce_init_common
   
   !> The number of equilibration MC sweeps in the simulation.  Equilibration
   !! sweeps are used to do all kinds of adjusting and should be discarded
@@ -106,29 +108,27 @@ module mc_engine
   !> The total energy.
   real(dp), save :: etotal = 0._dp
 
+  !> The string defining the ensemble (npt or nvt)
   character(len=:), allocatable, save :: ensemble
 
 contains
 
-  !> Initializes the program. Must be called before run or finalize. 
-  !!
-  !! @param id The replica index of the process for parallel 
-  !!        tempering.
-  !! @param n_tasks The number of replicas.
-  !! @param The input file containing parameters and coordinates.
-  !! @param The name of the file to which parameters and coordinates are
-  !!        logged during the simulation.
-  !! @param The name of the file to which the parameters and coordinates are
-  !!        written for checkpointing/restarting.
-  !!
   subroutine mce_init_json(id, n_tasks, parameter_infile, parameter_outfile, &
        parameter_restartfile)
-    integer, intent(in) :: id
-    integer, intent(in) :: n_tasks
-    character(len=*), intent(in) :: parameter_infile
-    character(len=*), intent(in) :: parameter_outfile
-    character(len=*), intent(in) :: parameter_restartfile
+    !! Initializes the program. Must be called before run or finalize.
 
+    integer, intent(in) :: id
+      !! The replica index of the process for parallel tempering.
+    integer, intent(in) :: n_tasks
+      !! The number of replicas.
+    character(len=*), intent(in) :: parameter_infile
+      !! The input file containing parameters and coordinates.
+    character(len=*), intent(in) :: parameter_outfile
+      !! The name of the file to which parameters and coordinates are
+      !! logged during the simulation.
+    character(len=*), intent(in) :: parameter_restartfile
+      !! The name of the file to which the parameters and coordinates
+      !! are written for checkpointing/restarting.
     type(json_value), pointer :: json_val, box_json
     logical :: status_ok
     character(len=:), allocatable :: error_msg
@@ -170,6 +170,7 @@ contains
   !! @param n_tasks total number of MPI processes.
   !!
   subroutine mce_init_common(id, n_tasks)
+    
     integer, intent(in) :: id
     integer, intent(in) :: n_tasks 
     integer :: err
@@ -610,6 +611,14 @@ subroutine check_simbox(simbox)
 end subroutine
 
 
+!> Deserialize pair interactions from JSON. The result is a symmetric
+!! matrix of pair_interaction_ptr:s in which the element pair_ias(i, j)
+!! is the interaction between @p group_names(i) and @p group_names(j).
+!!
+!! @param json_val contains the JSON.
+!! @param group_names the names of the groups used in the simulation.
+!! @param pair_ias the matrix of pair interactions in which the indices
+!!        correspond to group_names. 
 subroutine create_pair_interactions_json(json_val, group_names, pair_ias)
   type(json_value), pointer, intent(in) :: json_val
   character(len=*), intent(in) :: group_names(:)
@@ -634,7 +643,7 @@ subroutine create_pair_interactions_json(json_val, group_names, pair_ias)
            if (k > 0 .and. l > 0) then
               if (associated(pair_ias(k, l)%ptr)) then
                  write(error_unit, *) &
-                      'Warning: only the first interaction with participants ', &
+                      'Warning: only the first interaction with participants ',&
                       participants, ' is used.'
               else
                  pair_ias(k, l)%ptr => create_pair_interaction(pair_ia_element)
@@ -670,6 +679,14 @@ subroutine create_pair_interactions_json(json_val, group_names, pair_ias)
 end subroutine create_pair_interactions_json
 
 
+!> Deserializes single_interactions from JSON. At return, single_ias is
+!! an array, where @p single_ias(i) is the single_interaction
+!! concerning the group named @p group_names(i).
+!!
+!! @param json_val contains the JSON.
+!! @param group_names the names of the groups used in the simulation.
+!! @param single_ias the array of single_interactions.
+!!
 subroutine create_single_interactions_json(json_val, group_names, single_ias)
   type(json_value), pointer, intent(in) :: json_val
   character(len=*), intent(in) :: group_names(:)

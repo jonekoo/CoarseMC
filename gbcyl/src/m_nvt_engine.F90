@@ -1,8 +1,6 @@
-!> Implements Metropolis Monte Carlo updates of the coordinates of the
-!! particles and the simulation box dimensions. The module also
-!! controls the parallel tempering updates. If compiled and run
-!! with OpenMP, the domain decomposition algorithm is used for the
-!! particle moves and energy calculations. 
+!> Implements the domain decomposition algorithm for moving particles.
+!! The algorithm is built on the cell list implementation in
+!! class_simplelist.
 module m_nvt_engine
   use num_kind, only: dp
   use iso_fortran_env, only: output_unit, error_unit
@@ -16,15 +14,17 @@ module m_nvt_engine
   use class_simplelist, only: simplelist, new_simplelist, simplelist_update, &
        simplelist_nbr_cells, flat_index, simplelist_deallocate, &
        simplelist_nbrmask, simplelist_cell_nbrmask
-  include 'rng.inc'
+  use mt_stream, only: rng=>genrand_double1_s, rngstate=>mt_state
   use json_module, only: json_get, json_value, json_add
   use m_json_wrapper, only: get_parameter
   use m_particlegroup, only: particlegroup, particlegroup_ptr
   use particle_mover, only: setmaxmoves, getmaxmoves
   implicit none  
 
+  !> Stores particles in one cell and its neighbour cells.
   type, extends(particlearray_wrapper) :: domain
-    integer :: n_cell = 0
+     integer :: n_cell = 0
+       !! Number of particles in the cell.
   contains
     procedure :: domain_assign
     generic :: assignment(=) => domain_assign
@@ -46,6 +46,11 @@ module m_nvt_engine
 
 contains
 
+  !> Initializes the module by reading variables from JSON. Must be
+  !! called before any other routine in this module.
+  !!
+  !! @param json_val contains the JSON.
+  !! 
   subroutine nvt_engine_init_json(json_val)
     type(json_value), intent(in), pointer :: json_val
     call get_parameter(json_val, 'move_ratio', moveratio, error_lb=0._dp, &
@@ -56,6 +61,9 @@ contains
          error_ub=nmovetrials, error_lb=0)
   end subroutine nvt_engine_init_json
 
+  !> Serializes the module state to JSON. The JSON is added to
+  !! @p json_val.
+  !! 
   subroutine nvt_engine_to_json(json_val)
     type(json_value), pointer, intent(inout) :: json_val
     call json_add(json_val, 'temperature', temperature)
@@ -70,7 +78,7 @@ contains
     end if
   end subroutine nvt_engine_to_json
 
-  
+  !> Assignment operator implementation.
   subroutine domain_assign(this, src)
     class(domain), intent(inout) :: this
     type(domain), intent(in) :: src
@@ -78,18 +86,30 @@ contains
     this%n_cell = src%n_cell
   end subroutine domain_assign
 
+  !> Final procedure.
   subroutine domain_delete(this)
     type(domain), intent(inout) :: this
     this%n_cell = 0
   end subroutine domain_delete
 
+  !> Manual destructor when the final procedure is not applicable.
   subroutine domain_manual_delete(this)
     class(domain), intent(inout) :: this
     call this%particlearray_wrapper%delete()
     this%n_cell = 0
   end subroutine domain_manual_delete
 
-
+  !> A wrapper around make_particle_moves.
+  !!
+  !! @param groups the particle groups to be updated.
+  !! @param genstates the random number generator states for each
+  !!        thread.
+  !! @param simbox the simulation box.
+  !! @param pair_ias the matrix of pair interactions.
+  !! @param single_ias the array of single interactions.
+  !! @param dE the change in energy after all trial moves have been
+  !!        completed.
+  !!
   subroutine nvt_update(groups, genstates, simbox, pair_ias, single_ias, dE)
     type(particlegroup_ptr), intent(inout) :: groups(:)
     type(poly_box), intent(in) :: simbox
@@ -109,6 +129,17 @@ contains
   !!
   !! @see e.g. G. Heffelfinger and M. Lewitt. J. Comp. Chem., 17(2):250–265,
   !! 1996.
+  !!
+  !! @param groups the particle groups to be updated.
+  !! @param genstates the random number generator states for each
+  !!        thread.
+  !! @param simbox the simulation box.
+  !! @param pair_ias the matrix of pair interactions.
+  !! @param single_ias the array of single interactions.
+  !! @param dE the change in energy after all trial moves have been
+  !!        completed.
+  !! @param n_trials the number of trial moves attempted.
+  !! @param n_accepted the number of accepted moves.
   !! 
   subroutine make_particle_moves(groups, genstates, simbox, temperature, &
        pair_ias, single_ias, dE, n_trials, n_accepted)
@@ -225,12 +256,19 @@ contains
     end do
   end subroutine make_particle_moves
   
-  
+  !> Resets the counters used when adjusting moves.
   subroutine nvt_engine_reset_counters()
     nacceptedmoves = 0
     nmovetrials = 0
   end subroutine nvt_engine_reset_counters
-  
+
+  !> Assigns the cell @p jx @p jy @p jz to the domain @p d.
+  !!
+  !! @param this the particlegroup of the domain.
+  !! @param simbox the simulation box.
+  !! @param jx, jy, jz the cell index.
+  !! @param d the domain with particles from cell jx, jy, jz at return.
+  !!
   subroutine set_domain(this, simbox, jx, jy, jz, d)
     type(particlegroup), intent(in) :: this
     type(poly_box), intent(in) :: simbox
@@ -258,8 +296,8 @@ contains
   end subroutine set_domain  
 
   
-  !> Moves particle in a single cell of a domain. Part of the domain 
-  !! decomposition algorithm.
+  !> Moves particle in the cell of the domain @p domains(i_d). Used in
+  !! the domain decomposition algorithm.
   !!
   !! @param domains are the subsystems of particles corresponding to
   !! 	    groups given to the make_particle_moves algorithm.
@@ -343,6 +381,7 @@ contains
     n_trials = n_trials + domains(i_d)%n_cell
   end subroutine domain_move
 
+  !> Adjusts the maximum moves of the particles.
   subroutine nvt_engine_update_max_moves()
     real(dp) :: newdthetamax
     real(dp) :: newdximax
