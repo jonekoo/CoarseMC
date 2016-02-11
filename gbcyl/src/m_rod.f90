@@ -7,7 +7,7 @@ module m_rod
   use particle_mover, only: transmove, rotate
   use json_module, only: json_create_array, CK, json_value, json_add
   use m_json_wrapper, only: get_parameter
-  include 'rng.inc'
+  use mt_stream, only: rng=>genrand_double1_s, rngstate=>mt_state
   implicit none
   
   type, extends(point) :: rod

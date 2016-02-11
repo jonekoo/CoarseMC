@@ -1,7 +1,7 @@
 module utils
   use iso_fortran_env, only: iostat_end, iostat_eor
   use num_kind
-  include 'rng.inc'
+  use mt_stream, only: rng=>genrand_double1_s, rngstate=>mt_state
   implicit none
   intrinsic index
 

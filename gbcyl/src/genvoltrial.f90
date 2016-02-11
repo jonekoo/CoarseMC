@@ -9,6 +9,7 @@
 module genvoltrial
 use class_poly_box, only: poly_box, getx, gety, getz, setx, sety, setz
 use num_kind, only: dp
+use mt_stream, only: rngstate => mt_state, rng => genrand_double1_s
 implicit none
 
 contains

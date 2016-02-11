@@ -3,7 +3,7 @@ module m_point
   use num_kind, only: dp
   use particle_mover, only: transmove, rotate
   use json_module, only: json_value, json_add, json_create_array, CK
-  include 'rng.inc'
+  use mt_stream, only: rng=>genrand_double1_s, rngstate=>mt_state
   use m_json_wrapper, only: get_parameter
   use utils, only: fmt_char_dp
   implicit none
