@@ -1,14 +1,26 @@
+!> Wraps some JSON-Fortran getters with more error handling and warnings.
 module m_json_wrapper
   use iso_fortran_env, only: error_unit
   use json_module
   use num_kind, only: dp
   implicit none
-  
+
+  !> Gets a parameter from json. Wrapper for JSON-Fortran interface
+  !! json_get. Bounds checking does not apply for strings and logicals.
+  !!
+  !! @param json_val contains the json.
+  !! @param name the name of the parameter.
+  !! @param val the getted value. Should be default value at input.
+  !! @param error_lb if val < error_lb, the program stops in error.
+  !! @param error_ub if val > error_ub, the program stops in error.
+  !! @param warn_lb  if val < warn_lb, a warning is printed.
+  !! @param warn_ub  if val > warn_ub, a warning is printed. 
   interface get_parameter
      module procedure get_integer_parameter, get_real_parameter, &
           get_logical_parameter, get_string_parameter, get_string_vec_parameter
   end interface get_parameter
 
+  !> Common protocol to use when a variable is not found from JSON.
   interface process_not_found
      module procedure process_integer_not_found, process_real_not_found, &
           process_logical_not_found, process_string_not_found, &
