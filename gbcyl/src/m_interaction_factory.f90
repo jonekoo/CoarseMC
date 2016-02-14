@@ -1,3 +1,4 @@
+!> This module provides factory procedures for creating interactions.
 module m_interaction_factory
   use iso_fortran_env
   use m_particle, only: pair_interaction, single_interaction
@@ -10,6 +11,13 @@ module m_interaction_factory
 
 contains
 
+  !> Deserializes a pair interaction from JSON value @p json_val by
+  !! redirecting the call to the right constructor.
+  !!
+  !! @param json_val contains the JSON presentation of the interaction.
+  !!
+  !! @return pointer to the created pair_interaction.
+  !!
   function create_pair_interaction(json_val) result(res)
     type(json_value), pointer, intent(in) :: json_val
     class(pair_interaction), pointer :: res
@@ -28,6 +36,13 @@ contains
     end if
   end function create_pair_interaction
 
+  
+  !> Deserializes a single_interaction from json.
+  !!
+  !! @param json_val contains the JSON presentation.
+  !!
+  !! @return pointer to the single_interaction created.
+  !!
   function create_single_interaction(json_val) result(res)
     type(json_value), pointer, intent(in) :: json_val
     class(single_interaction), pointer :: res 
