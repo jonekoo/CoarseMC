@@ -6,15 +6,8 @@ module m_json_wrapper
   implicit none
 
   !> Gets a parameter from json. Wrapper for JSON-Fortran interface
-  !! json_get. Bounds checking does not apply for strings and logicals.
+  !! json_get. 
   !!
-  !! @param json_val contains the json.
-  !! @param name the name of the parameter.
-  !! @param val the getted value. Should be default value at input.
-  !! @param error_lb if val < error_lb, the program stops in error.
-  !! @param error_ub if val > error_ub, the program stops in error.
-  !! @param warn_lb  if val < warn_lb, a warning is printed.
-  !! @param warn_ub  if val > warn_ub, a warning is printed. 
   interface get_parameter
      module procedure get_integer_parameter, get_real_parameter, &
           get_logical_parameter, get_string_parameter, get_string_vec_parameter
@@ -29,6 +22,16 @@ module m_json_wrapper
   
 contains
 
+  !> Gets integer parameter from json.
+  !!
+  !! @param json_val contains the json.
+  !! @param name the name of the parameter.
+  !! @param val the getted value. Should be default value at input.
+  !! @param error_lb if val < error_lb, the program stops in error.
+  !! @param error_ub if val > error_ub, the program stops in error.
+  !! @param warn_lb  if val < warn_lb, a warning is printed.
+  !! @param warn_ub  if val > warn_ub, a warning is printed. 
+  !!
   subroutine get_integer_parameter(json_val, name, val, error_lb, error_ub, &
        warn_lb, warn_ub)
     type(json_value), pointer, intent(in) :: json_val
@@ -49,6 +52,16 @@ contains
     include 'process_not_found.inc'    
   end subroutine process_integer_not_found
   
+  !> Gets real parameter from json.
+  !!
+  !! @param json_val contains the json.
+  !! @param name the name of the parameter.
+  !! @param val the getted value. Should be default value at input.
+  !! @param error_lb if val < error_lb, the program stops in error.
+  !! @param error_ub if val > error_ub, the program stops in error.
+  !! @param warn_lb  if val < warn_lb, a warning is printed.
+  !! @param warn_ub  if val > warn_ub, a warning is printed. 
+  !!
   subroutine get_real_parameter(json_val, name, val, error_lb, error_ub, &
        warn_lb, warn_ub)
     type(json_value), pointer, intent(in) :: json_val
@@ -61,6 +74,7 @@ contains
     include 'check_parameter.inc'
   end subroutine get_real_parameter
 
+
   subroutine process_real_not_found(json_val, name, val, temp)
     type(json_value), pointer, intent(in) :: json_val
     character(kind=CK, len=*), intent(in) :: name
@@ -69,6 +83,8 @@ contains
     include 'process_not_found.inc'    
   end subroutine process_real_not_found
   
+
+  !> Gets logical from JSON @p json_val.
   subroutine get_logical_parameter(json_val, name, val)
     type(json_value), pointer, intent(in) :: json_val
     character(kind=CK, len=*), intent(in) :: name
@@ -77,6 +93,7 @@ contains
     call json_get(json_val, name, temp)
     call process_not_found(json_val, name, val, temp)
   end subroutine get_logical_parameter
+
   
   subroutine process_logical_not_found(json_val, name, val, temp)
     type(json_value), pointer, intent(in) :: json_val
@@ -86,6 +103,8 @@ contains
     include 'process_not_found.inc'    
   end subroutine process_logical_not_found
 
+  
+  !> Gets string from JSON @p json_val.
   subroutine get_string_parameter(json_val, name, val)
     type(json_value), pointer, intent(in) :: json_val
     character(kind=CK, len=*), intent(in) :: name
@@ -95,6 +114,7 @@ contains
     call process_not_found(json_val, name, val, temp)
   end subroutine get_string_parameter
 
+  
   subroutine process_string_not_found(json_val, name, val, temp)
     type(json_value), pointer, intent(in) :: json_val
     character(kind=CK, len=*), intent(in) :: name
@@ -102,7 +122,8 @@ contains
     character(kind=CK, len=*), intent(in) :: temp
     include 'process_not_found.inc'    
   end subroutine process_string_not_found
-  
+
+  !> Gets an array of strings from JSON @p json_val
   subroutine get_string_vec_parameter(json_val, name, val)
     type(json_value), pointer, intent(in) :: json_val
     character(kind=CK, len=*), intent(in) :: name
