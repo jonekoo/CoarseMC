@@ -1,3 +1,4 @@
+!> Routines to read particles from JSON.
 module m_particlejson_parser
   use iso_fortran_env, only: error_unit
   use m_particle, only: particle
@@ -9,6 +10,8 @@ module m_particlejson_parser
   
 contains
 
+  !> Deserializes an array of @p particles from JSON value @p json_val.
+  !! A factory routine.
   subroutine particlearray_from_json(json_val, particles)
     type(json_value), pointer, intent(in) :: json_val
     class(particle), allocatable, intent(inout) :: particles(:)
