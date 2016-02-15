@@ -30,7 +30,6 @@ AM_FCFLAGS = \
 
 utils_src = \
   num_kind.f90 \
-  rng.inc \
   utils.f90 \
   m_fileunit.f90
 
