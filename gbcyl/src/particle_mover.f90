@@ -8,7 +8,7 @@ module particle_mover
   use class_parameter_writer
   use json_module
   use m_json_wrapper, only: get_parameter
-  include 'rng.inc'
+  use mt_stream, only: genstate => mt_state, rng => genrand_double1_s
   implicit none
   
   !> The maximum angle for a trial rotation.
@@ -150,8 +150,6 @@ contains
   !! @see Understanding Mol. Sim. 2nd Ed.  Frenkel, Smit p. 578
   !!
   pure subroutine nvec(nx, ny, nz, genstate)
-    include 'rng.inc'
-    intrinsic sqrt
     double precision, intent(out) :: nx, ny, nz
     type(rngstate), intent(inout) :: genstate
     double precision :: l, u1, u2, s
