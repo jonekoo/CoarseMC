@@ -59,23 +59,47 @@ module particlewall
      !> Number density of virtual LJ particles in the wall.
      real(dp) :: wall_density = 1.
    contains
+
+     !> Computes the potential energy of the interaction between
+     !! a particle and the wall.
      procedure :: potential => ljwall_ia_potential
+
+     !> Computes the force acting on the given particle by the wall.
      procedure :: force => ljwall_ia_force
+
+     !> Serializes the interaction to JSON.
      procedure :: to_json => ljwall_ia_to_json
-     procedure :: rod_potential => gbwall 
+
+     !> Computes the interaction energy of a rod with the wall.
+     procedure :: rod_potential => gbwall
+
+     !> Computes the interaction energy of a point with the wall.
      procedure :: point_potential => ljwall
+
+     !> Returns the force acting on a rod by the wall.
      procedure :: rod_force => gbwall_force
+
+     !> Returns the force acting on a point by the wall.
      procedure :: point_force => ljwall_force
+
+     !> Returns the distances of the interactions sites in a rod
+     !! from the cylinder axis.
      procedure :: rarb
+
+     !> Produces a sample of the potential energies with this
+     !! interaction.
+     procedure :: sample => ljwall_sample
  end type ljwall_interaction
 
-  interface ljwall_interaction
-     module procedure ljwall_interaction_from_json, ljwall_interaction_w_reader
-  end interface
-
+ !> Constructors for the ljwall_interaction
+ interface ljwall_interaction
+    module procedure ljwall_interaction_from_json, ljwall_interaction_w_reader
+ end interface ljwall_interaction
+ 
 contains 
 
-
+  !> Creates a ljwall_interaction by reading its parameters with
+  !! @p reader.
   function ljwall_interaction_w_reader(reader) result(res)
     type(ljwall_interaction) :: res
     type(parameterizer), intent(in) :: reader
@@ -104,7 +128,8 @@ contains
 
 
 
-  !> Initializes the module with parameters read by @p reader.
+  !> Creates the ljwall_interaction using parameters read from JSON
+  !! contained in the @p json_val.
   function ljwall_interaction_from_json(json_val) result(res)
     type(json_value), pointer, intent(in) :: json_val
     type(ljwall_interaction) :: res
@@ -115,7 +140,8 @@ contains
     call get_parameter(json_val, 'sigwall', res%sig, error_lb=0._dp)
     call get_parameter(json_val, 'alpha_LJ', res%alpha_lj, error_lb=0._dp)
     call get_parameter(json_val, 'sigwall_LJ', res%sigwall_lj, error_lb=0._dp)
-    call get_parameter(json_val, 'wall_density', res%wall_density, error_lb=0._dp)
+    call get_parameter(json_val, 'wall_density', res%wall_density, &
+         error_lb=0._dp)
     call get_parameter(json_val, 'epswall_LJ', res%epswall_lj, error_lb=0._dp)
     call get_parameter(json_val, 'epswall', res%eps, error_lb=0._dp)
   end function
@@ -169,7 +195,7 @@ contains
  end subroutine
 
 
-  !> Returns the force acting on @p particle by the wall of a
+  !> Returns the force acting on @p particlei by the wall of a
   !! cylindrical cavity. Radius of the cavity is defined by @p simbox.
   !! See module description for details.
   pure function ljwall_ia_force(this, particlei, simbox) result(f)
@@ -213,7 +239,8 @@ contains
       overlap = .true.
       return
     end if
-    energy = ljcylinderpotential(this%epswall_lj, this%wall_density, this%sigwall_lj, this%alpha_lj, r, r_cylinder)
+    energy = ljcylinderpotential(this%epswall_lj, this%wall_density, &
+         this%sigwall_lj, this%alpha_lj, r, r_cylinder)
   end subroutine
 
 
@@ -233,7 +260,8 @@ contains
     !! Set the direction of f:
     f = [ljparticle%x, ljparticle%y, 0._dp] / r
     !! What should be done when r is near zero in the division above?
-    f = f * ljcylinderforce(this%epswall_lj, this%wall_density, this%sigwall_lj, this%alpha_lj, r, r_cylinder)
+    f = f * ljcylinderforce(this%epswall_lj, this%wall_density, &
+         this%sigwall_lj, this%alpha_lj, r, r_cylinder)
   end function
 
 
@@ -274,8 +302,10 @@ contains
     else 
       fu = 1._dp
     end if
-    energy = fu * (ljcylinderpotential(this%eps, this%wall_density, this%sig, this%alpha_a, rsite_a, r_cylinder) + &
-    ljcylinderpotential(this%eps, this%wall_density, this%sig, this%alpha_b, rsite_b, r_cylinder))
+    energy = fu * (ljcylinderpotential(this%eps, this%wall_density, this%sig,&
+         this%alpha_a, rsite_a, r_cylinder) + &
+         ljcylinderpotential(this%eps, this%wall_density, this%sig, &
+         this%alpha_b, rsite_b, r_cylinder))
   end subroutine gbwall
 
 
@@ -313,8 +343,9 @@ contains
   end function
 
 
-  !> Returns the distances from cavity axis @p ra, @p rb for
-  !! interaction sites embedded in @p particle.
+  !> Returns the distances from the cavity axis @p ra and @p ra for the
+  !! interaction sites A and B, respectively. The interaction sites are
+  !! embedded in @p particle.
   pure subroutine rarb(this, particle, ra, rb)
     class(ljwall_interaction), intent(in) :: this
     class(rod), intent(in) :: particle
@@ -339,4 +370,64 @@ contains
     angular = (particle%uz)**2
   end function angular
 
+
+  !> Creates a sample of the possible energies at distances @p r with
+  !! rod and point particles and stores them to the JSON value
+  !! @p json_val. For the rod, three different orientations along x, y
+  !! and z axes are used.
+  !!
+  subroutine ljwall_sample(this, json_val, r, simbox)
+    class(ljwall_interaction), intent(in) :: this
+    type(json_value), pointer :: json_val
+    real(dp), intent(in) :: r(:)
+    type(poly_box), intent(in) :: simbox
+    type(rod) :: rodsamples(3)
+    type(point) :: lj
+    type(json_value), pointer :: child
+    real(dp) :: energy
+    integer :: err, i, j, k
+    type(json_value), pointer :: r_json, energy_json
+    character(len=3, kind=CK), parameter :: descriptions(3) = &
+         ['GBx', 'GBy', 'GBz']
+
+    ! First the GB-Wall interactions
+    call rodsamples(1)%set_orientation([1._dp, 0._dp, 0._dp])
+    call rodsamples(2)%set_orientation([0._dp, 1._dp, 0._dp])
+    call rodsamples(3)%set_orientation([0._dp, 0._dp, 1._dp])
+    call json_create_object(json_val, 'ljwall_interaction')
+    do i = 1, size(rodsamples)   
+       call json_create_object(child, descriptions(i) // '-LJwall')
+       call json_create_array(r_json, 'x')
+       call json_create_array(energy_json, 'energy')
+       do k = 1, size(r)
+          call rodsamples(i)%set_position([simbox%lx / 2 - r(k), 0._dp, 0._dp])
+          call this%potential(rodsamples(i), &
+               simbox, energy, err)
+          if (err == 0) then
+             call json_add(r_json, '', r(k))
+             call json_add(energy_json, '', energy)
+          end if
+       end do
+       call json_add(child, r_json)
+       call json_add(child, energy_json)
+       call json_add(json_val, child)
+    end do
+    
+    ! LJ-wall interaction
+    call json_create_object(child, 'LJ' // '-LJwall')
+    call json_create_array(r_json, 'x')
+    call json_create_array(energy_json, 'energy')
+    do k = 1, size(r)
+       call lj%set_position([simbox%lx / 2 - r(k), 0._dp, 0._dp])
+       call this%potential(lj, simbox, energy, err)
+       if (err == 0) then
+          call json_add(r_json, '', r(k))
+          call json_add(energy_json, '', energy)
+       end if
+    end do
+    call json_add(child, r_json)
+    call json_add(child, energy_json)
+    call json_add(json_val, child)
+  end subroutine ljwall_sample
+  
 end module particlewall
