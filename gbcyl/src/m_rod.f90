@@ -44,6 +44,8 @@ module m_rod
      procedure :: from_json => rod_from_json
      !> Returns the orientation vector of this rod.
      procedure :: orientation => rod_orientation
+     !> Returns the orientation vector of this rod.
+     procedure :: set_orientation => rod_set_orientation
      !> Translates the rod into a new position and rotates it to a new
      !! orientation.
      procedure :: move => rod_move
@@ -179,5 +181,14 @@ contains
     real(dp), dimension(3) :: rod_orientation
     rod_orientation = [this%ux, this%uy, this%uz]
   end function rod_orientation
+
+  !> Sets the orientation of @p this rod to @p vec.
+  pure subroutine rod_set_orientation(this, vec)
+    class(rod), intent(inout) :: this
+    real(dp), intent(in) :: vec(3)
+    this%ux = vec(1)
+    this%uy = vec(2)
+    this%uz = vec(3)
+  end subroutine rod_set_orientation
   
 end module m_rod
