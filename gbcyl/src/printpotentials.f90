@@ -1,173 +1,79 @@
-!> This program prints the pair interactions present in the given
-!! set of molecules and geometry, specified in the inputfiles.
-!! Symbols in the output are:
-!!
-!! Usage (in Linux or similar POSIX terminal environment). Input read
-!! from inputparameter.0 and inputconfiguration.0: 
-!! echo 0 | ./printpotentials 
-!!
-!! r    - distance between the two objects.
-!! GB   - Gay-Berne particle.
-!! x    - the molecule is oriented along x-axis e.g. GBx is a Gay-Berne
-!!        particle oriented along the x-axis.
-!! y    - the molecule is oriented along y-axis.
-!! z    - the molecule is oriented along z-axis.
-!! LJ   - Lennard Jones particle.
-!! Wall - the wall of a cylindrical cavity. The wall consists of
-!!        smoothly and evenly distributed LJ particles.
-!!
 program printpotentials
-use num_kind
-use class_pair_potential
-use utils, only : fmt_char_dp
-use m_fileunit
-use particlewall
-use class_poly_box
-use particle, only: particledat, setposition, setorientation
-use m_particle_factory, only: factory_readstate, factory
-use class_parameterizer
-implicit none
+  use cla
+  use mc_engine, only: mce_init_json, groups, pair_interactions, &
+       single_interactions, simbox
+  use m_rod, only: rod
+  use m_point, only: point
+  use m_particle, only: particlearray_wrapper, pair_interaction
+  use m_gb_interaction, only: gb_interaction
+  use m_lj_interaction, only: lj_interaction
+  use m_gblj_interaction, only: gblj_interaction
+  use particlewall, only: ljwall_interaction
+  use mpi
+  use json_module
+  use num_kind, only: dp
+  implicit none
+  integer, parameter :: id = 0, ntasks=1
+  character(len=80) :: input_filename
+  character(len=80) :: output_filename
+  character(len=80) :: restart_filename
+  character(len=80) :: pef_filename
+  integer :: err, i, j
+  character(len=:), allocatable :: str
+  character(len=3) :: particle_descriptions(4)
+  type(rod) :: rodsamples(3)
+  type(particlearray_wrapper), allocatable :: samples(:)
+  real(dp), parameter :: step = 0.01
+  real(dp), parameter :: r(1001) = [(i * step, i = 0, 1000)]
+  type(json_value), pointer :: json_val, child_val, another
+  
+  call mpi_init(err)
+  
+  ! Parse command line arguments
+  call cla_init
+  call cla_register(key='-p', longkey='--pef-file', &
+       description='The file to write the potential energy functions.',&
+       kkind=cla_char, default='printpotentials.json')
+  call cla_register(key='-i', longkey='--input-file', &
+       description='input parameter file', &
+       kkind=cla_char, default='input-0.json')
 
-real(dp), dimension(3), parameter :: ex = (/1._dp, 0._dp, 0._dp/)
-real(dp), dimension(3), parameter :: ey = (/0._dp, 1._dp, 0._dp/)
-real(dp), dimension(3), parameter :: ez = (/0._dp, 0._dp, 1._dp/)
+  call cla_validate('printpotentials')
+  call cla_get('--input-file', input_filename)
+  call cla_get('--pef-file', pef_filename)
 
-!> The input is read from files inputparameters.idchar and 
-!! inputconfiguration.idchar.
-character(4) :: idchar
-logical :: is_wall_on
-
-type(factory) :: coordinatereader
-integer :: coordinateunit, ios
-character(len=200) :: statefile
-type(parameterizer) :: reader
-
-type(particledat), allocatable :: particles(:)
-type(poly_box) :: simbox
-
-type(particledat) :: testparticles(4)
-character(len=3) :: particle_descriptions(4)
-
-integer :: i, j, k
-integer, parameter :: n = 1000
-real(dp) :: energy
-integer :: err
-type(particledat) :: temp
-
-!> The distance between subsequent r values.
-real(dp), parameter :: step = 0.01_dp
-
-!> The distance between particles / to wall.
-real(dp) :: r
-
-!> The maximum distance
-real(dp) :: rmax
-
-class(pair_interaction), allocatable :: pair_ia
-
-read(*, *) idchar
-
-!! Read inputparameters
-reader = new_parameterizer('inputparameters.'//trim(adjustl(idchar)), &
-     logfile = "printpotentials_log."//trim(adjustl(idchar)))
-allocate(pair_ia, source=conditional_pair_interaction(reader))
-
-call getparameter(reader, 'is_wall_on', is_wall_on)
-if (is_wall_on) then
-  call particlewall_init(reader)
-end if
-
-!! Read inputconfiguration
-coordinateunit = fileunit_getfreeunit()
-statefile = 'inputconfiguration.'//trim(adjustl(idchar))
-!! In any case the output should be appended to configurations.(id) and restartfile
-!! should be used only for reading once and then overwriting the file.
-open(file=statefile, unit=coordinateunit, action='READ', status='OLD', iostat=ios)
-call factory_readstate(coordinatereader, coordinateunit, simbox, particles, ios)
-if (0/=ios) then 
-  write(*, *) 'Error ', ios,' reading ', statefile, ' Stopping.' 
-  stop
-end if
-close(coordinateunit)
-
-!! :TODO: Create only the kinds of particle pairs that exist in the inputconfiguration
-
-!! Look for GB particles:
-j=1
-do i = 1, size(particles)
-  if (particles(i)%rod) then
-    testparticles(j) = particles(i)
-    call setorientation(testparticles(j), ex)
-    particle_descriptions(j) = 'GBx'
-    j = j + 1
-    testparticles(j) = particles(i)
-    call setorientation(testparticles(j), ey)
-    particle_descriptions(j) = 'GBy'
-    j = j + 1
-    testparticles(j) = particles(i)
-    call setorientation(testparticles(j), ez)
-    particle_descriptions(j) = 'GBz'
-    j = j + 1
-    exit
-  end if
-end do
-
-!! Look for LJ particles:
-do i = 1, size(particles)
-  if (.not. particles(i)%rod) then
-    testparticles(j) = particles(i)
-    particle_descriptions(j) = 'LJ'
-    j = j + 1
-    exit
-  end if
-end do
-
-rmax = simbox%lx / 2._dp
-do i = 1, size(testparticles)
-  call setposition(testparticles(i), (/rmax, 0._dp, 0._dp/))
-end do
-
-
-write(*, '(A23,1X)', advance='no') 'r'
-do j = 1, size(particle_descriptions)
-  temp = testparticles(j)
-  temp%x = testparticles(j)%x - r  
-  if (is_wall_on) then
-      write(*, '(A23,1X)', advance='no') trim(particle_descriptions(j))// "-Wall"
-    end if
-    do k = 1, j
-      write(*, '(A23,1X)', advance='no') trim(particle_descriptions(j)) // "-" // particle_descriptions(k)
-    end do
+  ! Initialize
+  call mce_init_json(id, ntasks, input_filename, output_filename, &
+       restart_filename)
+  
+  call json_initialize()
+  call json_create_object(json_val, '')
+  ! compute pair_interactions with sample particles
+  do i = 1, size(pair_interactions, 1)
+     do j = 1, i
+        select type (ia => pair_interactions(i, j)%ptr)
+        type is (gb_interaction) 
+           call ia%sample(child_val, r)
+           call json_add(json_val, child_val)
+        type is (lj_interaction)
+           call ia%sample(child_val, r)
+           call json_add(json_val, child_val)
+        type is (gblj_interaction)
+           call ia%sample(child_val, r)
+           call json_add(json_val, child_val)
+        end select
+     end do
   end do
-  write(*, '(A)') ''
-
-
-r = 0._dp
-!! Calculate all possible pair potentials:
-do i = 1, n
-  r = r + step
-  if (r > rmax) exit
-  write(*, fmt='(G23.15E3,1X)', advance='no') r
-  do j = 1, size(testparticles)
-    temp = testparticles(j)
-    temp%x = testparticles(j)%x - r  
-    if (is_wall_on) then
-      call particlewall_potential(temp, simbox, energy, err)
-      if (err /= 0) then 
-        write(*, '(A23,1X)', advance='no') 'NaN'
-      else
-        write(*, '(G23.15E3,1X)', advance='no') energy
-      end if
-    end if
-    do k = 1, j
-      call pair_ia%pair_potential(temp, testparticles(k), position(testparticles(k))-position(temp), energy, err)
-      if (err /= 0) then 
-        write(*, '(A23,1X)', advance='no') 'NaN'
-      else
-        write(*, '(G23.15E3,1X)', advance='no') energy
-      end if
-    end do
+  ! compute single_interactions with sample particles
+  do i = 1, size(single_interactions)
+     select type (ia => single_interactions(i)%ptr)
+     type is (ljwall_interaction)
+        call ia%sample(child_val, r, simbox)
+        call json_add(json_val, child_val)
+     end select
   end do
-  write(*, '(A)') ''
-end do
-end program
+
+  call json_print(json_val, pef_filename)
+  call mpi_finalize(err)
+  
+end program printpotentials

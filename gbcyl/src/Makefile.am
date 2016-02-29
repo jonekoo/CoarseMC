@@ -1,7 +1,8 @@
 ## Programs to install
 bin_PROGRAMS = \
   ptgbcyl \
-  create_crystal
+  create_crystal \
+  printpotentials
 
 
 ## Scripts to install
@@ -99,8 +100,19 @@ create_crystal_SOURCES = \
   parse_cmdline.inc \
   create_crystal.f90
 
-#printpotentials_SOURCES = \
-#  printpotentials.f90 
+printpotentials_SOURCES = \
+  genvoltrial.f90 \
+  beta_exchange.f90 \
+  m_particlegroup.f90 \
+  m_lj_interaction.f90 \
+  m_gb_interaction.f90 \
+  m_gblj_interaction.f90 \
+  m_interaction_factory.f90 \
+  m_particlejson_parser.f90 \
+  m_nvt_engine.F90 \
+  m_npt_engine.F90 \
+  mc_engine.F90 \
+  printpotentials.f90 
 
 #printforces_SOURCES = \
 #  printforces.f90 
