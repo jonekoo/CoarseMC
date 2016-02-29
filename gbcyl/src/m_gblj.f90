@@ -197,18 +197,22 @@ pure subroutine gblj_value(this, ui, rij, energy, overlap)
   real(dp), intent(out) :: energy
   logical, intent(out) :: overlap
   real(dp) :: rijabs, urij(3), r
-  rijabs = sqrt(dot_product(rij, rij))
-  urij = rij/rijabs
-  r = this%r(ui, rij)
-  if (this%hardcore > r) then 
-    overlap = .true.
-    energy = 0._dp
+  if (all(rij == 0)) then
+     overlap = .true.
   else
-    overlap = .false.
-    energy = 4 * this%epsilon(urij, ui) * (this%sigma_0 / r) ** 6 * &
-         ((this%sigma_0 / r) ** 6 - 1)
+     rijabs = sqrt(dot_product(rij, rij))
+     urij = rij/rijabs
+     r = this%r(ui, rij)
+     if (this%hardcore > r) then 
+        overlap = .true.
+        energy = 0._dp
+     else
+        overlap = .false.
+        energy = 4 * this%epsilon(urij, ui) * (this%sigma_0 / r) ** 6 * &
+             ((this%sigma_0 / r) ** 6 - 1)
+     end if
   end if
-end subroutine
+end subroutine gblj_value
 
 
 !> Returns the force acting on the LJ particle (j) by the GB particle i.
