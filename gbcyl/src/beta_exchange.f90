@@ -5,7 +5,7 @@ module beta_exchange
 use mpi
 use num_kind
 use utils
-include 'rng.inc'
+use mt_stream, only: rngstate => mt_state, rng => genrand_double1_s
 implicit none
 
 public :: init, finalize, reset_counters, try_beta_exchanges, write_stats

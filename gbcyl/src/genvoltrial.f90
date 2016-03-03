@@ -21,7 +21,6 @@ contains
 !! the vector before the scaling.
 function genvoltrial_scale(simbox, maxscaling, genstate, scalingtype) &
      result(scaling)
-  include 'rng.inc'
   type(poly_box), intent(inout) :: simbox
   real(dp), intent(in) :: maxscaling
   type(rngstate), intent(inout) :: genstate
@@ -49,7 +48,6 @@ end function genvoltrial_scale
 !! scaling.
 function genvoltrial_scale1d(simbox, maxscaling, genstate, axis) &
      result(scaling)
-  include 'rng.inc'
   type(poly_box), intent(inout) :: simbox
   real(dp), intent(in) :: maxscaling
   type(rngstate), intent(inout) :: genstate
@@ -84,7 +82,6 @@ end function genvoltrial_scale1d
 !! scaling.
 function genvoltrial_scale2d(simbox, maxscaling, genstate, plane) &
      result(scaling)
-  include 'rng.inc'
   type(poly_box), intent(inout) :: simbox
   real(dp), intent(in) :: maxscaling
   type(rngstate), intent(inout) :: genstate
@@ -122,7 +119,6 @@ end function genvoltrial_scale2d
 !! @p maxscaling sets the maximum volume change. @p genstate holds the
 !! random number generator state. 
 function genvoltrial_scale3d(simbox, maxscaling, genstate) result(scaling)
-  include 'rng.inc'
   type(poly_box), intent(inout) :: simbox
   real(dp), intent(in) :: maxscaling
   type(rngstate), intent(inout) :: genstate
