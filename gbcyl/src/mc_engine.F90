@@ -372,9 +372,11 @@ subroutine sweep(simbox, groups, genstates, isweep)
 #endif
   call nvt_update(groups, genstates, simbox, pair_interactions, &
        single_interactions, dE)
-  etotal = etotal + dE
 #ifdef DEBUG
   write(output_unit, *) "etotal + dE = ", etotal, " + ", dE, " = ", etotal + dE
+#endif
+  etotal = etotal + dE
+#ifdef DEBUG
   call total_energy(groups, simbox, pair_interactions, &
        single_interactions, etotal, err)
   write(output_unit, *) "etotal updated = ", etotal
