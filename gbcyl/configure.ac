@@ -30,6 +30,8 @@ DX_PDF_FEATURE(OFF)
 DX_PS_FEATURE(OFF)
 DX_INIT_DOXYGEN([$PACKAGE_NAME], doxygen.cfg, doxygen-doc)
 
+# Python
+AM_PATH_PYTHON([2.6],,[:])
 
 AC_ARG_ENABLE([pfunit],
 [  --enable-pfunit Turn on tests with pFUnit],
