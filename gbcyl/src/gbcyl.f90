@@ -28,21 +28,22 @@ program gbcyl
   end if
   
   call cla_init
-  call cla_register(key='-i', longkey='--input', &
+  call cla_register(key='-i', longkey='--input-file', &
        description='input parameter file', &
        kkind=cla_char, default='input-_I_.json')
-  call cla_register(key='-o', longkey='--output', &
+  call cla_register(key='-o', longkey='--output-file', &
        description='output parameter file', &
        kkind=cla_char, default='output-_I_.json')
   call cla_register(key='-r', longkey='--restart-file', &
        description='File to write parameters for restart.', &
        kkind=cla_char, default='restart-_I_.json')
+  
   call cla_validate('ptgbcyl')
   
-  call cla_get('--input', input_filename)
+  call cla_get('--input-file', input_filename)
   call parse_filename(input_filename, parameter_infile)
 
-  call cla_get('--output', output_filename)
+  call cla_get('--output-file', output_filename)
   call parse_filename(output_filename, parameter_outfile)
  
   call cla_get('--restart-file', restart_filename)
