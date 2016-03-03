@@ -423,28 +423,44 @@ contains
     real(dp), allocatable :: rijs(:, :)
     logical, allocatable :: cutoff_mask(:)
     integer :: i_nbr
+    logical :: use_min_image
     energy = 0
     err = 0
+
     do i_nbr = 1, size(nbrs)
+       use_min_image = .false.
        rcutoff = pair_ias(i_nbr)%ptr%get_cutoff()
+       ! Minimum image can only be needed if the cutoff radius goes
+       ! outside the box in a periodic dimension.
+       if (simbox%xperiodic) then
+          if (abs(-0.5 * simbox%lx - this%x) < rcutoff .or. &
+               abs(0.5 * simbox%lx - this%x) < rcutoff) use_min_image = .true.
+       end if
+       if (simbox%yperiodic) then
+          if (abs(-0.5 * simbox%ly - this%y) < rcutoff .or. &
+               abs(0.5 * simbox%ly - this%y) < rcutoff) use_min_image = .true.
+       end if
+       if (simbox%zperiodic) then
+          if (abs(-0.5 * simbox%lz - this%z) < rcutoff .or. &
+               abs(0.5 * simbox%lz - this%z) < rcutoff) use_min_image = .true.
+       end if
+             
+       
        if (err /= 0) exit
        ! Select the calculated interactions by cutoff already here
        if (allocated(rijs)) deallocate(rijs)
        allocate(rijs(3, nbrs(i_nbr)%n))
-       do i = 1, nbrs(i_nbr)%n
-          ! :NOTE: The chosen way is better than
-          ! :NOTE: rij = minimage(simbox, position(particlei), 
-          ! position(particlej)) It is significantly faster to use direct
-          ! references to particle coordinates.
-          rijs(:, i) = minimage(simbox, nbrs(i_nbr)%arr(i)%x-this%x,& 
-               nbrs(i_nbr)%arr(i)%y-this%y, nbrs(i_nbr)%arr(i)%z-this%z)
-          
-          if (all(rijs(:, i) == 0.) .and. nbrs(i_nbr)%mask(i)) then
-             err = 2
-             return
-          end if
-       end do !! ifort does not vectorize
-       
+       if (use_min_image) then
+          do i = 1, nbrs(i_nbr)%n
+             rijs(:, i) = minimage(simbox, nbrs(i_nbr)%arr(i)%x-this%x,& 
+                  nbrs(i_nbr)%arr(i)%y-this%y, nbrs(i_nbr)%arr(i)%z-this%z)     
+          end do !! ifort does not vectorize
+       else
+          do i = 1, nbrs(i_nbr)%n
+             rijs(:, i) = [nbrs(i_nbr)%arr(i)%x-this%x,& 
+                  nbrs(i_nbr)%arr(i)%y-this%y, nbrs(i_nbr)%arr(i)%z-this%z]
+          end do !! ifort does not vectorize
+       end if
        if (allocated(cutoff_mask)) deallocate(cutoff_mask)
        allocate(cutoff_mask(nbrs(i_nbr)%n))
        do i = 1, nbrs(i_nbr)%n
