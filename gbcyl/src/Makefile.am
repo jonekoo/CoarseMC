@@ -1,3 +1,5 @@
+##SUBDIRS=tests
+
 ## Programs to install
 bin_PROGRAMS = \
   ptgbcyl \
@@ -117,12 +119,24 @@ printpotentials_SOURCES = \
 #printforces_SOURCES = \
 #  printforces.f90 
 
+dist_check_SCRIPTS = test_zerosweeps.py
+TESTS = test_zerosweeps.py
+TEST_EXTENSIONS = .py
+PY_LOG_COMPILER = $(PYTHON)
+AM_PY_LOG_FLAGS = -v
+##EXTRA_DIST = tests/zero_sweeps/0/input-0.json tests/zero_sweeps/total_energies-reference.txt
+dist_check_DATA = tests/zero_sweeps/0/input-0.json tests/zero_sweeps/total_energies-reference.txt 
+
+test_zerosweeps.py : tests/zero_sweeps/0/restart-0.json
+
+tests/zero_sweeps/0/restart-0.json : tests/zero_sweeps/0/input-0.json $(top_builddir)/src/ptgbcyl
+	mkdir -p tests/zero_sweeps/0;
+	mpirun -np 1 $(top_builddir)/src/ptgbcyl -i $(top_srcdir)/src/tests/zero_sweeps/0/input-_I_.json -r tests/zero_sweeps/0/restart-_I_.json
 
 if PFUNIT
 
 driver_SOURCES = \
   class_parameterizer.f90 \
-  rng.inc \
   class_parameter_writer.f90 \
   json_module.F90 \
   m_json_wrapper.f90 \
@@ -152,13 +166,15 @@ driver_FCFLAGS = -I${PFUNIT_DIR}/mod \
 
 driver_LDADD = ${PFUNIT_DIR}/lib/libpfunit.a ${ldadd_mtstream} libmodel.la
 
-TESTS = driver
+TESTS += driver 
 check_PROGRAMS = driver
+
 endif
+
 
 MODEXT = @MODEXT@
 
 mostlyclean-local :
 	-rm -f *.$(MODEXT)
 	-rm -f $(bin_PROGRAMS)
-
+	-rm -f tests/zero_sweeps/*/restart-0.json
