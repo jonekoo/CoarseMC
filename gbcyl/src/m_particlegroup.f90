@@ -224,7 +224,7 @@ contains
               rij = minimage(simbox,&
                    particlej%x - particlei%x, particlej%y - particlei%y,&
                    particlej%z - particlei%z)
-              if (norm2(rij) < pair_ia%get_cutoff()) then
+              if (dot_product(rij, rij) < pair_ia%get_cutoff()**2) then
                  call pair_ia%pair_potential(particlei, particlej, rij, &
                       energy_ij, err)
                  if (err /= 0 ) return
@@ -272,6 +272,26 @@ contains
   !write(*, *) "compute ", this%name, ix, iy, iz, " with ", &
   !     another%name, jx, jy, jz
   energy = 0
+  if ((ix-jx)**2 + (iy-jy)**2 + (iz-jz)**2 <= 3) then
+  ! No need to compute minimum image.
+  do i = 1, this%sl%counts(ix, iy, iz)
+     associate(particlei => this%particles(this%sl%indices(i, ix, iy, iz)))
+       do j = 1, another%sl%counts(jx, jy, jz)
+          associate(particlej => another%particles(&
+               another%sl%indices(j, jx, jy, jz)))
+            rij = [particlej%x - particlei%x, particlej%y - particlei%y, &
+                 particlej%z - particlei%z]
+            if (dot_product(rij, rij) < pair_ia%get_cutoff()**2) then
+               call pair_ia%pair_potential(particlei, particlej, rij, &
+                    energy_ij, err)
+               if (err /= 0) return
+               energy = energy + energy_ij
+            end if
+          end associate
+       end do
+     end associate
+  end do
+  else
   do i = 1, this%sl%counts(ix, iy, iz)
      associate(particlei => this%particles(this%sl%indices(i, ix, iy, iz)))
        do j = 1, another%sl%counts(jx, jy, jz)
@@ -279,16 +299,17 @@ contains
                another%sl%indices(j, jx, jy, jz)))
             rij = minimage(simbox, particlej%x - particlei%x, &
                  particlej%y - particlei%y, particlej%z - particlei%z)
-            if (norm2(rij) < pair_ia%get_cutoff()) then
+            if (dot_product(rij, rij) < pair_ia%get_cutoff()**2) then
                call pair_ia%pair_potential(particlei, particlej, rij, &
                     energy_ij, err)
                if (err /= 0) return
                energy = energy + energy_ij
             end if
           end associate
-     end do
+       end do
      end associate
   end do
+  end if
 end subroutine cell_pair_energy
 
 
