@@ -239,14 +239,18 @@ contains
     real(dp), dimension(3) :: urij
     energy = 0.0
     overlap = .false.
-    rgb = this%gb_R(ui, uj, rij)
-    if(rgb < this%hardcore) then
+    if (all(rij == 0._dp)) then
        overlap = .true.
     else
-       gb6 = rgb**(-6)
-       energy = gb6 * (gb6 - 1._dp)
-       urij = rij / sqrt(dot_product(rij, rij))
-       energy = 4._dp * this%epsilon(ui, uj, urij) * energy
+       rgb = this%gb_R(ui, uj, rij)
+       if(rgb < this%hardcore) then
+          overlap = .true.
+       else
+          gb6 = rgb**(-6)
+          energy = gb6 * (gb6 - 1._dp)
+          urij = rij / sqrt(dot_product(rij, rij))
+          energy = 4._dp * this%epsilon(ui, uj, urij) * energy
+       end if
     end if
   end subroutine gb_potential
   
