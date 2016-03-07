@@ -8,7 +8,8 @@ use utils
 use mt_stream, only: rngstate => mt_state, rng => genrand_double1_s
 implicit none
 
-public :: init, finalize, reset_counters, try_beta_exchanges, write_stats
+public :: init, finalize, be_reset_counters, try_beta_exchanges, write_stats, &
+     be_get_acceptance_ratios
 
 private
 
@@ -39,7 +40,7 @@ subroutine init(beta)
   if (task_id == root_id) then
     allocate(n_accepted(n_tasks, n_tasks), &
       n_trials(n_tasks, n_tasks), temperature_index(n_tasks))
-    call reset_counters()
+    call be_reset_counters()
   end if
 
   !! Find out the original indices of temperatures
@@ -88,7 +89,7 @@ subroutine finalize
 end subroutine
 
 !> Resets the counters for temperature swap trials and accepted swaps.
-subroutine reset_counters()
+subroutine be_reset_counters()
   n_accepted = 0
   n_trials = 0
 end subroutine
@@ -180,6 +181,20 @@ subroutine write_stats(unit)
     end do
     write(unit, *) ''
   end do
+end subroutine
+
+
+!> Returns acceptance ratios of temperature swaps for each replica with
+!! all the other replicas.
+subroutine be_get_acceptance_ratios(ratios)
+  integer :: j, k
+  real(dp), allocatable, intent(out) :: ratios(:, :)
+  ratios = real(n_accepted, dp)
+  where(n_trials > 0)
+     ratios = ratios / n_trials
+  elsewhere
+     ratios = -1._dp
+  end where
 end subroutine
 
 end module

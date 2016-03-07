@@ -18,8 +18,9 @@ module mc_engine
        particlearray_wrapper, single_interaction_ptr
   use particle_mover, only: particlemover_init, particlemover_writeparameters,&
        get_max_translation, getmaxmoves, setmaxmoves, particlemover_to_json
-  use beta_exchange, only: write_stats, reset_counters, &
-       beta_exchange_init => init, be_finalize => finalize, try_beta_exchanges
+  use beta_exchange, only: write_stats, be_reset_counters, &
+       beta_exchange_init => init, be_finalize => finalize, try_beta_exchanges,&
+       be_get_acceptance_ratios
   use num_kind, only: dp
   use iso_fortran_env, only: error_unit, output_unit
   use json_module
@@ -64,9 +65,6 @@ module mc_engine
   !> The sweep counter.
   integer, save :: isweep = 0
   
-  !> Output unit and filename for writing parameters.
-  integer, save :: pwunit
-
   !> The input and output unit used for reading and writing the geometry of 
   !! molecules and the simulation box.
   integer, save :: coordinateunit
@@ -111,6 +109,10 @@ module mc_engine
   !> The string defining the ensemble (npt or nvt)
   character(len=:), allocatable, save :: ensemble
 
+  !> The id of this replica.
+  integer, save :: replica_id =  0
+  integer, save :: n_replicas = 1
+  
 contains
 
   subroutine mce_init_json(id, n_tasks, parameter_infile, parameter_outfile, &
@@ -174,7 +176,9 @@ contains
     integer, intent(in) :: id
     integer, intent(in) :: n_tasks 
     integer :: err
-    
+
+    replica_id = id
+    n_replicas = n_tasks
     call mce_init_rng(id, n_tasks)    
     call beta_exchange_init(1._dp / temperature)
     call total_energy(groups, simbox, pair_interactions, &
@@ -239,7 +243,6 @@ subroutine mce_init_rng(id, n_tasks)
           "Warning: system_clock query failed, using default seed 1234567."
      seed = 1234567 
   end if
-  !call init(mts(thread_id), seed)
   call init(temp_mts, seed)
   mts(0) = temp_mts
   
@@ -523,18 +526,27 @@ end subroutine
 !!
 subroutine makerestartpoint
   type(json_value), pointer :: parameters_json
+  real(dp), allocatable :: ratios(:, :)
   parameters_json => null()
   call mce_to_json(parameters_json)
+  if (replica_id == 0 .and. n_replicas > 1) then
+     ! Write beta_exchange statistics.
+     call be_get_acceptance_ratios(ratios)
+     call json_add(parameters_json, 'beta_exchange_ratios', reshape(ratios, &
+          [size(ratios)]))
+     call be_reset_counters
+  end if
   call json_print(parameters_json, fn_parameters_restart)
   call json_destroy(parameters_json)
 end subroutine
+
+
 
 
 !> All actions done during both the equilibration and production sweeps
 !! should be gathered inside this routine for clarity. 
 subroutine runproductiontasks
   integer :: ios
-  integer :: be_unit
   type(json_value), pointer :: output_json
   integer :: u_output_json
   if (mod(isweep, productionperiod) == 0) then
@@ -552,22 +564,6 @@ subroutine runproductiontasks
     call json_print(output_json, u_output_json)
     close(u_output_json)
     call json_destroy(output_json)
-        
-    !! Write beta_exchange statistics:
-    if (trim(adjustl(idchar)) == "0") then
-      be_unit = fileunit_getfreeunit()
-      open(unit=be_unit, file="beta_exchange.stats", action="WRITE", &
-           position="APPEND", iostat=ios)
-      if (ios /= 0) then
-         write(error_unit, *) 'Warning: runproductiontasks failed opening ' //&
-              'beta_exchange.stats'
-      else
-         call write_stats(be_unit)
-         close(be_unit)
-      end if
-      call reset_counters
-    end if
-    close(pwunit)
     call resetcounters
   end if
 end subroutine
