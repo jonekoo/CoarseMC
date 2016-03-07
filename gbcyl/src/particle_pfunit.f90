@@ -1,3 +1,4 @@
+!> Unit tests for particle types.
 module particle_pfunit
   use m_particle
   use json_module

@@ -1,3 +1,4 @@
+!> Utility procedures.
 module utils
   use iso_fortran_env, only: iostat_end, iostat_eor
   use num_kind
