@@ -121,7 +121,7 @@ TESTS = test_zerosweeps.py test_short.py
 TEST_EXTENSIONS = .py
 PY_LOG_COMPILER = $(PYTHON)
 AM_PY_LOG_FLAGS = -v
-dist_check_DATA = tests/zero_sweeps/0/input-0.json tests/zero_sweeps/total_energies-reference.txt tests/short/id-0/input-0.json tests/short/reference/id-0/restart-0.json
+dist_check_DATA = tests/zero_sweeps/0/input-0.json tests/zero_sweeps/total_energies-reference.txt tests/short/id-0/input-0.json tests/short/reference/id-0/restart-0.json tests/short/id-1/input-0.json tests/short/reference/id-1/restart-0.json
 
 test_zerosweeps.py : tests/zero_sweeps/0/restart-0.json tests/zero_sweeps/total_energies-reference.txt
 
@@ -181,7 +181,7 @@ mostlyclean-local :
 	-rm -f *.$(MODEXT)
 	-rm -f $(bin_PROGRAMS)
 	-rm -f tests/zero_sweeps/*/restart-0.json
-	-rm -f tests/short/id-0/restart-0.json
-	-rm -f tests/short/id-0/output-0.json
+	-rm -f tests/short/id-*/restart-0.json
+	-rm -f tests/short/id-*/output-0.json
 	-rm -f beta_exchange.stats
 
