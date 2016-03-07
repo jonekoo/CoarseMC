@@ -1,3 +1,4 @@
+!> Unit tests for the m_gayberne module.
 module gayberne_pfunit
   use m_gayberne
   use pfunit
@@ -15,36 +16,6 @@ module gayberne_pfunit
   
 contains
   
-  !!subroutine test_all
-  !!  call test(test_zero_at_cross_contact, "Calculate potential at cross
-  !! contact")
-  !!  call test(test_kappa_sigma_defined, &
-  !! "Test that definition of kappa for the "//&
-  !!  "contact distance calculation is correct")
-  !!  call test(test_kappa_epsilon_defined, &
-  !! "Test that definition of kappa for "//&
-  !!  "the well-depth calculation is correct")
-  !!  call test(test_normalop, "Test normal operation.")
-  !!  call test(test_reduces_to_lennard_jones, &
-  !! "Test that the potential reduces "//&
-  !!  "to a Lennard-Jones potential.")
-  !!  call test(test_small_separation, &
-  !! "Test that small separation results as an overlap.")
-  !!  call test(test_ssderivative, "Test the ratio of potential and its "//&
-  !!  "derivative in side by side configuration")
-  !!  call test(test_zerosofforce, &
-  !! "Test the zeros of force in ss, ee and T configurations.")
-  !!  call test(test_forcevsfinitedifference, &
-  !! "Test the force against finite "//&
-  !!  "difference approximation")
-  !!end subroutine
-  
-  !! 1. "end test" -> "end subroutine" 
-  !! 2. "test " -> "subroutine test_" 
-  !! 3.1. 'assert_real_equal(' -> 'assert_comparable('
-  !! 3.2.  ')' ', resolution, "text")'
-  !!
-  !!
   subroutine test_zero_at_cross_contact
     real(dp) :: kappa_sigma = 4.4_dp
     real(dp) :: kappa_epsilon = 20._dp
