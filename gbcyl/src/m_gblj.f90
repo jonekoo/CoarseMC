@@ -12,7 +12,6 @@ module m_gblj
   use num_kind
   use class_parameterizer
   use class_parameter_writer
-  use m_rodsphere_potential
   use json_module
   use m_json_wrapper, only: get_parameter
   implicit none
@@ -28,7 +27,7 @@ module m_gblj
   private
   
   
-  type, extends(rodsphere_potential) :: gblj_potential
+  type :: gblj_potential
      
      !> Well-depth when the LJ particle is on the side of the GB particle.
      real(dp) :: epsilon_0 = 1.55

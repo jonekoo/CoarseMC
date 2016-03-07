@@ -1,5 +1,5 @@
 !> Module responsible for defining the computation of the (uniaxial)
-!! Gay-Berne potential for the interaction of two ellipsoidal molecules.
+!! Gay-Berne potential for the interaction of two rodlike molecules.
 !!
 !! @see J. G. Gay and B. J. Berne. J. Chem. Phys., 74(6):3316, 1981.
 !! @see M. A. Bates and G. R. Luckhurst. J. Chem. Phys.,
@@ -9,7 +9,6 @@ module m_gayberne
   use num_kind
   use class_parameterizer
   use class_parameter_writer
-  use m_rod_interaction
   use json_module
   use m_json_wrapper, only: get_parameter
   implicit none
@@ -18,7 +17,7 @@ module m_gayberne
   !! 
   !! @see Luckhurst & et.al J.Chem.Phys, Vol. 110, No. 14
   !!
-  type, extends(rod_interaction) :: gayberne 
+  type :: gayberne 
      !> Ratio of contact distances for end-to-end and side-by-side
      !! configurations of two particles.
      real(dp) :: kappasigma   = 4.4_dp   !! = sige/sigs

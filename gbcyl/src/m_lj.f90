@@ -3,7 +3,6 @@ module m_lj
   use num_kind
   use class_parameterizer
   use class_parameter_writer
-  use m_sphere_interaction, only: sphere_interaction
   use json_module
   use m_json_wrapper, only: get_parameter
   implicit none
@@ -13,7 +12,7 @@ module m_lj
      module procedure lj_init_parameters, lj_init_wt_reader
   end interface lj_init
   
-  type, extends(sphere_interaction) :: lj_potential
+  type :: lj_potential
      !> The range parameter which gives the zero-crossing distance of the
      !! potential.
      real(dp) :: sigma_0 = 1.
