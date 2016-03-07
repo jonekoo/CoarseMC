@@ -1,8 +1,7 @@
-!> Module for computing particle-wall interactions for a Lennard-Jones
-!! (LJ)  or Gay-Berne (GB) particle in a cylindrical cavity. The cavity
-!! walls are smooth and consist of evenly distributed LJ particles. A
-!! GB particle interacts with the wall through two embedded LJ sites in
-!! the particle.
+!> Particle-wall interactions for Lennard-Jones and rod-like particles
+!! in a cylindrical cavity. The cavity walls are smooth and consist of
+!! evenly distributed LJ particles. A rod-like particle interacts with
+!! the wall through two embedded LJ sites.
 !! 
 !! @see Micheletti et. al. Journal of Chemical Physics 123, 224705.
 !!
