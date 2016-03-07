@@ -1,3 +1,4 @@
+!> Unit tests for class_simplelist.
 module class_simplelist_pfunit
 use pfunit
 use m_particle
@@ -61,8 +62,8 @@ subroutine test_new_simplelist
        "indices in the cell list.")
   call simplelist_deallocate(sl)
 
-  !! Cases where the creation might break:
-  !! 1. Only one cell in some dimension
+  ! Cases where the creation might break:
+  ! 1. Only one cell in some dimension
   call new_simplelist(sl, simbox, particles, minlength, &
        min_boundary_width=0._dp)
   call AssertEqual(n, sl%counts(0,0,0), &
@@ -74,13 +75,13 @@ subroutine test_new_simplelist
        "Total count of particle indices in cell list does not match " // &
        "particle count.")
   call simplelist_deallocate(sl)
-  !! 2. iseven=.true. but only one cell can fit with the given minlength
-  !! What should happen? Failure? Warning? Silence and only one cell created?
-  !! Failure. But how is this tested? There could be a return code but the 
-  !! user does not have to handle a return code, so this is not a safe solution. 
-  !! Let's just make it stop.
-  !!call simplelist_init(minlength=11._dp, iseven=.true.)
-  !!call new_simplelist(sl, simbox, particles) !! Will cause a Fortran STOP
+  ! 2. iseven=.true. but only one cell can fit with the given minlength
+  ! What should happen? Failure? Warning? Silence and only one cell created?
+  ! Failure. But how is this tested? There could be a return code but the 
+  ! user does not have to handle a return code, so this is not a safe solution. 
+  ! Let's just make it stop.
+  !call simplelist_init(minlength=11._dp, iseven=.true.)
+  !call new_simplelist(sl, simbox, particles) ! Will cause a Fortran STOP
 end subroutine
 
 subroutine test_updateall
@@ -91,14 +92,14 @@ subroutine test_updateall
   real(dp), parameter :: minlength=5._dp
   real(dp), parameter :: boxside=4._dp*(minlength+tiny(minlength))
   simbox=new_box(boxside,boxside,boxside)
-  !! Put one particle in (1,1,1) and another in (3,3,3)
+  ! Put one particle in (1,1,1) and another in (3,3,3)
   particles(1)%x=-1.5_dp*minlength
   particles(1)%y=-1.5_dp*minlength
   particles(1)%z=-1.5_dp*minlength
   particles(2)%x=0.5_dp*minlength
   particles(2)%y=0.5_dp*minlength
   particles(2)%z=0.5_dp*minlength
-  !! Make a list of eight cells
+  ! Make a list of eight cells
   call new_simplelist(sl, simbox, particles, minlength, min_boundary_width=0._dp)
   call AssertEqual(n,sum(sl%counts), "Count of particle indices in cell list&
   & does not match particle count.")
@@ -106,12 +107,12 @@ subroutine test_updateall
   & 1,1,1")
   call AssertEqual(1,sl%counts(2,2,2), "More or less than one particle in cell&
   & 2,2,2")
-  !! Move first particle to (0,1,0)
+  ! Move first particle to (0,1,0)
   particles(1)%y=-0.5_dp*minlength
-  !! Move second particle to (2,2,1)
+  ! Move second particle to (2,2,1)
   particles(2)%z=-0.5_dp*minlength
   call simplelist_update(sl, simbox, particles)
-  !! Check positions.
+  ! Check positions.
   call AssertEqual(n,sum(sl%counts), "Count of particle indices in cell list&
   & does not match particle count after update.")
   call AssertEqual(1,sl%counts(0,1,0), "More or less than one particle in cell&
@@ -129,18 +130,18 @@ subroutine test_nbrmask
   type(particle), dimension(n) :: particles
   type(simplelist) :: sl
   logical, dimension(n) :: mask
-  !! set up
+  ! set up
   simbox=new_cylinder(boxside,boxside)
-  !! Test periodicity
+  ! Test periodicity
   particles(1)%x=-1.5_dp*minlength
   particles(1)%y=-1.5_dp*minlength
   particles(1)%z=-1.5_dp*minlength
-  !! Particle 2 is a periodic neighbour of particle 1
+  ! Particle 2 is a periodic neighbour of particle 1
   particles(2)%x=-0.5_dp*minlength
   particles(2)%y=-0.5_dp*minlength
   particles(2)%z= 1.5_dp*minlength
-  !! Particle 3 is an ordinary neighbour of particle 2 but not a neighbour of
-  !! particle 1
+  ! Particle 3 is an ordinary neighbour of particle 2 but not a neighbour of
+  ! particle 1
   particles(3)%x=-1.5_dp*minlength
   particles(3)%y=-0.5_dp*minlength
   particles(3)%z=0.5*minlength
