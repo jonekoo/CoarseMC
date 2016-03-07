@@ -7,15 +7,11 @@ import numpy
 
 def main():
     program = os.path.realpath("ptgbcyl")
-    #sys.exit(subprocess.call(["mpirun", "-np", "1", program]))
     inputdir = os.path.join("tests",
                             "zero_sweeps")
     ntasks = 1
-    #initialize(ntasks, inputdir)
-    #run_program(ntasks, program, inputdir)
     energies = collect_energies(ntasks, inputdir)
     compare_energies(ntasks, inputdir, energies, tolerance = 1e-8)
-    #cleanup(ntasks, inputdir)
 
 def cleanup(ntasks, inputdir):
     for i in range(ntasks):
