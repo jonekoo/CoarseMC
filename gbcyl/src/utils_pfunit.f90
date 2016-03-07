@@ -1,3 +1,4 @@
+!> Unit tests for the utils module.
 module utils_pfunit
   use pfunit
   use utils
