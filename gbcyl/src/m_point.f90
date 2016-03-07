@@ -1,4 +1,4 @@
-!> Implements the simplest concrete particle type, the point.
+!> Contains the point type and related procedures.
 module m_point
   use m_particle, only: particle
   use num_kind, only: dp

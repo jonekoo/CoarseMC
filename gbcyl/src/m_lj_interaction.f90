@@ -1,4 +1,4 @@
-!> Routines related to the Lennard-Jones interaction wrapper
+!> Routines related to the Lennard-Jones (12-6) interaction
 !! lj_interaction.
 module m_lj_interaction
   use m_lj, only: lj_potential, lj_from_json

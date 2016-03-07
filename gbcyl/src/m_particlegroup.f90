@@ -1,4 +1,4 @@
-!> Contains the particlegroup type.
+!> Contains the particlegroup type and related procedures.
 module m_particlegroup
   use iso_fortran_env, only: dp => REAL64, output_unit, error_unit
   use class_poly_box, only: poly_box, minimage, isxperiodic, isyperiodic, &

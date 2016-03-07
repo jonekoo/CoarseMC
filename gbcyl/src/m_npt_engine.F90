@@ -1,4 +1,8 @@
-!> A MC barostat.
+!> Implements MC barostat similar to the on in the original paper by
+!! McDonald (1972). Scaling can be performed in any of the directions
+!! x,y,z individually, or combined. The accepted and tried moves are
+!! counted and can be used to evaluate the need to adjust the maximum
+!! volume scaling.
 module m_npt_engine
   use num_kind, only: dp
   use iso_fortran_env, only: output_unit, error_unit

@@ -1,5 +1,5 @@
-!> Contains the GB-LJ interaction wrapper gblj_interaction and related
-!! procedures.
+!> Gay-Berne - Lennard-Jones interaction gblj_interaction between a
+!! rod-like and a point-like particle and related procedures.
 module m_gblj_interaction
   use m_gblj
   use m_particle, only: pair_interaction, particle

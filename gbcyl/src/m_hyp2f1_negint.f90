@@ -1,3 +1,5 @@
+!> Procedures to compute the Hypergeometric function _2F_1 in the
+!! special case in which a or b is a negative integer.
 module m_hyp2f1_negint
 use iso_c_binding
 implicit none

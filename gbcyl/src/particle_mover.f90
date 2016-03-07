@@ -1,5 +1,5 @@
 !> Implements routines for creating trial Monte Carlo translations and
-!! rotations for uniaxial particles, such as in the Gay-Berne model.
+!! rotations for point- and rod-like particles.
 module particle_mover
   use iso_fortran_env, only: error_unit
   use num_kind

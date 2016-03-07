@@ -1,3 +1,5 @@
+!> Contains procedures for creating positions of molecules on a periodic
+!! crystal lattice.
 module m_crystal
 implicit none
 

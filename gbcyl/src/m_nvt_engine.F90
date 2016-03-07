@@ -1,5 +1,5 @@
 !> Implements the domain decomposition algorithm for moving particles.
-!! The algorithm is built on the cell list implementation in
+!! The algorithm relies on the cell list implementation in
 !! class_simplelist.
 module m_nvt_engine
   use num_kind, only: dp
