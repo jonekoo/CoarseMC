@@ -10,16 +10,19 @@ import numpy
 
 def main():
     inputdir = os.path.join("tests", "short")
-    ntasks = 1
-    reference_path = os.path.join(os.path.dirname(__file__), inputdir,
-                                  "reference", "id-0", "restart-0.json")
-    output_path = os.path.join(inputdir, "id-0", "restart-0.json")
-    with open(reference_path) as f:
-        reference = json.load(f)
-    with open(output_path) as f:
-        output = json.load(f)
+    ntasks = 2
     tolerance = 1e-8
-    compare(output, reference, tolerance)
+    for i in range(ntasks):
+        reference_path = os.path.join(os.path.dirname(__file__), inputdir,
+                                      "reference", "id-" + str(i),
+                                      "restart-0.json")
+        output_path = os.path.join(inputdir, "id-" + str(i),
+                                   "restart-0.json")
+        with open(reference_path) as f:
+            reference = json.load(f)
+        with open(output_path) as f:
+            output = json.load(f)
+        compare(output, reference, tolerance)
 
 def compare(output, reference, tolerance):
     o = output["enthalpy"]
