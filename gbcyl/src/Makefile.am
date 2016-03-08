@@ -146,7 +146,7 @@ driver_FCFLAGS = -I${PFUNIT_DIR}/mod \
 
 driver_LDADD = ${PFUNIT_DIR}/lib/libpfunit.a ${ldadd_mtstream} libmodel.la
 
-TESTS += driver 
+TESTS = driver 
 check_PROGRAMS = driver
 
 endif
