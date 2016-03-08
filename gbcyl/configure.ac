@@ -71,6 +71,7 @@ lapack/Makefile
 src/Makefile
 Examples/Makefile
 analysis/Makefile
+tests/Makefile
 ])
 AC_OUTPUT
 

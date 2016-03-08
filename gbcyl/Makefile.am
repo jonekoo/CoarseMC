@@ -5,7 +5,7 @@ include $(top_srcdir)/aminclude.am
 SUBDIRS = claf90
 SUBDIRS += cephes Examples
 SUBDIRS += BLAS lapack/lapack_routine lapack
-SUBDIRS += mt_stream_f90-1.11 src analysis
+SUBDIRS += mt_stream_f90-1.11 src analysis tests
 
 if DX_COND_html
 
