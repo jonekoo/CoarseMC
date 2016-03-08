@@ -194,6 +194,7 @@ contains
 
 subroutine mce_from_json(json_val)
   type(json_value), pointer, intent(in) :: json_val
+  call get_parameter(json_val, 'replica_id', replica_id)
   call get_parameter(json_val, 'n_equilibration_sweeps', &
        nequilibrationsweeps, error_lb=0)
   call get_parameter(json_val, 'n_production_sweeps', &
@@ -417,7 +418,7 @@ subroutine mce_to_json(json_val)
        pair_ia_element, group_json, group_json_element, box_json, &
        single_ia_json, single_ia_element
   call json_create_object(json_val, 'mc_engine')
-  
+  call json_add(json_val, 'replica_id', replica_id)
   call json_add(json_val, 'n_equilibration_sweeps', &
   nequilibrationsweeps)
   call json_add(json_val, 'n_production_sweeps', nproductionsweeps)
