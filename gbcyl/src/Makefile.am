@@ -116,19 +116,6 @@ printpotentials_SOURCES = \
 #printforces_SOURCES = \
 #  printforces.f90 
 
-dist_check_SCRIPTS = test_zerosweeps.py
-TESTS = test_zerosweeps.py
-TEST_EXTENSIONS = .py
-PY_LOG_COMPILER = $(PYTHON)
-AM_PY_LOG_FLAGS = -v
-dist_check_DATA = tests/zero_sweeps/0/input-0.json tests/zero_sweeps/total_energies-reference.txt
-
-test_zerosweeps.py : tests/zero_sweeps/0/restart-0.json tests/zero_sweeps/total_energies-reference.txt
-
-tests/zero_sweeps/0/restart-0.json : tests/zero_sweeps/0/input-0.json $(top_builddir)/src/ptgbcyl
-	mkdir -p tests/zero_sweeps/0;
-	mpirun -np 1 $(top_builddir)/src/ptgbcyl -i $(top_srcdir)/src/tests/zero_sweeps/0/input-_I_.json -r tests/zero_sweeps/0/restart-_I_.json
-
 if PFUNIT
 
 driver_SOURCES = \
