@@ -18,7 +18,7 @@ program create_crystal
   integer :: i
   real(8) :: h != sqrt(3.0) / 2 * a
   integer :: unit = 12
-  character(len=80) :: ofile = "configurations.txt"
+  character(len=80) :: ofile = "geometry.json"
   character(len=15) :: boxtype = "rectangular"
   character(len=15) :: particletype = "rod"
   logical, allocatable :: mask(:)
