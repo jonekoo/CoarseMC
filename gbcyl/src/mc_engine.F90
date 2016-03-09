@@ -294,14 +294,20 @@ subroutine create_groups(json_val, simbox, group_names, pair_interactions, &
   call json_get(json_val, 'particle_groups', groups_json)
   do i = 1, json_count(groups_json)
      call json_get_child(groups_json, i, groups_json_element)
+     group_name = ''
      call get_parameter(groups_json_element, 'name', group_name)
+     if (group_name == '') then
+        write(error_unit, *) 'ERROR: particle_groups(', i, ') has no name!'
+        write(error_unit, *) 'Add name to the particle_group!'
+        stop
+     end if
      if (any(group_names == group_name)) then
         call particlearray_from_json(groups_json_element, particles)
         allocate(groups(i)%ptr, source=particlegroup(simbox, particles, &
              min_cell_length=max_cutoff + 2 * get_max_translation(), &
              min_boundary_width=2 * get_max_translation(), name=group_name))
      end if
-     deallocate(particles)
+     if (allocated(particles)) deallocate(particles)
   end do
 end subroutine create_groups
 
