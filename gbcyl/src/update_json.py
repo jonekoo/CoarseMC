@@ -1,4 +1,11 @@
 #-*- coding: utf-8 -*-
+"""
+Usage:
+python update_json.py master.json slave1.json [slave2.json ...]
+
+Updates the JSON in files slave1.json slave2.json etc. with the JSON in
+master.json.
+"""
 import sys
 import json
 
