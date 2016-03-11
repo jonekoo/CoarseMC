@@ -21,15 +21,18 @@ program create_crystal
   character(len=80) :: ofile = "geometry.json"
   character(len=15) :: boxtype = "rectangular"
   character(len=15) :: particletype = "rod"
+  character(len=20) :: groupname = "gb"
   logical, allocatable :: mask(:)
   real(dp) :: radius = 9.0,  offset = 0.5
 
   !!---- Command line parsing ------------------------------------------------
   character(len=1000) :: cmd_line = ""
-  namelist /cmd/ nx, ny, nz, a, d, ofile, boxtype, radius, offset, particletype
+  namelist /cmd/ nx, ny, nz, a, d, ofile, boxtype, radius, offset, particletype, &
+       groupname
   character(len=*), parameter :: options_str = &
        'ofile="geometry.json", a=1.0, d=3.6, nx=12, ny=12, nz=6, ' // &
-       'boxtype="rectangular", particletype="rod", [radius=9.0,] [offset=0.5]'
+       'boxtype="rectangular", particletype="rod", groupname="gb", ' // &
+       '[radius=9.0,] [offset=0.5]'
   type(json_value), pointer :: json_val => null(), box_json => null(), &
        groups_json => null(), groups_json_element => null()
   integer, allocatable :: indices(:)
@@ -47,6 +50,10 @@ program create_crystal
      stop
   else if (a <= 0.0 .or. d <= 0.0) then
      write(error_unit, *) 'a and d must be > 0!'
+     call print_usage
+     stop
+  else if (groupname == "") then
+     write(error_unit, *) 'groupname must not be empty!'
      call print_usage
      stop
   end if
@@ -96,6 +103,7 @@ program create_crystal
   else
      call particlearray_to_json(groups_json_element, particles)
   end if
+  call json_add(groups_json_element, 'name', groupname)
   call json_add(groups_json, groups_json_element)
 
   call json_create_object(box_json, 'box')
