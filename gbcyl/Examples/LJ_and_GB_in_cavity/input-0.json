@@ -15,11 +15,6 @@
     "seed": 432512,
     "ensemble description": "Constant-pressure constant-temperature (NPT) or constant-temperature constant volume (NVT). Possible values are npt or nvt. Parallel tempering is disabled if the ensemble has not been defined.",
     "ensemble": "npt",
-    "groups description": "The names of the particle groups to be used in the simulation. Group names can not be more than 20 characters long and should not contain non-ASCII characters.",
-    "groups": [
-	"gb",
-	"lj"
-    ],
     "pair_interactions description": "The list of pair interactions between particles. Every pair of groups can and must have only one pair interaction, set by the participants list in each of the interactions.",
     "pair_interactions": [
 	{

@@ -9,9 +9,6 @@
   "temperature": 0.9E+0,
   "move_ratio": 0.33E+0,
   "ensemble": "nvt",
-  "groups": [
-    "lj"
-  ],
   "pair_interactions": [
     {
       "participants": ["lj", "lj"],

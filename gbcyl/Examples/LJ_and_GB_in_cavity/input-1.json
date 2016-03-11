@@ -7,10 +7,6 @@
   "restartperiod": 10000,
   "seed": 432512,
   "ensemble": "npt",
-  "groups": [
-    "gb",
-    "lj"
-  ],
   "pair_interactions": [
     {
       "participants": [
