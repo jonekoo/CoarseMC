@@ -1,4 +1,4 @@
-!> Implements the streering of the simulation and controlling it's
+!> Implements the steering of the simulation and controlling it's
 !! input and output.
 module mc_engine
   !$ use omp_lib
@@ -157,8 +157,7 @@ contains
     call json_get(json_val, 'box', box_json)
     call simbox%from_json(box_json)
 
-    call create_groups(json_val, simbox, group_names, pair_interactions, &
-         groups)
+    call create_groups(json_val, simbox, pair_interactions, groups)
     
     if (json_failed()) call json_print_error_message(error_unit)
     call mce_init_common(id, n_tasks)
@@ -172,7 +171,6 @@ contains
   !! @param n_tasks total number of MPI processes.
   !!
   subroutine mce_init_common(id, n_tasks)
-    
     integer, intent(in) :: id
     integer, intent(in) :: n_tasks 
     integer :: err
@@ -194,6 +192,9 @@ contains
 
 subroutine mce_from_json(json_val)
   type(json_value), pointer, intent(in) :: json_val
+  type(json_value), pointer :: groups_json => null(), groups_element => null()
+  character(len=:, kind=CK), allocatable :: group_name
+  integer :: i
   call get_parameter(json_val, 'replica_id', replica_id)
   call get_parameter(json_val, 'n_equilibration_sweeps', &
        nequilibrationsweeps, error_lb=0)
@@ -207,8 +208,28 @@ subroutine mce_from_json(json_val)
   call get_parameter(json_val, 'pt_period', pt_period, error_lb=1)
   call get_parameter(json_val, 'restartperiod', restartperiod, error_lb=1)
   call get_parameter(json_val, 'seed', seed, warn_lb=1000)
-  allocate(group_names(0))
-  call get_parameter(json_val, 'groups', group_names)
+  ! Getting group names already here, so that we can set up interactions.
+  call json_get(json_val, 'particle_groups', groups_json)
+  allocate(group_names(json_count(groups_json)))
+  group_names = ''
+  do i = 1, json_count(groups_json)
+     call json_get_child(groups_json, i, groups_element)
+     group_name = ''
+     call get_parameter(groups_element, 'name', group_name)
+     if (group_name == '') then
+        write(error_unit, *) 'ERROR: particle_groups(', i, ') has no name!'
+        write(error_unit, *) 'Add name to the particle_group!'
+        stop
+     end if
+     if (i > 1) then
+        if (any(group_name == group_names(:i-1))) then
+           write(error_unit, *) 'Two groups must not have the same name: ' //&
+                group_name
+           stop
+        end if
+     end if
+     group_names(i) = group_name
+  end do
   ensemble = 'npt'
   call get_parameter(json_val, 'ensemble', ensemble)
   !! Initialize modules.
@@ -270,11 +291,10 @@ end subroutine mce_init_rng
 !!        to the groups.
 !! @param groups the particlegroups read from JSON.
 !!
-subroutine create_groups(json_val, simbox, group_names, pair_interactions, &
+subroutine create_groups(json_val, simbox, pair_interactions, &
      groups)
   type(json_value), pointer, intent(in) :: json_val
   type(poly_box), intent(in) :: simbox
-  character(len=*), intent(in) :: group_names(:)
   character(kind=CK, len=:), allocatable :: group_name
   type(pair_interaction_ptr), intent(in) :: pair_interactions(:, :)
   type(particlegroup_ptr), allocatable, intent(out) :: groups(:)
@@ -290,8 +310,8 @@ subroutine create_groups(json_val, simbox, group_names, pair_interactions, &
      end do
   end do
   
-  allocate(groups(size(group_names)))
   call json_get(json_val, 'particle_groups', groups_json)
+  allocate(groups(json_count(groups_json)))
   do i = 1, json_count(groups_json)
      call json_get_child(groups_json, i, groups_json_element)
      group_name = ''
@@ -301,12 +321,10 @@ subroutine create_groups(json_val, simbox, group_names, pair_interactions, &
         write(error_unit, *) 'Add name to the particle_group!'
         stop
      end if
-     if (any(group_names == group_name)) then
-        call particlearray_from_json(groups_json_element, particles)
-        allocate(groups(i)%ptr, source=particlegroup(simbox, particles, &
-             min_cell_length=max_cutoff + 2 * get_max_translation(), &
-             min_boundary_width=2 * get_max_translation(), name=group_name))
-     end if
+     call particlearray_from_json(groups_json_element, particles)
+     allocate(groups(i)%ptr, source=particlegroup(simbox, particles, &
+          min_cell_length=max_cutoff + 2 * get_max_translation(), &
+          min_boundary_width=2 * get_max_translation(), name=group_name))
      if (allocated(particles)) deallocate(particles)
   end do
 end subroutine create_groups
@@ -416,9 +434,10 @@ subroutine sweep(simbox, groups, genstates, isweep)
 end subroutine sweep
 
 
+!> Serializes the module and it's dependencies to JSON value @p
+!! json_val.
 subroutine mce_to_json(json_val)
   type(json_value), pointer, intent(out) :: json_val
-  !type(json_value), pointer, intent(out), optional :: coordinates_json
   integer :: i, j
   type(json_value), pointer :: json_child, group_name, pair_ia_json, &
        pair_ia_element, group_json, group_json_element, box_json, &
@@ -439,13 +458,6 @@ subroutine mce_to_json(json_val)
   call json_add(json_val, 'enthalpy', etotal + &
          simbox%volume() * pressure)
   call json_add(json_val, 'ensemble', ensemble)
-  !! Write group names.
-  call json_create_array(json_child, 'groups')
-  do i = 1, size(group_names)
-     call json_create_string(group_name, group_names(i), '')
-     call json_add(json_child, group_name)
-  end do
-  call json_add(json_val, json_child)
 
   !! Write pair interactions
   call json_create_array(pair_ia_json, 'pair_interactions')
