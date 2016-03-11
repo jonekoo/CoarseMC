@@ -158,7 +158,7 @@ contains
     !! may cause a stack overflow.
     real(dp) :: dE_d
     integer :: ix, iy, iz, jx, jy, jz, n_trials_d, n_accepted_d, i_group, i,&
-    	    n_max
+         n_max
     type(domain), allocatable :: ds(:)
     do i_group = 1, size(groups)
 #ifdef DEBUG
@@ -193,7 +193,7 @@ contains
       allocate(ds(i_group)%mask(n_max), source = .false.)
       ds(i_group)%n_cell = 0
       ds(i_group)%n = 0
-    end do  	 
+    end do 
     do iz=0, min(1, groups(1)%ptr%sl%nz-1)
        do iy=0, min(1, groups(1)%ptr%sl%ny-1)
           do ix=0, min(1, groups(1)%ptr%sl%nx-1)
@@ -204,8 +204,8 @@ contains
                       
                       !! Collect temp_particles for all groups
                       do i_group = 1, size(groups)
-			 call set_domain(groups(i_group)%ptr, &
-			       simbox, jx, jy, jz, ds(i_group))
+                         call set_domain(groups(i_group)%ptr, simbox, &
+                              jx, jy, jz, ds(i_group))
                       end do
                       !! Move particles
                       do i_group = 1, size(groups)
@@ -240,7 +240,7 @@ contains
     end do
     do i_group = 1, size(groups)
        call ds(i_group)%delete()
-    end do	   
+    end do   
     !$OMP END PARALLEL
 
     do i_group = 1, size(groups)
