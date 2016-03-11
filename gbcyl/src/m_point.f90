@@ -105,7 +105,7 @@ contains
   pure subroutine point_move(this, genstate)    
     class(point), intent(inout) :: this
     type(rngstate), intent(inout) :: genstate
-    real(dp) :: xn, yn, zn, uxn, uyn, uzn
+    real(dp) :: xn, yn, zn
     call transmove(this%x, this%y, this%z, xn, yn, zn, genstate)
     this%x = xn
     this%y = yn

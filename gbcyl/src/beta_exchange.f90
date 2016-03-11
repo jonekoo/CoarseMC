@@ -187,7 +187,6 @@ end subroutine
 !> Returns acceptance ratios of temperature swaps for each replica with
 !! all the other replicas.
 subroutine be_get_acceptance_ratios(ratios)
-  integer :: j, k
   real(dp), allocatable, intent(out) :: ratios(:, :)
   ratios = real(n_accepted, dp)
   where(n_trials > 0)

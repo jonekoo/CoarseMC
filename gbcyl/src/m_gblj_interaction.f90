@@ -138,7 +138,7 @@ contains
     real(dp), intent(in) :: r(:)
     type(json_value), pointer :: child
     real(dp) :: energy
-    integer :: err, i, j, k
+    integer :: err, i, k
     type(json_value), pointer :: r_json, energy_json
     character(len=3, kind=CK), parameter :: descriptions(2) = &
          ['GBx', 'GBy']

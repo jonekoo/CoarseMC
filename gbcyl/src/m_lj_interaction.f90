@@ -110,7 +110,7 @@ contains
     real(dp), intent(in) :: r(:)
     type(json_value), pointer :: child
     real(dp) :: energy
-    integer :: err, i, j, k
+    integer :: err, k
     type(json_value), pointer :: r_json, energy_json
 
     call json_create_object(json_val, 'lj_interaction')

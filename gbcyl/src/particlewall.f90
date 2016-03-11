@@ -384,7 +384,7 @@ contains
     type(point) :: lj
     type(json_value), pointer :: child
     real(dp) :: energy
-    integer :: err, i, j, k
+    integer :: err, i, k
     type(json_value), pointer :: r_json, energy_json
     character(len=3, kind=CK), parameter :: descriptions(3) = &
          ['GBx', 'GBy', 'GBz']
