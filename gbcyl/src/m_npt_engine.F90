@@ -156,8 +156,8 @@ contains
     type(single_interaction_ptr) :: single_ias(:)
     real(dp), intent(out) :: e_total
     integer :: n_trials, n_accepted
-    integer :: i_group
 #ifdef DEBUG
+    integer :: i_group
     do i_group = 1, size(groups)
        if (.not. groups(i_group)%ptr%check_particles(simbox)) then
           write(error_unit, *) 'groups(', i_group, &
