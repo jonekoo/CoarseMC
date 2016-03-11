@@ -1,6 +1,6 @@
 program printpotentials
   use cla
-  use mc_engine, only: mce_init_json, groups, pair_interactions, &
+  use mc_engine, only: mce_init_json, pair_interactions, &
        single_interactions, simbox
   use m_rod, only: rod
   use m_point, only: point
@@ -19,13 +19,9 @@ program printpotentials
   character(len=80) :: restart_filename
   character(len=80) :: pef_filename
   integer :: err, i, j
-  character(len=:), allocatable :: str
-  character(len=3) :: particle_descriptions(4)
-  type(rod) :: rodsamples(3)
-  type(particlearray_wrapper), allocatable :: samples(:)
   real(dp), parameter :: step = 0.01
   real(dp), parameter :: r(1001) = [(i * step, i = 0, 1000)]
-  type(json_value), pointer :: json_val, child_val, another
+  type(json_value), pointer :: json_val, child_val
   
   call mpi_init(err)
   

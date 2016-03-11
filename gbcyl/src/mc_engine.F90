@@ -393,11 +393,11 @@ subroutine sweep(simbox, groups, genstates, isweep)
   type(mt_state), intent(inout) :: genstates(0:)
   integer, intent(in) :: isweep
   real(dp) :: beta, dE
-  integer :: err
-  dE = 0.
 #ifdef DEBUG
+  integer :: err
   write(output_unit, *) 'Move particles'
 #endif
+  dE = 0.
   call nvt_update(groups, genstates, simbox, pair_interactions, &
        single_interactions, dE)
 #ifdef DEBUG
@@ -439,9 +439,8 @@ end subroutine sweep
 subroutine mce_to_json(json_val)
   type(json_value), pointer, intent(out) :: json_val
   integer :: i, j
-  type(json_value), pointer :: json_child, group_name, pair_ia_json, &
-       pair_ia_element, group_json, group_json_element, box_json, &
-       single_ia_json, single_ia_element
+  type(json_value), pointer :: pair_ia_json, pair_ia_element, group_json, &
+       group_json_element, box_json, single_ia_json, single_ia_element
   call json_create_object(json_val, 'mc_engine')
   call json_add(json_val, 'replica_id', replica_id)
   call json_add(json_val, 'n_equilibration_sweeps', &

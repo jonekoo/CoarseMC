@@ -16,7 +16,6 @@ program gbcyl
   character(len=:), allocatable :: parameter_outfile
   character(len=80) :: restart_filename
   character(len=:), allocatable :: parameter_restartfile
-  integer :: nargs
   
   call mpi_init(ierr)
   call mpi_comm_rank(MPI_COMM_WORLD, id, ierr)
