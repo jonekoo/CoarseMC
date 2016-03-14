@@ -23,7 +23,8 @@ dist_bin_SCRIPTS = \
   update_json.py \
   convert_to_json.py \
   reorder_output.py \
-  json_average.py
+  json_average.py \
+  replace_with_points.py
 
 AM_FCFLAGS = \
 -I${top_builddir}/mt_stream_f90-1.11 \
