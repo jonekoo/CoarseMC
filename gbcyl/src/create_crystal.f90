@@ -14,10 +14,9 @@ program create_crystal
   real(8) :: a = 1.0, d = 3.6
   real(8), allocatable :: rs(:, :) !(3, nx * ny * nz)
   type(poly_box) :: simbox
-  class(particle), allocatable :: particles(:), temp(:)
-  integer :: i
+  class(particle), allocatable, target :: particles(:), temp(:)
+  integer :: i, j
   real(8) :: h != sqrt(3.0) / 2 * a
-  integer :: unit = 12
   character(len=80) :: ofile = "geometry.json"
   character(len=15) :: boxtype = "rectangular"
   character(len=15) :: particletype = "rod"
@@ -45,7 +44,7 @@ program create_crystal
      call print_usage
      stop
   else if (nx < 1 .or. ny < 1 .or. nz < 1) then
-     write(error_unit, *) 'nx, ny and nz must be > 1!'   
+     write(error_unit, *) 'nx, ny and nz must be > 0!'   
      call print_usage
      stop
   else if (a <= 0.0 .or. d <= 0.0) then
@@ -97,12 +96,20 @@ program create_crystal
      allocate(mask(size(particles)))
      mask(:) = particles(:)%x**2 + particles(:)%y**2 < &
           (getx(simbox) / 2 - offset)**2
-     allocate(indices, source=pack([(i, i=1, size(particles))], mask))
-     allocate(temp, source=particles(indices))
+
+     allocate(temp(count(mask)), source=particles(1:count(mask)))
+     j = 0
+     do i = 1, size(mask)
+        if (mask(i)) then
+           j = j + 1
+           call temp(j)%downcast_assign(particles(i))
+        end if
+     end do
+     
      call particlearray_to_json(groups_json_element, temp)
   else
      call particlearray_to_json(groups_json_element, particles)
-  end if
+  end  if
   call json_add(groups_json_element, 'name', groupname)
   call json_add(groups_json, groups_json_element)
 
