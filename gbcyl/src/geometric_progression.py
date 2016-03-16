@@ -22,7 +22,7 @@ def main():
         ratio = math.pow(last/first, 1.0/(n-1))
         
         series = [ratio**i*first for i in range(n)]
-        print json.dumps({'pt_temperatures': series})
+        print json.dumps({'_SCATTER_temperature': series})
 
 if __name__ == '__main__':
     main()
