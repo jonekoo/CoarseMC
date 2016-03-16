@@ -51,12 +51,13 @@ subroutine init(beta)
     allocate(betas(n_tasks), indices(n_tasks))
   end if
   call mpi_gather(beta, 1, MPI_REAL8, betas, 1, MPI_REAL8, root_id, &
-    MPI_COMM_WORLD, ierr)
+       MPI_COMM_WORLD, ierr)
   if (task_id == root_id) then
-    !! Determine the replica index - temperature index mapping.
-    !! First sort replica indices by temperature.
-    !!
-    !! Insertion sort from T. Cormen et al. here except sort to decreasing order.
+     ! Determine the replica index - temperature index mapping.
+     ! First sort replica indices by temperature.
+     !
+     ! Insertion sort from T. Cormen et al. here except sort to
+     ! decreasing order.
     indices(1) = 1
     do j = 2, n_tasks
       key = betas(j)
@@ -70,8 +71,9 @@ subroutine init(beta)
       betas(i + 1) = key
       indices(i + 1) = data
     end do
-    !! After the sorting, indices contains indices of the replicas ordered by
-    !! temperature. We need indices of temperatures ordered by replica, so
+    ! After the sorting, indices contains indices of the replicas
+    ! ordered by temperature. We need indices of temperatures ordered
+    ! by replica, so
     do i = 1, n_tasks
       temperature_index(indices(i)) = i
     end do
