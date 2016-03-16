@@ -3,17 +3,17 @@
 Replaces randomly selected particles from the first particle_group with
 point-particles. A new group called 'lj' is created for the particles.
 
-usage: python replace_with_points.py input-0.json [input-1.json ...]
+Usage: python replace_with_points.py n file1.json [file2.json ...]
 """
 import sys
 import json
 import random
 
 def main():
-    k = 10
+    k = int(sys.argv[1])
     pointgroup = {"name": "lj", "type": "point",
                   "description": ["x", "y", "z"], "n": k}
-    for fn in sys.argv[1:]:
+    for fn in sys.argv[2:]:
         with open(fn, 'r') as f:
             d = json.load(f)
         js = random.sample(range(len(d["particle_groups"][0]["coordinates"])),
