@@ -1059,6 +1059,7 @@
     character(kind=CDK,len=:),allocatable :: real_fmt  !the format string to use for real numbers
                                                        ! [set in json_initialize]
     logical(LK) :: compact_real = .true.   !to use the "compact" form of real numbers for output
+    logical(LK) :: all_compact = .false.   !to remove all indentations, whitespace and line breaks from output.
 
     !exception handling [private variables]
     logical(LK) :: is_verbose = .false.                 !if true, all exceptions are immediately printed to console
@@ -2050,12 +2051,13 @@
 !
 !  SOURCE
 
-    subroutine json_initialize(verbose,compact_reals)
+    subroutine json_initialize(verbose,compact_reals,compact)
 
     implicit none
 
     logical(LK),intent(in),optional :: verbose  !mainly useful for debugging (default is false)
     logical(LK),intent(in),optional :: compact_reals !to compact the real number strings for output
+    logical(LK),intent(in),optional :: compact !to have no indents and line breaks
 
     character(kind=CDK,len=10) :: w,d,e
     integer(IK) :: istat
@@ -2077,7 +2079,8 @@
     !optional inputs (if not present, values remains unchanged):
     if (present(verbose))       is_verbose   = verbose
     if (present(compact_reals)) compact_real = compact_reals  !may be a bug here in Gfortran 5.0.0... check this...
-
+    if (present(compact)) all_compact = compact
+    
     ! set the default output/input format for reals:
     !  [this only needs to be done once, since it can't change]
     if (.not. allocated(real_fmt)) then
@@ -4392,6 +4395,7 @@
 
     contains
 
+
     !
     ! write the string to the file (or the output string)
     !
@@ -4412,16 +4416,20 @@
             add_comma = .false. !default is not to add comma
         end if
 
+        if (all_compact) then
+           add_line_break = .false.
+           s2 = trim(adjustl(s))
+        else
         if (present(advance)) then
             add_line_break = advance
         else
             add_line_break = .true. !default is to advance
         end if
-
         !string to print:
         s2 = s
+        end if
         if (add_comma) s2 = s2 // delimiter
-
+        
         if (write_file) then
 
             if (add_line_break) then
