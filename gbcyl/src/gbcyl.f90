@@ -21,7 +21,7 @@ program gbcyl
   call mpi_comm_rank(MPI_COMM_WORLD, id, ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, ntasks, ierr)
 
-  call json_initialize()
+  call json_initialize(compact=.true.)
   if (ierr /= 0) then
     stop 'MPI initialization failed. Check your MPI environment!'
   end if
