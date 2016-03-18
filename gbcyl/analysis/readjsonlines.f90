@@ -3,13 +3,21 @@ program readjsonlines
   use iso_fortran_env, only: error_unit
   implicit none
   character(len=:), allocatable :: line
-  integer :: u_json = 11
+  integer, parameter :: u_json = 11
+  type(json_file) :: json_f
+  integer :: i
   open(unit=u_json, file='test.json', action='READ')
 
+  i = 0
   do while(ReadLine(u_json, line))
-     write(*, '(A)') line
+     !write(*, '(A)') line
+     i = i + 1
+     write(*, *) 'loading JSON from line ', i
+     call json_f%load_from_string(line)
+     call json_f%destroy()
   end do
 
+  close(unit=u_json)
 contains
 
   ! http://stackoverflow.com/a/21953596
