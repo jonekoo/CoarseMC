@@ -12,7 +12,6 @@ program analysis
   use utils
   use orientational_ordering
   implicit none
-  !real(dp) :: radius, height
   type(particledat), allocatable :: particles(:)
   integer :: io_status
   integer, parameter :: stdin = 5
