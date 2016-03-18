@@ -20,8 +20,16 @@ bin_PROGRAMS = \
   print_xewall_coupling \
   print_xewall_shielding \
   print_xeslab_shielding \
-  pair_distribution
+  pair_distribution \
+  readjsonlines
 #  virial_tensor 
+
+dist_bin_SCRIPTS = main.py
+
+main.py : wrapper.so
+
+wrapper.so : wrapper.f90
+	f2py -c $(top_builddir)/lapack/lapack_routine/.libs/libdsyev.a $(top_builddir)/src/.libs/libmodel.a $(top_builddir)/mt_stream_f90-1.11/.libs/libmt_stream.a m_particledat.$(OBJEXT) eigens_dsyev.$(OBJEXT) orientational_ordering.$(OBJEXT) $(top_srcdir)/analysis/wrapper.f90 --fcompiler=gnu95 --f90flags=-I$(top_builddir)/src/ -m wrapper -DF2PY_REPORT_ON_ARRAY_COPY
 
 MODEXT = @MODEXT@
 
@@ -44,6 +52,9 @@ AM_FCFLAGS += -I$(top_builddir)/src
 
 eigens_src = eigens_dsyev.f90
 common_src =   m_particledat.f90 m_particle_factory.f90 
+
+readjsonlines_SOURCES = \
+  readjsonlines.f90
 
 orientation_parameter_SOURCES = \
   $(common_src) \
