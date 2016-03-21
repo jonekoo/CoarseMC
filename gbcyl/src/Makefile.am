@@ -9,17 +9,6 @@ bin_PROGRAMS = \
 
 ## Scripts to install
 dist_bin_SCRIPTS = \
-  rdf_average.sh \
-  loop-script-over-args.sh \
-  remove-non-numeric-lines.sh \
-  show-non-numeric-lines.sh \
-  find_closest.awk \
-  pipe-columns.awk \
-  makerestart.sh \
-  replaceparameter.py \
-  slowcool.py \
-  gbs2ljs.py \
-  set_inputparameters.py \
   update_json.py \
   convert_to_json.py \
   reorder_output.py \
