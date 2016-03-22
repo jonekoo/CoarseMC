@@ -10,9 +10,7 @@ AC_PROG_F77
 # Checks for programs.
 AC_CONFIG_MACRO_DIR([m4])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
-##AC_LIBTOOL_DLOPEN
-AC_PROG_LIBTOOL
-
+LT_INIT
 
 # Checks for libraries.
 
