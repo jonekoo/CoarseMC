@@ -24,24 +24,36 @@ bin_PROGRAMS = \
   readjsonlines
 #  virial_tensor 
 
+MODEXT = @MODEXT@
+
+noinst_LTLIBRARIES = libwrapper.la
+
+libwrapper_la_SOURCES =  m_particledat.f90 orientational_ordering.f90 wrapper.f90
+libwrapper_la_FCFLAGS=-I$(top_builddir)/analysis -I$(top_builddir)/src -I$(top_builddir)/mt_stream_f90-1.11
+##libwrapper_la_DEPENDENCIES =  m_particledat.$(OBJEXT) m_particledat.$(MODEXT) orientational_ordering.$(OBJEXT) orientational_ordering.$(MODEXT)
+
 dist_bin_SCRIPTS = main.py
 
 main.py : wrapper.so
 
-wrapper.so : wrapper.f90
-	f2py -c $(top_builddir)/lapack/lapack_routine/.libs/libdsyev.a $(top_builddir)/src/.libs/libmodel.a $(top_builddir)/mt_stream_f90-1.11/.libs/libmt_stream.a m_particledat.$(OBJEXT) eigens_dsyev.$(OBJEXT) orientational_ordering.$(OBJEXT) $(top_srcdir)/analysis/wrapper.f90 --fcompiler=gnu95 --f90flags=-I$(top_builddir)/src/ -m wrapper -DF2PY_REPORT_ON_ARRAY_COPY
+.PRECIOUS = wrapper.so
 
-MODEXT = @MODEXT@
+WRAPPER_DEPS = $(top_builddir)/lapack/lapack_routine/.libs/libdsyev.a $(top_builddir)/src/.libs/libmodel.a $(top_builddir)/mt_stream_f90-1.11/.libs/libmt_stream.a m_particledat.$(OBJEXT) eigens_dsyev.$(OBJEXT) orientational_ordering.$(OBJEXT)
+
+
+wrapper.so : $(top_srcdir)/analysis/wrapper.f90 $(WRAPPER_DEPS)
+	f2py -c $(WRAPPER_DEPS) $(top_srcdir)/analysis/wrapper.f90 --fcompiler=gnu95 --f90flags="-I$(top_builddir)/src/ $(FCFLAGS)" -lgomp -m wrapper
+
 
 mostlyclean-local :
-	-rm -f *.$(MODEXT) $(bin_PROGRAMS)
+	-rm -rf *.$(MODEXT) $(bin_PROGRAMS) wrapper.so*
 
 
 ldadd_mtstream = ${top_builddir}/mt_stream_f90-1.11/libmt_stream.la
 
 ldadd_hyp2f1 = $(top_builddir)/cephes/libhyp2f1.la
 
-LDADD = $(top_builddir)/lapack/lapack_routine/libdsyev.la $(ldadd_mtstream) $(ldadd_hyp2f1) $(top_builddir)/claf90/libclaf.la $(top_builddir)/src/libmodel.la
+LDADD = $(top_builddir)/lapack/lapack_routine/libdsyev.la $(ldadd_mtstream) $(ldadd_hyp2f1) $(top_builddir)/claf90/libclaf.la $(top_builddir)/src/libmodel.la 
 
 AM_FCFLAGS = \
 -I${top_builddir}/mt_stream_f90-1.11 \
