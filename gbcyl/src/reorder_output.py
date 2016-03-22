@@ -22,37 +22,52 @@ try:
 except ImportError:
     # than with this Python 2.7.9 module.
     import json
-
+    
 def main():
     fns = sys.argv[1:]
     all_results = {}
+    sort_and_write(fns, all_results)
+
+    
+def sort_and_write(fns, all_results):
     for fn in fns:
         print "Processing file " + fn
         try:
-            f = open(fn, 'r')
+            with open(fn, 'r') as f:
+                parse_json_lines(f, all_results)
         except IOError:
             print __doc__
             return 1
-        json_str = f.read()
-        f.close()
-        splitted = json_str.split("}\n{")
-        try: 
-            d = json.loads(splitted[0] + "}")
-            if d["temperature"] in all_results:
-                all_results[d["temperature"]].append(d)
-            else:
-                all_results[d["temperature"]] = [d]
+    # Sort results and write to files.
+    for i, key in enumerate(sorted(all_results)):
+        all_results[key].sort(key=lambda result: result["i_sweep"])
+        with open("sorted-" + str(i) + ".json", 'w') as f:
+            for snapshot in all_results[key]:
+                f.write(json.dumps(snapshot) + "\n")
+            #json.dump(all_results[key], f)
+
+
+        
+def parse_prettyprinted_file(f, all_results):
+    json_str = f.read()
+    splitted = json_str.split("}\n{")
+    try: 
+        d = json.loads(splitted[0] + "}")
+        if d["temperature"] in all_results:
+            all_results[d["temperature"]].append(d)
+        else:
+            all_results[d["temperature"]] = [d]
+    except ValueError:
+        pass
+    for item in splitted[1:-1]:
+        try:
+            d = json.loads("{" + item + "}")
         except ValueError:
-            pass
-        for item in splitted[1:-1]:
-           try:
-               d = json.loads("{" + item + "}")
-           except ValueError:
-               continue
-           if d["temperature"] in all_results:
-               all_results[d["temperature"]].append(d)
-           else:
-               all_results[d["temperature"]] = [d]
+            continue
+        if d["temperature"] in all_results:
+            all_results[d["temperature"]].append(d)
+        else:
+            all_results[d["temperature"]] = [d]
         try:
             d = json.loads("{" + splitted[-1])
             if d["temperature"] in all_results:
@@ -62,13 +77,15 @@ def main():
         except ValueError:
             pass
 
-    for i, key in enumerate(sorted(all_results)):
-        all_results[key].sort(key=lambda result: result["i_sweep"])
-        f = open("sorted-" + str(i) + ".json", 'w')
-        json.dump(all_results[key], f)
-        f.close()
-
-
+def parse_json_lines(f, all_results):
+    # Parse lines to all_results
+    for line in f.readlines():
+        d = json.loads(line)
+        if d["temperature"] in all_results:
+            all_results[d["temperature"]].append(d)
+        else:
+            all_results[d["temperature"]] = [d]
+        
 
 if __name__=='__main__':
     main()
