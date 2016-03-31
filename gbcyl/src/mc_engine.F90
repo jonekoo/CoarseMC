@@ -337,7 +337,11 @@ subroutine finalize(id)
   integer, intent(in) :: id
   integer :: i, j
   close(coordinateunit)
-  call makerestartpoint
+  if (mod(isweep, restartperiod) /= 0) then
+     ! Make restartpoint at the end only if it was not already made for
+     ! this sweep.
+     call makerestartpoint
+  end if
   if (ensemble == 'npt') then
      call npt_engine_finalize
   end if
