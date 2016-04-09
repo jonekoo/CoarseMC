@@ -6,7 +6,7 @@ use m_shielding, only: sigma
 use utils
 use class_parameterizer
 use m_lj
-use particlewall, only: ljwall_interaction
+use m_lj1wall_interaction, only: lj1wall_interaction
 implicit none
 
 !! Lintuvuori et al. Phys. Rev. E 75, 031707 (2007), excerpt from TABLE II: 
@@ -50,7 +50,7 @@ real(dp), parameter :: xexe_cutoff_A = 13.5_dp
 
 type(gblj_potential), save :: gblj
 type(lj_potential), save :: lj
-type(ljwall_interaction), save :: ljwall 
+type(lj1wall_interaction), save :: ljwall 
 
 interface 
   pure function xewall_qcoupling(k, radiusA, densityA, epsilonratio, &
@@ -65,7 +65,7 @@ contains
 
 subroutine qcoup_init(reader)
   type(parameterizer), intent(in) :: reader
-  ljwall = ljwall_interaction(reader)
+  ljwall = lj1wall_interaction(reader)
   gblj = gblj_potential(reader)
   lj = lj_potential(reader)
 end subroutine
@@ -155,8 +155,8 @@ pure function xewall_coupling_local(r, cyl_radius) result(t)
   t = 0._dp
 
   t = xewall_qcoupling(r / cyl_radius, cyl_radius * sigma0_aengstroms, &
-    ljwall%wall_density / sigma0_aengstroms**3, ljwall%epswall_lj / lj%epsilon_0, &
-    ljwall%sigwall_lj / lj%sigma_0)
+    ljwall%wall_density / sigma0_aengstroms**3, ljwall%eps / lj%epsilon_0, &
+    ljwall%sig / lj%sigma_0)
   t = 0.001_dp * t !! Conversion to MHz
 
 end function

@@ -10,7 +10,6 @@ use class_poly_box
 use m_particledat
 use utils
 use class_parameterizer
-use particlewall
 implicit none
 
 

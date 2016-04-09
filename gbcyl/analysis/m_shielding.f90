@@ -5,7 +5,7 @@ use m_gblj
 use m_constants
 use class_parameterizer !! for initialization
 use m_lj
-use particlewall, only: ljwall_interaction
+use m_lj1wall_interaction, only: lj1wall_interaction
 implicit none
 !!
 !! This module implements the calculation of Xe NMR shielding for a 
@@ -63,7 +63,7 @@ real(dp), parameter :: xexe_cutoff_A = 13.5_dp
 
 type(gblj_potential), save :: gblj
 type(lj_potential), save :: lj
-type(ljwall_interaction), save :: ljwall
+type(lj1wall_interaction), save :: ljwall
 
 interface xewall_shielding
   pure function xewall_shielding(k, radiusA, densityA, epsilonratio, &
@@ -87,8 +87,7 @@ contains
 subroutine init_shielding(reader)
   type(parameterizer), intent(inout) :: reader
   !! The modules below are needed for the ljwall_shielding calculation
-  !call particlewall_init(reader)
-  ljwall = ljwall_interaction(reader)
+  ljwall = lj1wall_interaction(reader)
   lj = lj_potential(reader)   
   gblj = gblj_potential(reader)
 end subroutine
@@ -174,8 +173,6 @@ end function
 !! z-axis is parallel to the cylinder axis and x axis points to the radial 
 !! direction.
 !!
-!! @see module particlewall
-!!
 !! @param r the distance of the Xe atom from the cylinder axis.
 !! @param radius the inner radius of the cylindrical wall.
 !!
@@ -188,8 +185,8 @@ pure function xewall_shielding_local(r, radius) result(local_tensor)
   local_tensor = 0._dp
   local_tensor = xewall_shielding(r / radius, &
     radius * sigma0_aengstroms, &
-    ljwall%wall_density / sigma0_aengstroms**3, ljwall%epswall_lj / lj%epsilon_0, &
-    ljwall%sigwall_lj / lj%sigma_0)
+    ljwall%wall_density / sigma0_aengstroms**3, ljwall%eps / lj%epsilon_0, &
+    ljwall%sig / lj%sigma_0)
 end function
 
 end module
