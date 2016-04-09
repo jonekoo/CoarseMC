@@ -9,16 +9,22 @@ module m_lj1wall_interaction
   use class_parameterizer, only: parameterizer, getparameter
   implicit none
 
+  !> Defines the interaction between a Lennard-Jones particle and the
+  !! wall of a cylindrical cavity confining the particle. The wall
+  !! consists of smoothly and evenly distributed "virtual" LJ particles.
+  !!
+  !! @see X. Zhang et al., Fluid Phase Equilibria 218(2), 239-246, 2004.
+  !!
   type, extends(single_interaction) :: lj1wall_interaction
      !> The relative strength of the attractive term as compared to the
-     !! repulsive term
+     !! repulsive term: U = U_repulsive + alpha * U_attractive
      real(dp) :: alpha = 1.
 
      !> The well-depth parameter of the interaction between the wall and the
      !! LJ site.
      real(dp) :: eps = 1.
      
-     !> The range parameter of the interaction between the LJ site and the
+     !> The range parameter of the interaction between the LJ particle and the
      !! wall.
      real(dp) :: sig = 1.
      
@@ -27,10 +33,10 @@ module m_lj1wall_interaction
    contains
 
      !> Computes the potential energy of the interaction between
-     !! a particle and the wall.
+     !! a LJ particle and the wall.
      procedure :: potential => lj1wall
 
-     !> Computes the force acting on the given particle by the wall.
+     !> Computes the force acting on the given LJ particle by the wall.
      procedure :: force => lj1wall_force
      
      !> Serializes the interaction to JSON.
@@ -63,8 +69,8 @@ contains
   end function
 
 
-  !> Writes the parameters of this module with the format and output
-  !! unit defined by @p writer.
+  !> Writes the parameters of @p this interaction to the JSON value
+  !! @p json_val.
   subroutine lj1wall_ia_to_json(this, json_val)
     class(lj1wall_interaction), intent(in) :: this
     type(json_value), intent(inout), pointer :: json_val    
@@ -87,13 +93,11 @@ contains
     call getparameter(reader, 'epswall_LJ', res%eps)
   end function
 
-
-
-
   
   !> Calculates the interaction energy of a Lennard-Jones (LJ) particle
   !! and the wall of a cylindrical cavity.
-  !! 
+  !!
+  !! @param this the LJ-wall interaction.
   !! @param particlei the LJ particle.
   !! @param simbox the simulation box defining the radius of the
   !!        cavity.
@@ -123,8 +127,8 @@ contains
 
 
   !> Returns the force exerted on a LJ particle @p particlei by the
-  !! wall of the cylindrical cavity. The radius of the cavity is
-  !! defined by the @p simbox.
+  !! wall of the cylindrical cavity due to @p this interaction. The
+  !! radius of the cavity is defined by the @p simbox.
   pure function lj1wall_force(this, particlei, simbox) result(f)
     class(lj1wall_interaction), intent(in) :: this
     class(particle), intent(in) :: particlei
@@ -143,10 +147,9 @@ contains
   end function
 
 
-  !> Creates a sample of the possible energies at distances @p r with
-  !! rod and point particles and stores them to the JSON value
-  !! @p json_val. For the rod, three different orientations along x, y
-  !! and z axes are used.
+  !> Creates a sample of the possible energies of @p this interaction
+  !! with wall-particle distances @p r and stores them to the JSON
+  !! value @p json_val.
   !!
   subroutine lj1wall_sample(this, json_val, r, simbox)
     class(lj1wall_interaction), intent(in) :: this
