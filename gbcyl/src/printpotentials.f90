@@ -8,7 +8,8 @@ program printpotentials
   use m_gb_interaction, only: gb_interaction
   use m_lj_interaction, only: lj_interaction
   use m_gblj_interaction, only: gblj_interaction
-  use particlewall, only: ljwall_interaction
+  use m_lj1wall_interaction, only: lj1wall_interaction
+  use m_lj2wall_interaction, only: lj2wall_interaction
   use mpi
   use json_module
   use num_kind, only: dp
@@ -63,7 +64,10 @@ program printpotentials
   ! compute single_interactions with sample particles
   do i = 1, size(single_interactions)
      select type (ia => single_interactions(i)%ptr)
-     type is (ljwall_interaction)
+     type is (lj1wall_interaction)
+        call ia%sample(child_val, r, simbox)
+        call json_add(json_val, child_val)
+     type is (lj2wall_interaction)
         call ia%sample(child_val, r, simbox)
         call json_add(json_val, child_val)
      end select

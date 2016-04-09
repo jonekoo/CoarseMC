@@ -55,7 +55,8 @@ energy_src = \
   m_gayberne.f90 \
   m_gblj.f90 \
   ljcylinder.f90 \
-  particlewall.f90 \
+  m_lj1wall_interaction.f90 \
+  m_lj2wall_interaction.f90 \
   class_simplelist.f90
 
 ## Use dsyev from LAPACK

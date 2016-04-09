@@ -6,7 +6,8 @@ module m_interaction_factory
   use m_lj_interaction, only: lj_interaction
   use m_gblj_interaction, only: gblj_interaction
   use json_module, only: json_value, json_get, CK
-  use particlewall, only: ljwall_interaction
+  use m_lj1wall_interaction, only: lj1wall_interaction
+  use m_lj2wall_interaction, only: lj2wall_interaction
   implicit none
 
 contains
@@ -49,12 +50,15 @@ contains
     character(kind=CK, len=:), allocatable :: typestr
     res => null()
     call json_get(json_val, "type", typestr)
-    if (typestr == 'ljwall_interaction') then
-       allocate(res, source=ljwall_interaction(json_val))
-    else
+    select case (typestr)
+    case ('lj1wall_interaction')
+       allocate(res, source=lj1wall_interaction(json_val))
+    case ('lj2wall_interaction')
+       allocate(res, source=lj2wall_interaction(json_val))
+    case default
        write(error_unit, *) 'ERROR: Unknown interaction type ', typestr
        stop 'create_single_interaction unable to continue.'
-    end if
+    end select
   end function create_single_interaction
   
 end module m_interaction_factory
