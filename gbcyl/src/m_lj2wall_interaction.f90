@@ -1,10 +1,3 @@
-!> Particle-wall interactions for Lennard-Jones and rod-like particles
-!! in a cylindrical cavity. The cavity walls are smooth and consist of
-!! evenly distributed LJ particles. A rod-like particle interacts with
-!! the wall through two embedded LJ sites.
-!! 
-!! @see Micheletti et. al. Journal of Chemical Physics 123, 224705.
-!!
 module m_lj2wall_interaction
   use m_particle, only: particle, single_interaction 
   use num_kind
@@ -17,10 +10,19 @@ module m_lj2wall_interaction
   use m_lj1wall_interaction, only: lj1wall_interaction
   implicit none
 
+  !> Particle-wall interaction for rod-like particles in a cylindrical
+  !! cavity. The cavity walls consist of smoothly and evenly
+  !! distributed "virtual" LJ particles. A rod-like particle interacts with
+  !! the wall through two embedded LJ sites.
+  !! 
+  !! @see Micheletti et. al. Journal of Chemical Physics 123, 224705.
+  !!
   type, extends(single_interaction) :: lj2wall_interaction
+     !> The LJ-wall potentials for the two interaction sites.
      type(lj1wall_interaction) :: a, b
-     !> The distance of LJ interaction sites from the Gay-Berne particle
-     !! center along the unique axis.
+     
+     !> The distance of LJ interaction sites from the center of the
+     !! Gay-Berne particle along the unique (long) axis.
      real(dp) :: LJdist = 1.7
      
      !> If true, the wall interaction favors uniform alignment of rods 
@@ -45,14 +47,14 @@ module m_lj2wall_interaction
      !> Returns the force acting on a rod by the wall.
      procedure :: rod_force => gbwall_force
 
-     !> Returns the distances of the interactions sites in a rod
+     !> Returns the distances of the interaction sites in a rod
      !! from the cylinder axis.
      procedure :: rarb
 
      !> Returns the positions of the lj sites in a rod.
      procedure :: set_sites
  
-     !> Produces a sample of the potential energies with this
+     !> Produces a sample of the possible potential energies with this
      !! interaction.
      procedure :: sample => lj2wall_sample    
  end type lj2wall_interaction
@@ -81,8 +83,8 @@ contains
   end function
 
 
-  !> Writes the parameters of this module with the format and output
-  !! unit defined by @p writer.
+  !> Writes the parameters of @p this interaction to the JSON value
+  !! @p json_val.
   subroutine lj2wall_ia_to_json(this, json_val)
     class(lj2wall_interaction), intent(in) :: this
     type(json_value), intent(inout), pointer :: json_val
@@ -99,10 +101,10 @@ contains
   end subroutine
 
 
-  !> Calculates the potential @p energy for a @p particle inside a
+  !> Calculates the potential @p energy for a @p particlei inside a
   !! cylindrical Lennard-Jones cavity. The radius of the cavity is
   !! defined by @p simbox. If the particle is too close to the wall or
-  !! inside the wall @p overlap == true.
+  !! inside the wall, @p err == 1.
   pure subroutine lj2wall_ia_potential(this, particlei, simbox, energy, err)
     class(lj2wall_interaction), intent(in) :: this
     class(particle), intent(in) :: particlei
@@ -116,14 +118,14 @@ contains
       call this%rod_potential(particlei, simbox, energy, overlap)
     class default
       err = 66
-   end select
-   if (overlap) err = 1
- end subroutine
+    end select
+    if (overlap) err = 1
+  end subroutine lj2wall_ia_potential
 
 
-  !> Returns the force acting on @p particlei by the wall of a
-  !! cylindrical cavity. Radius of the cavity is defined by @p simbox.
-  !! See module description for details.
+  !> Returns the force acting on @p particlei by the wall of the
+  !! cylindrical cavity due to @p this interaction. Radius of the
+  !! cavity is defined by @p simbox.
   pure function lj2wall_ia_force(this, particlei, simbox) result(f)
     class(lj2wall_interaction), intent(in) :: this
     class(particle), intent(in) :: particlei
@@ -137,24 +139,25 @@ contains
   end function
 
 
-  !> Calculates the potential energy of a rodlike particle which
-  !! interacts with the wall of a cylindrical cavity. The particle
-  !! interacts with the wall via two embedded Lennard-Jones interaction
-  !! sites.
-  !! 
-  !! @param gbparticle the rodlike particle.
+  !> Calculates the potential energy of @p this interaction for the
+  !! rod-like particle @p arod and the wall of the cylindrical cavity.
+  !! The particle interacts with the wall via two embedded virtual
+  !! Lennard-Jones sites.
+  !!
+  !! @param this the interaction.
+  !! @param arod the rod-like particle.
   !! @param simbox the simulation box defining the dimensions of the
   !!        cavity.
   !! @param energy the interaction energy of the wall and the particle.
-  !! @param overlap is true if the @p gbparticle has penetrated the
+  !! @param overlap is true if the @p arod has penetrated the
   !!        wall too much.
   !! 
   !! @see D. Micheletti et al. J. Chem. Phys. 123, 224705, 2005 for the
   !! interaction site model.
   !!
-  pure subroutine gbwall(this, gbparticle, simbox, energy, overlap)
+  pure subroutine gbwall(this, arod, simbox, energy, overlap)
     class(lj2wall_interaction), intent(in) :: this
-    class(rod), intent(in) :: gbparticle
+    class(rod), intent(in) :: arod
     type(poly_box), intent(in) :: simbox
     real(dp), intent(out) :: energy
     logical, intent(out) :: overlap
@@ -166,24 +169,24 @@ contains
     overlap = .false.
     energy = 0._dp
     r_cylinder = getx(simbox)/2._dp 
-    call this%set_sites(gbparticle, site_a, site_b)
+    call this%set_sites(arod, site_a, site_b)
     call this%a%potential(site_a, simbox, energy_a, err_a)
     call this%b%potential(site_b, simbox, energy_b, err_b)
     if (err_a == 0 .and. err_b == 0) then
        energy = energy_a + energy_b
-       if (this%isuniformalignment) energy = angular(gbparticle) * energy
+       if (this%isuniformalignment) energy = angular(arod) * energy
     else
        overlap = .true.
     end if
   end subroutine gbwall
 
 
-  !> Returns the force exerted on a GB particle @p gbparticle by the
-  !! wall of a cylindrical cavity. The @p gbparticle interacts with the
-  !! wall via two embedded LJ sites.
-  pure function gbwall_force(this, gbparticle, simbox) result(f)
+  !> Returns the force exerted on a rod-like particle @p arod by the
+  !! wall of a cylindrical cavity due to @p this interaction. The
+  !! @p arod interacts with the wall via two embedded LJ sites.
+  pure function gbwall_force(this, arod, simbox) result(f)
     class(lj2wall_interaction), intent(in) :: this
-    class(rod), intent(in) :: gbparticle
+    class(rod), intent(in) :: arod
     type(poly_box), intent(in) :: simbox
     real(dp) :: f(3)
     real(dp) :: f_a(3), f_b(3)
@@ -191,11 +194,11 @@ contains
     real(dp) :: fu, r_cylinder
     type(particle) :: site_a, site_b
     r_cylinder = getx(simbox) / 2. 
-    call this%set_sites(gbparticle, site_a, site_b)
+    call this%set_sites(arod, site_a, site_b)
     f_a = this%a%force(site_a, simbox)
     f_b = this%b%force(site_b, simbox)
     f = f_a + f_b
-    if (this%isuniformalignment) f = angular(gbparticle) * f
+    if (this%isuniformalignment) f = angular(arod) * f
   end function
 
 
@@ -216,9 +219,8 @@ contains
   end subroutine
 
 
-  !> Returns the distances from the cavity axis @p ra and @p ra for the
-  !! interaction sites A and B, respectively. The interaction sites are
-  !! embedded in @p arod.
+  !> Returns the virtual interaction sites @p site_a and @p site_b
+  !! embedded in the @p arod and needed by @p this interaction.
   pure subroutine set_sites(this, arod, site_a, site_b)
     class(lj2wall_interaction), intent(in) :: this
     class(rod), intent(in) :: arod
@@ -229,21 +231,23 @@ contains
     site_b%y = arod%y - this%LJdist * arod%uy    
   end subroutine set_sites
 
-  !> Returns the angular dependence of the potential with respect to the 
-  !! cylinder axis (z-direction). 
+  
+  !> Returns the angular dependence of the potential with respect to
+  !! the cylinder axis (z-direction). 
   !!
-  !! @param particle the particle to which the potential is calculated. 
+  !! @param arod the rod-like particle to which the potential is
+  !! calculated. 
   !! 
-  pure real(dp) function angular(particle)
-    class(rod), intent(in) :: particle
-    angular = (particle%uz)**2
+  pure real(dp) function angular(arod)
+    class(rod), intent(in) :: arod
+    angular = (arod%uz)**2
   end function angular
 
 
-  !> Creates a sample of the possible energies at distances @p r with
-  !! rod and point particles and stores them to the JSON value
-  !! @p json_val. For the rod, three different orientations along x, y
-  !! and z axes are used.
+  !> Creates a sample of the possible energies at particle-to-wall
+  !! distances @p r and stores them to the JSON value @p json_val.
+  !! Three different orientations of the rod-like particle, along x, y
+  !! and z axes, are represented in the dataset.
   !!
   subroutine lj2wall_sample(this, json_val, r, simbox)
     class(lj2wall_interaction), intent(in) :: this
@@ -282,6 +286,5 @@ contains
     end do
     
   end subroutine lj2wall_sample
-
- 
+  
 end module
