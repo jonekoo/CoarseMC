@@ -93,10 +93,6 @@ be found from the User Manual and the Examples folder.
 Package folders (in alphabetical order)
 ---------------------------------------
 
-BLAS:
-Basic Linear Algebra Subprograms. Used by some of the analysis
-tools.
-
 cephes:
 Mathematical library of special functions. Used by the ljwall_interaction.
 
@@ -108,9 +104,6 @@ Created if doxygen is available
 
 Examples:
 Contains example input files for simulations.
-
-lapack:
-Linear Algebra PACKage. Used by some of the analysis tools.
 
 mt_stream_f90-1.11:
 Multiple Stream Mersenne Twister Pseudo-Random Number Generator
