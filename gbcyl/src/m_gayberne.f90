@@ -7,7 +7,6 @@
 !!
 module m_gayberne
   use num_kind
-  use class_parameterizer
   use class_parameter_writer
   use json_module
   use m_json_wrapper, only: get_parameter
@@ -73,7 +72,7 @@ module m_gayberne
 
   !> Initializes the type
   interface gayberne
-     module procedure initparameterizer, initold, gb_from_json
+     module procedure gb_init, gb_from_json
   end interface gayberne
   
   !> The interface for the well-depth function in the GB potential.
@@ -88,25 +87,6 @@ module m_gayberne
   end interface
 
 contains
-
-  !> Initializes the module using a parameterizer object.
-  !! 
-  !! @param[in] reader the parameterizer object which is responsible
-  !! for getting the parameters for this module from some source, e.g.
-  !! file. 
-  !!
-  function initparameterizer(reader) result(this)
-    type(gayberne) :: this 
-    type(parameterizer), intent(in) :: reader
-    call getparameter(reader, 'gb_kappa_sigma', this%kappasigma)
-    call getparameter(reader, 'gb_kappa_epsilon', this%kappaepsilon)
-    call getparameter(reader, 'gb_mu', this%mu)
-    call getparameter(reader, 'gb_nu', this%nu)
-    call getparameter(reader, 'gb_sigma_0', this%sigma0)
-    call getparameter(reader, 'gb_epsilon_0', this%epsilon0)
-    call getparameter(reader, 'gb_hardcore', this%hardcore)
-    call init_common(this)
-  end function initparameterizer
 
   !> Constructs a gayberne potential using the JSON in @p json_val.
   !! 
@@ -167,7 +147,7 @@ contains
   !!        In effect this defines the gb_R at which two particles
   !!        overlap.
   !! 
-  function initold(kappasigma, kappaepsilon, mu, nu, sigma0, &
+  function gb_init(kappasigma, kappaepsilon, mu, nu, sigma0, &
        epsilon0, hardcore) result(this)
     type(gayberne) :: this
     real(dp), intent(in) :: kappasigma
@@ -185,7 +165,7 @@ contains
     this%epsilon0 = epsilon0
     if (present(hardcore)) this%hardcore = hardcore
     call init_common(this)
-  end function initold
+  end function gb_init
 
 
   !> Write the parameters of this module to the output unit and format
