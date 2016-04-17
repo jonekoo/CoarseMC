@@ -59,7 +59,6 @@ energy_src = \
   m_lj2wall_interaction.f90 \
   class_simplelist.f90
 
-## Use dsyev from LAPACK
 LDADD = $(ldadd_mtstream) $(ldadd_hyp2f1) $(top_builddir)/claf90/libclaf.la libmodel.la
 
 ## Use hyp2f1 from cephes
@@ -148,8 +147,4 @@ MODEXT = @MODEXT@
 mostlyclean-local :
 	-rm -f *.$(MODEXT)
 	-rm -f $(bin_PROGRAMS)
-	-rm -f tests/zero_sweeps/*/restart-0.json
-	-rm -f tests/short/id-*/restart-0.json
-	-rm -f tests/short/id-*/output-0.json
-	-rm -f beta_exchange.stats
 
