@@ -69,7 +69,6 @@ lapack/Makefile
 src/Makefile
 Examples/Makefile
 Examples/LJ_and_GB_in_R7/Makefile
-analysis/Makefile
 tests/Makefile
 ])
 AC_OUTPUT
