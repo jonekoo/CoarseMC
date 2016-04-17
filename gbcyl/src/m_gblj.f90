@@ -10,7 +10,6 @@
 !! 
 module m_gblj
   use num_kind
-  use class_parameterizer
   use class_parameter_writer
   use json_module
   use m_json_wrapper, only: get_parameter
@@ -72,30 +71,11 @@ module m_gblj
 
   !> Initializes the module.
   interface gblj_potential
-     module procedure gblj_readparameters, gblj_init, gblj_from_json
+     module procedure gblj_init, gblj_from_json
   end interface gblj_potential
   
 contains
   
-
-!> Creates the gblj_potential using a @p reader object, which is
-!! responsible for reading the parameters e.g. from a file.
-!! Parameters not given by @p reader are replaced by previously
-!! set / default values.
-function gblj_readparameters(reader) result(pot)
-  type(parameterizer), intent(in) :: reader
-  type(gblj_potential) :: pot
-  logical :: is_self_test = .false.
-  call getparameter(reader, 'is_self_test', is_self_test)
-  if (is_self_test) call test_defaults(pot)
-  call getparameter(reader, 'gblj_epsilon_0', pot%epsilon_0)
-  call getparameter(reader, 'gblj_sigma_0', pot%sigma_0)
-  call getparameter(reader, 'gblj_ee_to_es', pot%ee_to_es)
-  call getparameter(reader, 'gblj_se_to_ss', pot%se_to_ss)
-  call getparameter(reader, 'gblj_mu', pot%mu)
-  call getparameter(reader, 'gblj_hardcore', pot%hardcore)
-  call pot%init_internal()
-end function
 
 !> Creates a gblj_potential from parameters in @p json_val.
 function gblj_from_json(json_val) result(pot)
