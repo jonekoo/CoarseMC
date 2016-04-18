@@ -14,7 +14,7 @@ module mc_engine
   use class_poly_box, only: poly_box, getx, gety, getz
   use m_particle, only: particle, pair_interaction_ptr, &
        particlearray_wrapper, single_interaction_ptr
-  use particle_mover, only: particlemover_init, particlemover_writeparameters,&
+  use particle_mover, only: particlemover_init,&
        get_max_translation, getmaxmoves, setmaxmoves, particlemover_to_json
   use beta_exchange, only: write_stats, be_reset_counters, &
        beta_exchange_init => init, be_finalize => finalize, try_beta_exchanges,&
