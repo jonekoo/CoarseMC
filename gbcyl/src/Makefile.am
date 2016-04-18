@@ -27,7 +27,6 @@ utils_src = \
   m_fileunit.f90
 
 model_src = \
-  class_parameterizer.f90 \
   class_parameter_writer.f90 \
   json_module.F90 \
   m_json_wrapper.f90 \
@@ -103,13 +102,9 @@ printpotentials_SOURCES = \
   mc_engine.F90 \
   printpotentials.f90 
 
-#printforces_SOURCES = \
-#  printforces.f90 
-
 if PFUNIT
 
 driver_SOURCES = \
-  class_parameterizer.f90 \
   class_parameter_writer.f90 \
   json_module.F90 \
   m_json_wrapper.f90 \
