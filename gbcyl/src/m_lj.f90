@@ -1,16 +1,10 @@
 !> Implements the Lennard-Jones 12-6 potential and the force derived from it.
 module m_lj
   use num_kind
-  use class_parameterizer
   use class_parameter_writer
   use json_module
   use m_json_wrapper, only: get_parameter
   implicit none
-  
-  !> Initializes the module.
-  interface lj_init
-     module procedure lj_init_parameters, lj_init_wt_reader
-  end interface lj_init
   
   type :: lj_potential
      !> The range parameter which gives the zero-crossing distance of the
@@ -27,7 +21,7 @@ module m_lj
   end type lj_potential
   
   interface lj_potential
-     module procedure lj_init_parameters, lj_init_wt_reader, lj_from_json
+     module procedure lj_init_parameters, lj_from_json
   end interface lj_potential
   
   
@@ -41,14 +35,6 @@ contains
     this%epsilon_0 = epsilon_0
     this%sigma_0 = sigma_0
   end function lj_init_parameters
-  
-  !> Initialize the module using parameters given by @p reader.
-  function lj_init_wt_reader(reader) result(this)
-    type(parameterizer), intent(in) :: reader
-    type(lj_potential) :: this
-    call getparameter(reader, 'lj_sigma_0', this%sigma_0)
-    call getparameter(reader, 'lj_epsilon_0', this%epsilon_0)
-  end function lj_init_wt_reader
   
   !> Initialize the module using parameters given by @p reader.
   function lj_from_json(json_val) result(this)

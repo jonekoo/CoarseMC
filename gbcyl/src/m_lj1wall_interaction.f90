@@ -6,7 +6,6 @@ module m_lj1wall_interaction
   use json_module
   use m_json_wrapper, only: get_parameter
   use m_point, only: point
-  use class_parameterizer, only: parameterizer, getparameter
   implicit none
 
   !> Defines the interaction between a Lennard-Jones particle and the
@@ -49,8 +48,7 @@ module m_lj1wall_interaction
 
 
   interface lj1wall_interaction
-     module procedure lj1wall_interaction_from_json, &
-          lj1wall_interaction_w_reader
+     module procedure lj1wall_interaction_from_json
   end interface lj1wall_interaction
 
   
@@ -82,18 +80,6 @@ contains
   end subroutine
 
 
-  !> Creates a lj1wall_interaction by reading its parameters with
-  !! @p reader.
-  function lj1wall_interaction_w_reader(reader) result(res)
-    type(lj1wall_interaction) :: res
-    type(parameterizer), intent(in) :: reader
-    call getparameter(reader, 'alpha_LJ', res%alpha) 
-    call getparameter(reader, 'sigwall_LJ', res%sig)
-    call getparameter(reader, 'wall_density', res%wall_density)
-    call getparameter(reader, 'epswall_LJ', res%eps)
-  end function
-
-  
   !> Calculates the interaction energy of a Lennard-Jones (LJ) particle
   !! and the wall of a cylindrical cavity.
   !!

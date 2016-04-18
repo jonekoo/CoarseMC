@@ -4,7 +4,6 @@ module particle_mover
   use iso_fortran_env, only: error_unit
   use num_kind
   use utils
-  use class_parameterizer
   use class_parameter_writer
   use json_module
   use m_json_wrapper, only: get_parameter
@@ -22,8 +21,7 @@ module particle_mover
   
   !> Initializes the module. 
   interface particlemover_init
-     module procedure particlemover_init_parameterizer, particlemover_init2, &
-          particlemover_from_json
+     module procedure particlemover_init_, particlemover_from_json
   end interface particlemover_init
   
 contains
@@ -35,13 +33,6 @@ contains
     call get_parameter(json_val, 'max_rotation', max_rotation, error_lb=0._dp)
     call particlemover_init_common
   end subroutine particlemover_from_json
-  
-  subroutine particlemover_init_parameterizer(reader)
-    type(parameterizer), intent(in) :: reader
-    call getparameter(reader, 'max_translation', max_translation)
-    call getparameter(reader, 'max_rotation', max_rotation)
-    call particlemover_init_common
-  end subroutine particlemover_init_parameterizer
   
   !> Initializes this module using a parameterizer object.
   !! 
@@ -61,7 +52,7 @@ contains
 
   !> Initializes the module by setting the maximum translation and
   !! rotation to @p distance and @p angle, respectively. 
-  subroutine particlemover_init2(distance, angle)
+  subroutine particlemover_init_(distance, angle)
     implicit none
     real(dp), intent(in) :: distance 
     real(dp), intent(in) :: angle
