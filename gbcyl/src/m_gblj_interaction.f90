@@ -5,7 +5,6 @@ module m_gblj_interaction
   use m_particle, only: pair_interaction, particle
   use num_kind, only: dp
   use json_module
-  use class_parameter_writer, only: parameter_writer, writeparameter
   use m_json_wrapper, only: get_parameter
   use m_rod, only: rod
   use m_point, only: point

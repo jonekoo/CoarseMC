@@ -7,7 +7,6 @@ module m_particle
   use particle_mover, only: transmove, rotate
   use json_module, only: json_value, json_add, CK, json_add, &
        json_create_array
-  use class_parameter_writer, only: parameter_writer
   use m_json_wrapper, only: get_parameter
   implicit none
 

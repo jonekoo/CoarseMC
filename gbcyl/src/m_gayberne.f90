@@ -7,7 +7,6 @@
 !!
 module m_gayberne
   use num_kind
-  use class_parameter_writer
   use json_module
   use m_json_wrapper, only: get_parameter
   implicit none
@@ -66,7 +65,6 @@ module m_gayberne
      procedure :: gb_R
      procedure :: potentialf
      procedure :: sigma
-     procedure :: writeparameters => gb_writeparameters
      procedure :: to_json => gb_to_json
   end type gayberne
 
@@ -166,22 +164,6 @@ contains
     if (present(hardcore)) this%hardcore = hardcore
     call init_common(this)
   end function gb_init
-
-
-  !> Write the parameters of this module to the output unit and format
-  !! defined by @p writer.
-  subroutine gb_writeparameters(this, writer)
-    class(gayberne), intent(in) :: this
-    type(parameter_writer), intent(inout) :: writer
-    call writecomment(writer, 'Gay-Berne potential parameters')
-    call writeparameter(writer, 'gb_kappa_sigma', this%kappasigma)
-    call writeparameter(writer, 'gb_kappa_epsilon', this%kappaepsilon)
-    call writeparameter(writer, 'gb_mu', this%mu)
-    call writeparameter(writer, 'gb_nu', this%nu)
-    call writeparameter(writer, 'gb_sigma_0', this%sigma0)
-    call writeparameter(writer, 'gb_epsilon_0', this%epsilon0)    
-    call writeparameter(writer, 'gb_hardcore', this%hardcore)
-  end subroutine gb_writeparameters
 
 
   !> Write the parameters of this module to the output unit and format

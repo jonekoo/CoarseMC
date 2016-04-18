@@ -1,7 +1,6 @@
 !> Implements the Lennard-Jones 12-6 potential and the force derived from it.
 module m_lj
   use num_kind
-  use class_parameter_writer
   use json_module
   use m_json_wrapper, only: get_parameter
   implicit none
@@ -16,7 +15,6 @@ module m_lj
    contains
      procedure :: potential => lj1
      procedure :: force => lj_force
-     procedure :: writeparameters => lj_writeparameters
      procedure :: to_json => lj_to_json
   end type lj_potential
   
@@ -43,16 +41,6 @@ contains
     call get_parameter(json_val, 'lj_sigma_0', this%sigma_0, error_lb=0._dp)
     call get_parameter(json_val, 'lj_epsilon_0', this%epsilon_0, error_lb=0._dp)
   end function lj_from_json
-  
-  !> Write the module parameters using the output unit and format defined
-  !! by @p writer.
-  subroutine lj_writeparameters(this, writer)
-    class(lj_potential), intent(in) :: this
-    type(parameter_writer), intent(inout) :: writer
-    call writecomment(writer, 'Lennard-Jones potential parameters.')
-    call writeparameter(writer, 'lj_sigma_0', this%sigma_0)
-    call writeparameter(writer, 'lj_epsilon_0', this%epsilon_0)
-  end subroutine lj_writeparameters
   
   !> Write the module parameters using the output unit and format defined
   !! by @p writer.
