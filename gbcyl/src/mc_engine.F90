@@ -12,8 +12,6 @@ module mc_engine
   use mt_stream
   use m_fileunit
   use class_poly_box, only: poly_box, getx, gety, getz
-  use class_parameterizer
-  use class_parameter_writer
   use m_particle, only: particle, pair_interaction_ptr, &
        particlearray_wrapper, single_interaction_ptr
   use particle_mover, only: particlemover_init, particlemover_writeparameters,&

@@ -7,9 +7,6 @@ module m_particlegroup
        moveparticle_2, pair_interaction, pair_interaction_ptr, &
        single_interaction, single_interaction_ptr, &
        particlearray_wrapper, wrapper_delete, particlearray_to_json
-  use class_parameterizer, only: parameterizer, getparameter
-  use class_parameter_writer, only: parameter_writer, writeparameter, &
-       writecomment
   use utils, only: splitstr, join, acceptchange
   !$ use omp_lib
   use class_simplelist, only: simplelist, new_simplelist, simplelist_update, &
