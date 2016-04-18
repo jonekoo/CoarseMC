@@ -4,7 +4,6 @@ module particle_mover
   use iso_fortran_env, only: error_unit
   use num_kind
   use utils
-  use class_parameter_writer
   use json_module
   use m_json_wrapper, only: get_parameter
   use mt_stream, only: genstate => mt_state, rng => genrand_double1_s
@@ -59,15 +58,6 @@ contains
     max_rotation = angle
     max_translation = distance
     call particlemover_init_common
-  end subroutine
-
-  !> Writes the module parameters. Output unit and format are defined
-  !! by @p writer.
-  subroutine particlemover_writeparameters(writer)
-    type(parameter_writer), intent(in) :: writer
-    call writecomment(writer, 'Particle moving parameters')
-    call writeparameter(writer, 'max_translation', max_translation)
-    call writeparameter(writer, 'max_rotation', max_rotation)    
   end subroutine
 
   !> Writes the module parameters to json object @p json_val.

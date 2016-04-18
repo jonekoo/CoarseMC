@@ -10,13 +10,11 @@
 !! 
 module m_gblj
   use num_kind
-  use class_parameter_writer
   use json_module
   use m_json_wrapper, only: get_parameter
   implicit none
   
   public :: gblj_init
-  public :: gblj_writeparameters
   public :: gblj_potential
   public :: gblj_force
   public :: gblj_get_sigma_0
@@ -63,7 +61,6 @@ module m_gblj
      procedure :: grad_eps => gblj_grad_eps
      procedure :: r => gblj_r
      procedure :: grad_r => gblj_grad_r
-     procedure :: writeparameters => gblj_writeparameters
      procedure :: to_json => gblj_to_json
   end type gblj_potential
 
@@ -129,22 +126,6 @@ subroutine gblj_init_internal(this)
   class(gblj_potential), intent(inout) :: this
   this%chisigma = 1 - this%se_to_ss ** (-2)
   this%chiepsilon = 1 - this%ee_to_es ** (1 / this%mu)
-end subroutine
-
-
-!> Writes the parameters of this module to a file using the format and
-!! output unit defined by @p writer.
-subroutine gblj_writeparameters(this, writer)
-  class(gblj_potential), intent(in) :: this
-  class(parameter_writer), intent(inout) :: writer
-  call writecomment(writer, &
-       'Gay-Berne - Lennard-Jones potential parameters.')
-  call writeparameter(writer, 'gblj_epsilon_0', this%epsilon_0)
-  call writeparameter(writer, 'gblj_sigma_0', this%sigma_0)
-  call writeparameter(writer, 'gblj_mu', this%mu)
-  call writeparameter(writer, 'gblj_ee_to_es', this%ee_to_es)
-  call writeparameter(writer, 'gblj_se_to_ss', this%se_to_ss)
-  call writeparameter(writer, 'gblj_hardcore', this%hardcore)
 end subroutine
 
 
