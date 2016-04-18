@@ -27,7 +27,6 @@ utils_src = \
   m_fileunit.f90
 
 model_src = \
-  class_parameter_writer.f90 \
   json_module.F90 \
   m_json_wrapper.f90 \
   process_not_found.inc \
@@ -105,7 +104,6 @@ printpotentials_SOURCES = \
 if PFUNIT
 
 driver_SOURCES = \
-  class_parameter_writer.f90 \
   json_module.F90 \
   m_json_wrapper.f90 \
   m_gblj.f90 \
