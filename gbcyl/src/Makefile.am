@@ -35,7 +35,8 @@ model_src = \
   particle_mover.f90 \
   m_particle.f90 \
   m_point.f90 \
-  m_rod.f90 
+  m_rod.f90 \
+  m_particlejson_parser.f90 
 
 
 
@@ -53,9 +54,12 @@ energy_src = \
   m_gayberne.f90 \
   m_gblj.f90 \
   ljcylinder.f90 \
+  m_lj_interaction.f90 \
+  m_gb_interaction.f90 \
+  m_gblj_interaction.f90 \
   m_lj1wall_interaction.f90 \
   m_lj2wall_interaction.f90 \
-  class_simplelist.f90
+  m_interaction_factory.f90
 
 LDADD = $(ldadd_mtstream) $(ldadd_hyp2f1) $(top_builddir)/claf90/libclaf.la libmodel.la
 
@@ -71,12 +75,8 @@ AM_FCFLAGS += -I$(top_builddir)/cephes/cmath
 ptgbcyl_SOURCES = \
   genvoltrial.f90 \
   beta_exchange.f90 \
+  class_simplelist.f90 \
   m_particlegroup.f90 \
-  m_lj_interaction.f90 \
-  m_gb_interaction.f90 \
-  m_gblj_interaction.f90 \
-  m_interaction_factory.f90 \
-  m_particlejson_parser.f90 \
   m_nvt_engine.F90 \
   m_npt_engine.F90 \
   mc_engine.F90 \
@@ -90,12 +90,8 @@ create_crystal_SOURCES = \
 printpotentials_SOURCES = \
   genvoltrial.f90 \
   beta_exchange.f90 \
+  class_simplelist.f90 \
   m_particlegroup.f90 \
-  m_lj_interaction.f90 \
-  m_gb_interaction.f90 \
-  m_gblj_interaction.f90 \
-  m_interaction_factory.f90 \
-  m_particlejson_parser.f90 \
   m_nvt_engine.F90 \
   m_npt_engine.F90 \
   mc_engine.F90 \
@@ -104,21 +100,10 @@ printpotentials_SOURCES = \
 if PFUNIT
 
 driver_SOURCES = \
-  json_module.F90 \
-  m_json_wrapper.f90 \
-  m_gblj.f90 \
-  m_gayberne.f90 \
   gayberne_pfunit.f90 \
-  particle_mover.f90 \
-  m_particle.f90 \
-  class_poly_box.f90 \
-  m_lj.f90 \
   class_simplelist.f90 \
   class_simplelist_pfunit.f90 \
   utils_pfunit.f90 \
-  m_point.f90 \
-  m_rod.f90 \
-  m_particlejson_parser.f90 \
   particle_pfunit.f90 \
   driver.f90  
 
