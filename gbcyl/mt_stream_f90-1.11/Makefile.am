@@ -13,7 +13,7 @@ TESTS = check_1.sh check_2.sh check_3.sh
 SH_LOG_COMPILER = $(BASH)
 
 check_PROGRAMS = check_stream_1 check_stream_2 check_stream_3
-check_DATA = sample_1.out test_2.out sample_2.out
+check_DATA = test_1.out sample_1.out test_2.out sample_2.out
 check_SCRIPTS = check_1.sh check_2.sh check_3.sh
 
 check_LTLIBRARIES = libmt_stream_debug.la
@@ -31,8 +31,12 @@ check_stream_3_SOURCES = check_stream.F90
 check_stream_3_FCFLAGS = -D_DEBUG_ -D_CHECK_SAVEREAD_
 check_stream_3_LDADD = libmt_stream_debug.la
 
+test_1.out : check_stream_1
+	test ! -f sample_1.out && cp ${top_srcdir}/mt_stream_f90-1.11/sample_1.out .
+	./check_stream_1 > test_1.out
 
 test_2.out : check_stream_2
+	test ! -f sample_2.out && cp ${top_srcdir}/mt_stream_f90-1.11/sample_2.out .
 	./check_stream_2 > test_2.out
 
 endif
@@ -41,4 +45,3 @@ MODEXT = @MODEXT@
 
 mostlyclean-local :
 	-rm -f *.$(MODEXT)
-
