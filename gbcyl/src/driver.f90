@@ -1,6 +1,5 @@
 program main
    use pFUnit
-   !use mpi
    use gayberne_pfunit
    use class_simplelist_pfunit
    use utils_pfunit
@@ -63,11 +62,8 @@ program main
         test_rodarray_json_io))
    call add(particle_suite, &
         TestCase1Step('Test writing and reading point array from json.', &
-        test_pointarray_json_io))
+        test_particlearray_json_io))
    
-   call add(particle_suite, &
-        TestCase1Step('Test downcasting from particle to point.', &
-        test_point_downcast))
    call add(particle_suite, &
         TestCase1Step('Test downcasting from particle to point.', &
         test_point_downcast))

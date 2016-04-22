@@ -5,7 +5,7 @@ module m_nvt_engine
   use num_kind, only: dp
   use iso_fortran_env, only: output_unit, error_unit
   use class_poly_box, only: poly_box
-  use m_particle, only: particle, &
+  use m_particle, only: point, &
        pair_interaction, pair_interaction_ptr, &
        single_interaction, single_interaction_ptr, &
        particlearray_wrapper
@@ -285,7 +285,7 @@ contains
     !! Remove particles in jx, jy, jz from mask:
     nbr_mask(this%sl%indices(1:d%n_cell, jx, jy, jz)) = .false.
     !! GFortran 6.0.0 is not fine with pack from a polymorphic
-    !! array class(particle) so we'll use a workaround.
+    !! array class(point) so we'll use a workaround.
     allocate(helper, source=[this%sl%indices(1:d%n_cell, jx, jy, jz), &
          pack([(i, i = 1, size(this%particles))], nbr_mask)])
     if (allocated(nbr_mask)) deallocate(nbr_mask)
@@ -324,7 +324,7 @@ contains
     real(dp), intent(out) :: dE
     integer, intent(out), optional :: n_trials, n_accepted
     integer :: j
-    class(particle), allocatable :: newparticle
+    class(point), allocatable :: newparticle
     integer :: err
     real(dp) :: enew
     real(dp) :: eold

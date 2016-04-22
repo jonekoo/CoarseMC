@@ -2,7 +2,7 @@
 !! lj_interaction.
 module m_lj_interaction
   use m_lj, only: lj_potential, lj_from_json
-  use m_particle, only: pair_interaction, particle
+  use m_particle, only: point, pair_interaction
   use num_kind, only: dp
   use json_module
   use m_json_wrapper, only: get_parameter
@@ -67,7 +67,7 @@ contains
   pure subroutine lj_pair_potential(this, particlei, particlej, rij, &
        energy, err)
     class(lj_interaction), intent(in) :: this
-    class(particle), intent(in) :: particlei, particlej
+    class(point), intent(in) :: particlei, particlej
     real(dp), intent(in) :: rij(3)
     real(dp), intent(out) :: energy
     integer, intent(out) :: err
@@ -91,7 +91,7 @@ contains
   !! @p particlej.
   pure function lj_pair_force(this, particlei, particlej, rij) result(f)
     class(lj_interaction), intent(in) :: this
-    class(particle), intent(in) :: particlei, particlej
+    class(point), intent(in) :: particlei, particlej
     real(dp), intent(in) :: rij(3)
     real(dp) :: f(3)
     f = this%pef%force(rij)
@@ -104,7 +104,7 @@ contains
   subroutine lj_sample(this, json_val, r)
     class(lj_interaction), intent(in) :: this
     type(json_value), pointer :: json_val
-    type(particle) :: lj
+    type(point) :: lj
     real(dp), intent(in) :: r(:)
     type(json_value), pointer :: child
     real(dp) :: energy

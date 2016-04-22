@@ -11,44 +11,46 @@ module m_particle
   implicit none
 
   !> The base type for all particles.
-  type particle
+  type point
      real(dp) :: x = 0._dp
      real(dp) :: y = 0._dp
      real(dp) :: z = 0._dp
    contains
-     !> Returns the type of the particle as a string.
-     procedure, nopass :: typestr => particle_typestr
-     !> Returns a description of the coordinates of this particle.
-     procedure, nopass :: description => particle_description
-     !> Downcasts and assigns to particle. Overridden by subtypes.
-     procedure :: downcast_assign => particle_downcast_assign
-     !> Assignment operator implementation.
-     procedure :: particle_assign
-     generic :: assignment(=) => particle_assign
-     
-     !> Equality operator implementation. 
-     procedure :: particle_equals
-     generic :: operator(==) => particle_equals
-
-     !> Deserializes the particle from string.
-     procedure :: from_str => particle_from_str
-     !> Deserializes the particle from JSON.
-     procedure :: from_json => particle_from_json
-     !> Serializes particle coordinates to JSON.
-     procedure :: coordinates_to_json => particle_coordinates_to_json
-     !> Serializes particle to the given Fortran output unit.
-     procedure :: to_unit => particle_to_unit
      !> Returns the particle position.
      procedure :: position => position
      !> Sets the particle position.
-     procedure :: set_position => particle_set_position
+     procedure :: set_position => point_set_position
      !> Returns the potential energy of the with given neighbours and
      !! interactions.
-     procedure :: energy => particle_potential
-     procedure :: nvt_update => moveparticle_2
-     !> Trial move generator. 
-     procedure :: move => particle_move
-  end type particle
+     procedure :: energy => point_potential
+     procedure :: nvt_update => movepoint_2
+
+
+     !! Routines imported from m_point.f90:
+
+     !> Deserializes the coordinates from a string.
+     procedure :: from_str => point_from_str
+     !> Downcasts a particle to a point and assigns
+     procedure :: downcast_assign => point_downcast_assign
+     !> Assignment operator implementation
+     procedure :: point_assign
+     generic :: assignment(=) => point_assign
+     !> Equality operator implementation.
+     procedure :: point_equals
+     generic :: operator(==) => point_equals
+     !> Returns the type of this particle as a string.
+     procedure, nopass :: typestr => point_typestr
+     !> Randomly translates the point to a new position.
+     procedure :: move => point_move
+     !> Writes point coordinates to a JSON value.
+     procedure :: coordinates_to_json => point_coordinates_to_json
+     !> Deserializes point coordinates from json.
+     procedure :: from_json => point_from_json
+     !> Returns the names of the point coordinates.
+     procedure, nopass :: description => point_description
+     !> Serializes the point to the given Fortran output unit.
+     procedure :: to_unit => point_to_unit
+  end type point
 
   !> The base type for all pairwise-computed particle-particle
   !! interactions.
@@ -76,7 +78,7 @@ module m_particle
           energy, err)
        import
        class(pair_interaction), intent(in) :: this
-       class(particle), intent(in) :: particlei, particlej
+       class(point), intent(in) :: particlei, particlej
        real(dp), intent(in) :: rij(3)
        real(dp), intent(out) :: energy
        integer, intent(out) :: err
@@ -95,7 +97,7 @@ module m_particle
      pure function pair_force(this, particlei, particlej, rij) result(f)
        import
        class(pair_interaction), intent(in) :: this
-       class(particle), intent(in) :: particlei, particlej
+       class(point), intent(in) :: particlei, particlej
        real(dp), intent(in) :: rij(3)
        real(dp) :: f(3)
      end function pair_force
@@ -149,7 +151,7 @@ module m_particle
      pure subroutine single_potential(this, particlei, simbox, energy, err)
        import
        class(single_interaction), intent(in) :: this
-       class(particle), intent(in) :: particlei
+       class(point), intent(in) :: particlei
        type(poly_box), intent(in) :: simbox
        real(dp), intent(out) :: energy
        integer, intent(out) :: err
@@ -166,7 +168,7 @@ module m_particle
      pure function single_force(this, particlei, simbox) result(f)
        import
        class(single_interaction), intent(in) :: this
-       class(particle), intent(in) :: particlei
+       class(point), intent(in) :: particlei
        type(poly_box), intent(in) :: simbox
        real(dp) :: f(3)
      end function single_force
@@ -192,7 +194,7 @@ module m_particle
   !! types.
   type particlearray_wrapper
      !> The particles.
-     class(particle), allocatable :: arr(:)
+     class(point), allocatable :: arr(:)
      !> A mask which can be used to exclude particles.
      logical, allocatable :: mask(:)
      !> Number of particles to be considered in the array.
@@ -207,114 +209,118 @@ module m_particle
 
 contains
 
-  !> Deserializes @p this particle from string @p str.
-  !! If successful, ios==0.
-  subroutine particle_from_str(this, str, ios)
-    class(particle), intent(inout) :: this
+  !> Deserializes @p this point from @p str. ios /= 0 if an error
+  !! occurs.
+  subroutine point_from_str(this, str, ios)
+    class(point), intent(inout) :: this
     character(len=*), intent(in) :: str
     integer, intent(out) :: ios
     read(str, fmt=*, iostat=ios) this%x, this%y, this%z
-  end subroutine particle_from_str
+  end subroutine point_from_str
 
-  
-  !> Returns the type of the particle as a string @p str.
-  subroutine particle_typestr(str)
+
+  !> Returns the type of the point in @p str.
+  subroutine point_typestr(str)
     character(len=:), allocatable, intent(out) :: str
-    str = "particle"
-  end subroutine particle_typestr
+    str = "point"
+  end subroutine point_typestr
 
 
-  !> Returns the description of particle coordinates as an array of
-  !! strings. 
-  subroutine particle_description(descr)
+  !> Returns the names of the point coordinates in @p descr.
+  subroutine point_description(descr)
     character(kind=CK, len=3), allocatable, intent(inout) :: descr(:)
     descr = ["x  ", "y  ", "z  "]
-  end subroutine particle_description
+  end subroutine point_description
 
-  
-  !> Downcast and assign @p a_particle to @p this. If type of a_particle
-  !! is different from @p this, @p err = 3.
-  pure subroutine particle_downcast_assign(this, a_particle, err)
-    class(particle), intent(inout) :: this
-    class(particle), intent(in) :: a_particle
+
+  !> Downcasts @p a_particle to a point and assigns it to @p this.
+  !! err = 3 if an error occurs.
+  pure subroutine point_downcast_assign(this, a_particle, err)
+    class(point), intent(inout) :: this
+    class(point), intent(in) :: a_particle
     integer, intent(out), optional :: err
     select type (a_particle)
-    type is (particle)
+    type is (point)
        this = a_particle
        if (present(err)) err = 0
     class default
        if (present(err)) err = 3
     end select
-  end subroutine particle_downcast_assign
+  end subroutine point_downcast_assign
 
 
   !> Assigns @p another to @p this.
-  pure subroutine particle_assign(this, another)
-    class(particle), intent(inout) :: this
-    type(particle), intent(in) :: another
+  pure subroutine point_assign(this, another)
+    class(point), intent(inout) :: this
+    type(point), intent(in) :: another
     this%x = another%x
     this%y = another%y
     this%z = another%z
-  end subroutine particle_assign
+  end subroutine point_assign
 
 
-  !> Returns .true. if @p another equals @p this.
-  elemental function particle_equals(this, another) result(res)
-    class(particle), intent(in) :: this
-    type(particle), intent(in) :: another
+  !> Returns true if coordinates of @p another are equal to @p this.
+  elemental function point_equals(this, another) result(res)
+    class(point), intent(in) :: this
+    type(point), intent(in) :: another
     logical :: res
     res = (this%x == another%x) .and. (this%y == another%y) .and. &
          (this%z == another%z)
-  end function particle_equals
+  end function point_equals
 
 
-  !> Translates @p this particle randomly. @p genstate is the random
-  !! number generator state used to create the move.
-  pure subroutine particle_move(this, genstate)    
-    class(particle), intent(inout) :: this
+  !> Translates @p this randomly to a new position. @p genstate is the
+  !! random number generator used.
+  pure subroutine point_move(this, genstate)    
+    class(point), intent(inout) :: this
     type(rngstate), intent(inout) :: genstate
     real(dp) :: xn, yn, zn
     call transmove(this%x, this%y, this%z, xn, yn, zn, genstate)
     this%x = xn
     this%y = yn
     this%z = zn
-  end subroutine particle_move
+  end subroutine point_move
 
 
-  !> Serializes the coordinates of @p this particle to JSON value
+  !> Serializes the coordinates of @p this point to JSON value
   !! @p json_val.
-  subroutine particle_coordinates_to_json(this, json_val)
-    class(particle), intent(in) :: this
+  subroutine point_coordinates_to_json(this, json_val)
+    class(point), intent(in) :: this
     type(json_value), pointer :: json_val
     call json_create_array(json_val, '')
     call json_add(json_val, '', this%x)
     call json_add(json_val, '', this%y)
     call json_add(json_val, '', this%z)
-  end subroutine particle_coordinates_to_json
+  end subroutine point_coordinates_to_json
 
 
-  !> Serializes the coordinates of @p this particle to output @p unit. 
-  subroutine particle_to_unit(this, unit)
-    class(particle), intent(in) :: this
-    integer, intent(in) :: unit
-    write(unit, *) 'particle', this%x, this%y, this%z
-  end subroutine particle_to_unit
-
-
-  !> Deserializes @p this particle from JSON value @p json_val.
-  subroutine particle_from_json(this, json_val)
-    class(particle), intent(inout) :: this
+  !> Deserializes @p this point from JSON value @p json_val.
+  subroutine point_from_json(this, json_val)
+    class(point), intent(inout) :: this
     type(json_value), pointer, intent(in) :: json_val
     call get_parameter(json_val, '[1]', this%x)
     call get_parameter(json_val, '[2]', this%y)
     call get_parameter(json_val, '[3]', this%z)
-  end subroutine particle_from_json
+  end subroutine point_from_json
+
+
+  !> Writes @p this point to @p unit.
+  subroutine point_to_unit(this, unit)
+    class(point), intent(in) :: this
+    integer, intent(in) :: unit
+    write(unit, '(A,3(' // fmt_char_dp() // ',1X))', advance='no') &
+         'point', this%x, this%y, this%z
+  end subroutine point_to_unit
+
+
+!!!! Routines imported from m_point.f90 above.
+
 
 
   !> Serializes an array of @p particles to JSON value @p json_val.
   subroutine particlearray_to_json(json_val, particles)
     type(json_value), pointer, intent(inout) :: json_val
-    class(particle), intent(in) :: particles(:)
+    class(point), intent(in) :: particles(:)
     character(kind=CK, len=3), allocatable :: descr(:)
     type(json_value), pointer :: coordinates_json
     type(json_value), pointer :: particle_json
@@ -351,9 +357,9 @@ contains
   !! @param n_trials is the number of trial moves attempted.
   !! @param n_accepted the number of trial moves accepted.
   !! 
-  subroutine moveparticle_2(this, genstates, simbox, temperature, nbrs, &
+  subroutine movepoint_2(this, genstates, simbox, temperature, nbrs, &
      pair_ias, single_ia, dE, n_trials, n_accepted)
-    class(particle), intent(inout) :: this
+    class(point), intent(inout) :: this
     class(particlearray_wrapper), intent(in) :: nbrs(:) 
     type(poly_box), intent(in) :: simbox
     real(dp), intent(in) :: temperature
@@ -363,8 +369,8 @@ contains
     real(dp), intent(out) :: dE
     integer, intent(out) :: n_trials, n_accepted
     
-    class(particle), allocatable :: newparticle
-    class(particle), allocatable :: oldparticle
+    class(point), allocatable :: newparticle
+    class(point), allocatable :: oldparticle
     integer :: err
     real(dp) :: enew
     real(dp) :: eold
@@ -399,7 +405,7 @@ contains
        n_accepted = 0
     end if
     n_trials = 1
-  end subroutine moveparticle_2
+  end subroutine movepoint_2
 
 
   !> Returns the potential @p energy of @p this particle due to pairwise
@@ -407,9 +413,9 @@ contains
   !! @p single_ia. @p simbox is the simulation box in which @p this
   !! particle and @p nbrs reside. err /= 0 if an error or overlap occurs
   !! in any of the interactions.
-  subroutine particle_potential(this, nbrs, pair_ias, simbox, &
+  subroutine point_potential(this, nbrs, pair_ias, simbox, &
        single_ia, energy, err)
-    class(particle), intent(in) :: this
+    class(point), intent(in) :: this
     class(particlearray_wrapper), intent(in) :: nbrs(:)
     type(pair_interaction_ptr), intent(in) :: pair_ias(:)
     type(poly_box), intent(in) :: simbox
@@ -484,25 +490,25 @@ contains
        call single_ia%potential(this, simbox, e, err)
        if (err == 0) energy = energy + e
     end if
-  end subroutine particle_potential
+  end subroutine point_potential
   
   
   !> Returns the position of @p aparticle as a vector.
   pure function position(this)
-    class(particle), intent(in) :: this
+    class(point), intent(in) :: this
     real(dp), dimension(3) :: position
     position = [this%x, this%y, this%z]
   end function position
 
   
   !> Assigns the position @p vec to @p aparticle.
-  pure subroutine particle_set_position(this, vec)
-    class(particle), intent(inout) :: this
+  pure subroutine point_set_position(this, vec)
+    class(point), intent(inout) :: this
     real(dp), dimension(3), intent(in) :: vec
     this%x = vec(1)
     this%y = vec(2)
     this%z = vec(3)
-  end subroutine particle_set_position
+  end subroutine point_set_position
   
 
   !> Finalizes @p this.

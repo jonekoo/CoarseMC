@@ -3,7 +3,7 @@
 module class_simplelist
   use iso_fortran_env, only: error_unit
   use num_kind, only: dp
-  use m_particle, only: particle
+  use m_particle, only: point
   use class_poly_box
   implicit none
   private
@@ -52,7 +52,7 @@ contains
   subroutine new_simplelist(sl, simbox, particles, min_length, &
        min_boundary_width, is_nx_even, is_ny_even, is_nz_even)
     type(poly_box), intent(in) :: simbox
-    class(particle), intent(in) :: particles(:)
+    class(point), intent(in) :: particles(:)
     real(dp), intent(in) :: min_length
     real(dp), intent(in) :: min_boundary_width
     logical, intent(in), optional :: is_nx_even, is_ny_even, is_nz_even
@@ -115,7 +115,7 @@ contains
   subroutine simplelist_update(sl, simbox, particles)
     type(simplelist), intent(inout) :: sl
     type(poly_box), intent(in) :: simbox
-    class(particle), dimension(:), intent(in) :: particles
+    class(point), dimension(:), intent(in) :: particles
     real(dp) :: maxdiff
     integer :: i
     type(simplelist) :: temp
@@ -163,7 +163,7 @@ contains
   subroutine simplelist_populate(sl, simbox, particles)
     type(simplelist), intent(inout) :: sl
     type(poly_box), intent(in) :: simbox
-    class(particle), dimension(:), intent(in) :: particles
+    class(point), dimension(:), intent(in) :: particles
     integer :: ix, iy, iz
     integer :: iparticle
     integer :: err
@@ -196,7 +196,7 @@ contains
   
   elemental subroutine cell_index(sl, p, simbox, ix, iy, iz, err)
     type(simplelist), intent(in) :: sl
-    class(particle), intent(in) :: p
+    class(point), intent(in) :: p
     type(poly_box), intent(in) :: simbox
     integer, intent(out) :: ix, iy, iz
     integer, intent(out), optional :: err

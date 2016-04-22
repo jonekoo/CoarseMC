@@ -1,12 +1,11 @@
 program create_crystal
   use utils, only: splitstr, join
   use m_crystal
-  use m_particle, only: particle, particlearray_to_json
+  use m_particle, only: point, particlearray_to_json
   use class_poly_box
   use iso_fortran_env
   use json_module
   use num_kind, only: dp
-  use m_point, only: point
   use m_rod, only: rod
   implicit none
   integer :: nx = -1, ny = -1, nz = -1
@@ -14,7 +13,7 @@ program create_crystal
   real(8) :: a = 1.0, d = 3.6
   real(8), allocatable :: rs(:, :) !(3, nx * ny * nz)
   type(poly_box) :: simbox
-  class(particle), allocatable, target :: particles(:), temp(:)
+  class(point), allocatable, target :: particles(:), temp(:)
   integer :: i, j
   real(8) :: h != sqrt(3.0) / 2 * a
   character(len=80) :: ofile = "geometry.json"
@@ -170,7 +169,7 @@ subroutine print_help
 end subroutine
 
 subroutine cylinder_mask(theparticles, cutradius, themask)
-  type(particle), intent(in) :: theparticles(:)
+  type(point), intent(in) :: theparticles(:)
   real(dp), intent(in) :: cutradius
   logical, intent(out) :: themask(size(theparticles))
   themask = .false.

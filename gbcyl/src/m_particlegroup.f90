@@ -3,8 +3,8 @@ module m_particlegroup
   use iso_fortran_env, only: dp => REAL64, output_unit, error_unit
   use class_poly_box, only: poly_box, minimage, isxperiodic, isyperiodic, &
        iszperiodic, getx, gety, getz
-  use m_particle, only: particle, &
-       moveparticle_2, pair_interaction, pair_interaction_ptr, &
+  use m_particle, only: point, &
+       movepoint_2, pair_interaction, pair_interaction_ptr, &
        single_interaction, single_interaction_ptr, &
        particlearray_wrapper, wrapper_delete, particlearray_to_json
   use utils, only: splitstr, join, acceptchange
@@ -23,7 +23,7 @@ module m_particlegroup
      !> The name of the group
      character(len=:), allocatable :: name
      !> The particles in this group.
-     class(particle), allocatable :: particles(:)
+     class(point), allocatable :: particles(:)
      !> The cell list
      type(simplelist) :: sl
    contains
@@ -62,7 +62,7 @@ contains
   function create_particlegroup(simbox, particles, min_cell_length, &
        min_boundary_width, name) result(group)
     type(poly_box), intent(in) :: simbox
-    class(particle), intent(in) :: particles(:)
+    class(point), intent(in) :: particles(:)
     real(dp), intent(in) :: min_cell_length, min_boundary_width
     character(kind=CK, len=*), intent(in) :: name
     type(particlegroup) :: group

@@ -1,10 +1,9 @@
 !> Unit tests for particle types.
 module particle_pfunit
-  use m_particle
+  use m_particle, only: point, particlearray_to_json
   use json_module
   use pfunit
   use m_rod, only: rod
-  use m_point, only: point
   use m_particlejson_parser
   implicit none
 
@@ -46,7 +45,7 @@ contains
   
   subroutine test_rodarray_json_io
     type(rod) :: out(2)
-    class(particle), allocatable :: in(:)
+    class(point), allocatable :: in(:)
     type(json_value), pointer :: json_val
     
 
@@ -64,9 +63,9 @@ contains
     
   end subroutine test_rodarray_json_io
   
-  subroutine test_pointarray_json_io
+  subroutine test_particlearray_json_io
     type(point) :: out(2)
-    class(particle), allocatable :: in(:)
+    class(point), allocatable :: in(:)
     type(json_value), pointer :: json_val
     
 
@@ -82,12 +81,12 @@ contains
        call assertTrue(.false., 'Input is not of type point.')
     end select
     
-  end subroutine test_pointarray_json_io
+  end subroutine test_particlearray_json_io
 
 
   subroutine test_point_downcast
-    class(particle), allocatable :: somepoint
-    class(particle), allocatable :: another
+    class(point), allocatable :: somepoint
+    class(point), allocatable :: another
     integer :: err
     allocate(somepoint, source=point(x=1.0, y=2.0, z=3.0))
     allocate(another, source=point())
@@ -108,8 +107,8 @@ contains
   
 
   subroutine test_rod_downcast
-    class(particle), allocatable :: somerod
-    class(particle), allocatable :: another
+    class(point), allocatable :: somerod
+    class(point), allocatable :: another
     integer :: err
     allocate(somerod, source=rod(x=1.0, ux=1.0, uz=0.0))
     allocate(another, source=rod())

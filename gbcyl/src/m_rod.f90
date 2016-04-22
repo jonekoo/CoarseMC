@@ -1,7 +1,7 @@
 !> Contains the rod type and related procedures.
 module m_rod
   use iso_fortran_env, only: output_unit
-  use m_particle, only: particle
+  use m_particle, only: point
   use num_kind, only: dp
   use utils, only: fmt_char_dp
   use particle_mover, only: transmove, rotate
@@ -11,7 +11,7 @@ module m_rod
   implicit none
 
   !> A rod-like particle.
-  type, extends(particle) :: rod
+  type, extends(point) :: rod
      !> The components of the unit vector of orientation.
      real(dp) :: ux = 0._dp
      real(dp) :: uy = 0._dp
@@ -80,7 +80,7 @@ contains
   !! @p err == 3 if an error occurs.
   pure subroutine rod_downcast_assign(this, a_particle, err)
     class(rod), intent(inout) :: this
-    class(particle), intent(in) :: a_particle
+    class(point), intent(in) :: a_particle
     integer, intent(out), optional :: err
     select type (a_particle)
     type is (rod)

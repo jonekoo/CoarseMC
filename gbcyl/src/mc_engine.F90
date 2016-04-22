@@ -12,7 +12,7 @@ module mc_engine
   use mt_stream
   use m_fileunit
   use class_poly_box, only: poly_box, getx, gety, getz
-  use m_particle, only: particle, pair_interaction_ptr, &
+  use m_particle, only: point, pair_interaction_ptr, &
        particlearray_wrapper, single_interaction_ptr
   use particle_mover, only: particlemover_init,&
        get_max_translation, getmaxmoves, setmaxmoves, particlemover_to_json
@@ -299,7 +299,7 @@ subroutine create_groups(json_val, simbox, pair_interactions, &
   integer :: i, j
   real(dp) :: max_cutoff = 0._dp
   type(json_value), pointer :: groups_json, groups_json_element
-  class(particle), allocatable :: particles(:)
+  class(point), allocatable :: particles(:)
   !! Find maximum cutoff radius for pair interactions to be used when 
   !! determining the cell sizes of the cell list.
   do i = 1, size(pair_interactions, 2)

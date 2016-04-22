@@ -1,5 +1,5 @@
 module m_lj1wall_interaction
-  use m_particle, only: particle, single_interaction 
+  use m_particle, only: point, single_interaction 
   use num_kind
   use class_poly_box
   use ljcylinder
@@ -92,7 +92,7 @@ contains
   !! 
   pure subroutine lj1wall(this, particlei, simbox, energy, err)
     class(lj1wall_interaction), intent(in) :: this
-    class(particle), intent(in) :: particlei
+    class(point), intent(in) :: particlei
     type(poly_box), intent(in) :: simbox
     real(dp), intent(out) :: energy
     integer, intent(out) :: err
@@ -116,7 +116,7 @@ contains
   !! radius of the cavity is defined by the @p simbox.
   pure function lj1wall_force(this, particlei, simbox) result(f)
     class(lj1wall_interaction), intent(in) :: this
-    class(particle), intent(in) :: particlei
+    class(point), intent(in) :: particlei
     type(poly_box), intent(in) :: simbox
     real(dp) :: f(3)
 
@@ -141,7 +141,7 @@ contains
     type(json_value), pointer :: json_val
     real(dp), intent(in) :: r(:)
     type(poly_box), intent(in) :: simbox
-    type(particle) :: lj
+    type(point) :: lj
     type(json_value), pointer :: child
     real(dp) :: energy
     integer :: err, i, k

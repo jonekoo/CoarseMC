@@ -1,6 +1,6 @@
 !> Contains the point type and related procedures.
 module m_point
-  use m_particle, only: particle
+  use m_particle, only: point
   use num_kind, only: dp
   use particle_mover, only: transmove, rotate
   use json_module, only: json_value, json_add, json_create_array, CK
@@ -10,7 +10,7 @@ module m_point
   implicit none
 
   !> Point-like particle.
-  type, extends(particle) :: point
+  type, extends(point) :: point2
    contains
      !> Deserializes the coordinates from a string.
      procedure :: from_str => point_from_str
@@ -34,7 +34,7 @@ module m_point
      procedure, nopass :: description => point_description
      !> Serializes the point to the given Fortran output unit.
      procedure :: to_unit => point_to_unit
-  end type point
+  end type point2
 
 
 contains
@@ -68,7 +68,7 @@ contains
   !! err = 3 if an error occurs.
   pure subroutine point_downcast_assign(this, a_particle, err)
     class(point), intent(inout) :: this
-    class(particle), intent(in) :: a_particle
+    class(point), intent(in) :: a_particle
     integer, intent(out), optional :: err
     select type (a_particle)
     type is (point)

@@ -1,5 +1,5 @@
 module m_lj2wall_interaction
-  use m_particle, only: particle, single_interaction 
+  use m_particle, only: point, single_interaction 
   use num_kind
   use class_poly_box
   use ljcylinder
@@ -107,7 +107,7 @@ contains
   !! inside the wall, @p err == 1.
   pure subroutine lj2wall_ia_potential(this, particlei, simbox, energy, err)
     class(lj2wall_interaction), intent(in) :: this
-    class(particle), intent(in) :: particlei
+    class(point), intent(in) :: particlei
     type(poly_box), intent(in) :: simbox
     real(dp), intent(out) :: energy
     integer, intent(out) :: err
@@ -128,7 +128,7 @@ contains
   !! cavity is defined by @p simbox.
   pure function lj2wall_ia_force(this, particlei, simbox) result(f)
     class(lj2wall_interaction), intent(in) :: this
-    class(particle), intent(in) :: particlei
+    class(point), intent(in) :: particlei
     type(poly_box), intent(in) :: simbox
     real(dp) :: f(3)
     f = 0.
@@ -163,7 +163,7 @@ contains
     logical, intent(out) :: overlap
     real(dp) :: rsite_a, rsite_b
     real(dp) :: fu, r_cylinder
-    type(particle) :: site_a, site_b
+    type(point) :: site_a, site_b
     real(dp) :: energy_a, energy_b
     integer :: err_b, err_a
     overlap = .false.
@@ -192,7 +192,7 @@ contains
     real(dp) :: f_a(3), f_b(3)
     real(dp) :: rsite_a, rsite_b
     real(dp) :: fu, r_cylinder
-    type(particle) :: site_a, site_b
+    type(point) :: site_a, site_b
     r_cylinder = getx(simbox) / 2. 
     call this%set_sites(arod, site_a, site_b)
     f_a = this%a%force(site_a, simbox)
@@ -224,7 +224,7 @@ contains
   pure subroutine set_sites(this, arod, site_a, site_b)
     class(lj2wall_interaction), intent(in) :: this
     class(rod), intent(in) :: arod
-    type(particle), intent(out) :: site_a, site_b
+    type(point), intent(out) :: site_a, site_b
     site_a%x = arod%x + this%LJdist * arod%ux
     site_a%y = arod%y + this%LJdist * arod%uy
     site_b%x = arod%x - this%LJdist * arod%ux

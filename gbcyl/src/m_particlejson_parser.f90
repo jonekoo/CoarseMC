@@ -1,8 +1,7 @@
 !> Routines to read particles from JSON.
 module m_particlejson_parser
   use iso_fortran_env, only: error_unit
-  use m_particle, only: particle
-  use m_point, only: point
+  use m_particle, only: point
   use m_rod, only: rod
   use json_module, only: json_value, json_get_child, json_count, json_get, CK
   use m_json_wrapper, only: get_parameter
@@ -14,7 +13,7 @@ contains
   !! A factory routine.
   subroutine particlearray_from_json(json_val, particles)
     type(json_value), pointer, intent(in) :: json_val
-    class(particle), allocatable, intent(inout) :: particles(:)
+    class(point), allocatable, intent(inout) :: particles(:)
     character(kind=CK, len=:), allocatable :: typestr
     integer :: n, i
     type(json_value), pointer :: coordinates_json, particle_json

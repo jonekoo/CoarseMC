@@ -11,7 +11,7 @@ contains
 
 subroutine test_new_simplelist
   integer, parameter :: n=3
-  type(particle), dimension(n) :: particles
+  type(point), dimension(n) :: particles
   type(poly_box) :: simbox
   type(simplelist) :: sl
   integer :: i
@@ -86,7 +86,7 @@ end subroutine
 
 subroutine test_updateall
   integer, parameter :: n=2
-  type(particle), dimension(n) :: particles
+  type(point), dimension(n) :: particles
   type(poly_box) :: simbox
   type(simplelist) :: sl
   real(dp), parameter :: minlength=5._dp
@@ -127,7 +127,7 @@ subroutine test_nbrmask
   real(dp), parameter :: minlength=5._dp
   real(dp), parameter :: boxside=nearest(4._dp*minlength, 1._dp)
   type(poly_box) :: simbox
-  type(particle), dimension(n) :: particles
+  type(point), dimension(n) :: particles
   type(simplelist) :: sl
   logical, dimension(n) :: mask
   ! set up

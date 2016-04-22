@@ -34,7 +34,6 @@ model_src = \
   class_poly_box.f90 \
   particle_mover.f90 \
   m_particle.f90 \
-  m_point.f90 \
   m_rod.f90 \
   m_particlejson_parser.f90 
 

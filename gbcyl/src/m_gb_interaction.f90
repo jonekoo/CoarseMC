@@ -1,7 +1,7 @@
 !> Routines related to the Gay-Berne interaction wrapper gb_interaction.
 module m_gb_interaction
   use m_gayberne, only: gayberne, gb_from_json
-  use m_particle, only: pair_interaction, particle
+  use m_particle, only: pair_interaction, point
   use num_kind, only: dp
   use json_module
   use m_json_wrapper, only: get_parameter
@@ -69,7 +69,7 @@ contains
   pure subroutine gb_pair_potential(this, particlei, particlej, rij, &
        energy, err)
     class(gb_interaction), intent(in) :: this
-    class(particle), intent(in) :: particlei, particlej
+    class(point), intent(in) :: particlei, particlej
     real(dp), intent(in) :: rij(3)
     real(dp), intent(out) :: energy
     integer, intent(out) :: err
@@ -104,7 +104,7 @@ contains
   !! particle i to particle j.
   pure function gb_pair_force(this, particlei, particlej, rij) result(f)
     class(gb_interaction), intent(in) :: this
-    class(particle), intent(in) :: particlei, particlej
+    class(point), intent(in) :: particlei, particlej
     real(dp), intent(in) :: rij(3)
     real(dp) :: f(3)
     select type (particlei)
