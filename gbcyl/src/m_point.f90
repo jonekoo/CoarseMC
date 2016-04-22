@@ -1,5 +1,5 @@
 !> Contains the base type for all particles and related routines.
-module m_particle
+module m_point
   use iso_fortran_env, only: error_unit, output_unit, dp => REAL64
   use utils, only: fmt_char_dp, acceptchange
   use class_poly_box, only: poly_box, minimage
@@ -545,4 +545,4 @@ contains
     this%n = src%n
   end subroutine wrapper_assign
   
-end module m_particle
+end module m_point
