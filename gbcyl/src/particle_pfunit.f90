@@ -1,6 +1,6 @@
 !> Unit tests for particle types.
 module particle_pfunit
-  use m_particle, only: point, particlearray_to_json
+  use m_point, only: point, particlearray_to_json
   use json_module
   use pfunit
   use m_rod, only: rod

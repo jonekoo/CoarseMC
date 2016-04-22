@@ -3,7 +3,7 @@ module m_particlegroup
   use iso_fortran_env, only: dp => REAL64, output_unit, error_unit
   use class_poly_box, only: poly_box, minimage, isxperiodic, isyperiodic, &
        iszperiodic, getx, gety, getz
-  use m_particle, only: point, &
+  use m_point, only: point, &
        movepoint_2, pair_interaction, pair_interaction_ptr, &
        single_interaction, single_interaction_ptr, &
        particlearray_wrapper, wrapper_delete, particlearray_to_json

@@ -12,7 +12,7 @@ module mc_engine
   use mt_stream
   use m_fileunit
   use class_poly_box, only: poly_box, getx, gety, getz
-  use m_particle, only: point, pair_interaction_ptr, &
+  use m_point, only: point, pair_interaction_ptr, &
        particlearray_wrapper, single_interaction_ptr
   use particle_mover, only: particlemover_init,&
        get_max_translation, getmaxmoves, setmaxmoves, particlemover_to_json

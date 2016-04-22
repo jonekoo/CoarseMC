@@ -1,7 +1,7 @@
 !> Contains the rod type and related procedures.
 module m_rod
   use iso_fortran_env, only: output_unit
-  use m_particle, only: point
+  use m_point, only: point
   use num_kind, only: dp
   use utils, only: fmt_char_dp
   use particle_mover, only: transmove, rotate

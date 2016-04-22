@@ -7,7 +7,7 @@ module m_npt_engine
   use num_kind, only: dp
   use iso_fortran_env, only: output_unit, error_unit
   use class_poly_box, only: poly_box
-  use m_particle, only: pair_interaction_ptr, single_interaction_ptr
+  use m_point, only: pair_interaction_ptr, single_interaction_ptr
   use genvoltrial, only: genvoltrial_scale
   use utils, only: splitstr, join, acceptchange
   !$ use omp_lib

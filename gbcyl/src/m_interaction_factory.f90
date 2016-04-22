@@ -1,7 +1,7 @@
 !> This module provides factory procedures for creating interactions.
 module m_interaction_factory
   use iso_fortran_env
-  use m_particle, only: pair_interaction, single_interaction
+  use m_point, only: pair_interaction, single_interaction
   use m_gb_interaction, only: gb_interaction
   use m_lj_interaction, only: lj_interaction
   use m_gblj_interaction, only: gblj_interaction

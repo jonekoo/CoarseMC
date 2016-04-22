@@ -2,7 +2,7 @@
 !! lj_interaction.
 module m_lj_interaction
   use m_lj, only: lj_potential, lj_from_json
-  use m_particle, only: point, pair_interaction
+  use m_point, only: point, pair_interaction
   use num_kind, only: dp
   use json_module
   use m_json_wrapper, only: get_parameter

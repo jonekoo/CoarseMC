@@ -1,7 +1,7 @@
 program create_crystal
   use utils, only: splitstr, join
   use m_crystal
-  use m_particle, only: point, particlearray_to_json
+  use m_point, only: point, particlearray_to_json
   use class_poly_box
   use iso_fortran_env
   use json_module

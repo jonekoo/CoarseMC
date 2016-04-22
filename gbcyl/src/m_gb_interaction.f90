@@ -1,7 +1,7 @@
 !> Routines related to the Gay-Berne interaction wrapper gb_interaction.
 module m_gb_interaction
   use m_gayberne, only: gayberne, gb_from_json
-  use m_particle, only: pair_interaction, point
+  use m_point, only: pair_interaction, point
   use num_kind, only: dp
   use json_module
   use m_json_wrapper, only: get_parameter

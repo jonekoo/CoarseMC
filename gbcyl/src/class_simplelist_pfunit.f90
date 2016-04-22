@@ -1,7 +1,7 @@
 !> Unit tests for class_simplelist.
 module class_simplelist_pfunit
 use pfunit
-use m_particle
+use m_point, only: point
 use class_poly_box
 use class_simplelist
 use num_kind

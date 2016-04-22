@@ -1,5 +1,5 @@
 module m_lj2wall_interaction
-  use m_particle, only: point, single_interaction 
+  use m_point, only: point, single_interaction 
   use num_kind
   use class_poly_box
   use ljcylinder

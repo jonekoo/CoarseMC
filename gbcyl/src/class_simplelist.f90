@@ -3,7 +3,7 @@
 module class_simplelist
   use iso_fortran_env, only: error_unit
   use num_kind, only: dp
-  use m_particle, only: point
+  use m_point, only: point
   use class_poly_box
   implicit none
   private

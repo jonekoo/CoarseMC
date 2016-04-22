@@ -2,7 +2,7 @@
 !! rod-like and a point-like particle and related procedures.
 module m_gblj_interaction
   use m_gblj
-  use m_particle, only: pair_interaction, point
+  use m_point, only: pair_interaction, point
   use num_kind, only: dp
   use json_module
   use m_json_wrapper, only: get_parameter
