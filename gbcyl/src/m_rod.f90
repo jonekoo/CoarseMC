@@ -2,7 +2,6 @@
 module m_rod
   use iso_fortran_env, only: output_unit
   use m_particle, only: particle
-  use m_point, only: point
   use num_kind, only: dp
   use utils, only: fmt_char_dp
   use particle_mover, only: transmove, rotate
@@ -12,7 +11,7 @@ module m_rod
   implicit none
 
   !> A rod-like particle.
-  type, extends(point) :: rod
+  type, extends(particle) :: rod
      !> The components of the unit vector of orientation.
      real(dp) :: ux = 0._dp
      real(dp) :: uy = 0._dp
