@@ -2,8 +2,6 @@ program printpotentials
   use cla
   use mc_engine, only: mce_init_json, pair_interactions, &
        single_interactions, simbox
-  use m_rod, only: rod
-  use m_point, only: point
   use m_particle, only: particlearray_wrapper, pair_interaction
   use m_gb_interaction, only: gb_interaction
   use m_lj_interaction, only: lj_interaction

@@ -6,7 +6,6 @@ module m_lj2wall_interaction
   use json_module
   use m_json_wrapper, only: get_parameter
   use m_rod, only: rod
-  use m_point, only: point
   use m_lj1wall_interaction, only: lj1wall_interaction
   implicit none
 
@@ -22,7 +21,8 @@ module m_lj2wall_interaction
      type(lj1wall_interaction) :: a, b
      
      !> The distance of LJ interaction sites from the center of the
-     !! Gay-Berne particle along the unique (long) axis.
+     !! Gay-Berne (or another rod-like) particle along the unique 
+     !! (long) axis.
      real(dp) :: LJdist = 1.7
      
      !> If true, the wall interaction favors uniform alignment of rods 

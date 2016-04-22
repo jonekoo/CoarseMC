@@ -5,7 +5,6 @@ module m_lj1wall_interaction
   use ljcylinder
   use json_module
   use m_json_wrapper, only: get_parameter
-  use m_point, only: point
   implicit none
 
   !> Defines the interaction between a Lennard-Jones particle and the
@@ -142,7 +141,7 @@ contains
     type(json_value), pointer :: json_val
     real(dp), intent(in) :: r(:)
     type(poly_box), intent(in) :: simbox
-    type(point) :: lj
+    type(particle) :: lj
     type(json_value), pointer :: child
     real(dp) :: energy
     integer :: err, i, k

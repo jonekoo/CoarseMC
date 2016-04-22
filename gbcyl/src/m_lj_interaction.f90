@@ -6,8 +6,6 @@ module m_lj_interaction
   use num_kind, only: dp
   use json_module
   use m_json_wrapper, only: get_parameter
-  use m_rod, only: rod
-  use m_point, only: point
   implicit none
 
   !> Wraps the Lennard-Jones potential as a pair_interaction.
@@ -106,7 +104,7 @@ contains
   subroutine lj_sample(this, json_val, r)
     class(lj_interaction), intent(in) :: this
     type(json_value), pointer :: json_val
-    type(point) :: lj
+    type(particle) :: lj
     real(dp), intent(in) :: r(:)
     type(json_value), pointer :: child
     real(dp) :: energy

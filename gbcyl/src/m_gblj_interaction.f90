@@ -7,7 +7,7 @@ module m_gblj_interaction
   use json_module
   use m_json_wrapper, only: get_parameter
   use m_rod, only: rod
-  use m_point, only: point
+!  use m_point, only: point
   implicit none
 
   !> Wraps the GB-LJ potential as a pair_interaction.
@@ -111,14 +111,11 @@ contains
     real(dp) :: f(3)
     f = 0._dp
     select type (particlei)
-    type is (rod)
+    class is (rod)
+       f = this%pef%force(particlei%orientation(), rij)
+    class default
        select type (particlej)
-       type is (point)
-          f = this%pef%force(particlei%orientation(), rij)
-       end select
-    type is (point)
-       select type (particlej)
-       type is (rod)
+       class is (rod)
           f = this%pef%force(particlej%orientation(), -rij)
        end select
     end select
@@ -133,7 +130,7 @@ contains
     class(gblj_interaction), intent(in) :: this
     type(json_value), pointer :: json_val
     type(rod) :: rodsamples(2)
-    type(point) :: lj
+    type(particle) :: lj
     real(dp), intent(in) :: r(:)
     type(json_value), pointer :: child
     real(dp) :: energy
