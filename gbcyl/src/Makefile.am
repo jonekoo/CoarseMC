@@ -75,7 +75,6 @@ ptgbcyl_SOURCES = \
   genvoltrial.f90 \
   beta_exchange.f90 \
   class_simplelist.f90 \
-  m_particlegroup.f90 \
   m_nvt_engine.F90 \
   m_npt_engine.F90 \
   mc_engine.F90 \
@@ -90,7 +89,6 @@ printpotentials_SOURCES = \
   genvoltrial.f90 \
   beta_exchange.f90 \
   class_simplelist.f90 \
-  m_particlegroup.f90 \
   m_nvt_engine.F90 \
   m_npt_engine.F90 \
   mc_engine.F90 \
