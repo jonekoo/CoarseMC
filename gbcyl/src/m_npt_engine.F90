@@ -7,14 +7,12 @@ module m_npt_engine
   use num_kind, only: dp
   use iso_fortran_env, only: output_unit, error_unit
   use class_poly_box, only: poly_box
-  use m_point, only: pair_interaction_ptr, single_interaction_ptr
   use genvoltrial, only: genvoltrial_scale
   use utils, only: splitstr, join, acceptchange
   !$ use omp_lib
   use json_module
   use m_json_wrapper, only: get_parameter
-  use m_nvt_engine, only: temperature, newmaxvalue
-  use m_particlegroup, only: particlegroup_ptr, particlegroup, total_energy
+  use m_nvt_engine, only: temperature, newmaxvalue, particlegroup_ptr, particlegroup, total_energy, groups, simbox
   use mt_stream, only: rngstate => mt_state
   implicit none  
 
@@ -139,21 +137,11 @@ contains
   
   !> Performs trial volume scaling moves. 
   !!
-  !! @param simbox the simulation box.
-  !! @param groups the particlegroups.
   !! @param genstate the random number generator state.
-  !! @param pair_ias the pair interactions between particlegroups.
-  !! @param single_ias the single-particle interactions of each
-  !!        particlegroup.
   !! @param e_total the total energy after the moves.
   !! 
-  subroutine npt_update(simbox, groups, genstate, pair_ias, single_ias, &
-       e_total)
-    type(poly_box), intent(inout) :: simbox
-    type(particlegroup_ptr), intent(inout) :: groups(:)
+  subroutine npt_update(genstate, e_total)
     type(rngstate), intent(inout) :: genstate
-    type(pair_interaction_ptr), intent(in) :: pair_ias(:, :)
-    type(single_interaction_ptr) :: single_ias(:)
     real(dp), intent(out) :: e_total
     integer :: n_trials, n_accepted
 #ifdef DEBUG
@@ -166,8 +154,7 @@ contains
        end if
     end do
 #endif
-    call update_volume(simbox, groups, genstate, pair_ias,&
-         single_ias, temperature, pressure, e_total, n_trials, &
+    call update_volume(genstate, temperature, pressure, e_total, n_trials, &
          n_accepted)
 #ifdef DEBUG
     do i_group = 1, size(groups)
@@ -185,52 +172,41 @@ contains
   
   !> Performs trial volume scaling moves. 
   !!
-  !! @param simbox the simulation box.
-  !! @param groups the particlegroups.
   !! @param genstate the random number generator state.
-  !! @param pair_ias the pair interactions between particlegroups.
-  !! @param single_ias the single-particle interactions of each
-  !!        particlegroup.
   !! @param e_total the total energy after the moves.
   !! 
-  subroutine update_volume(simbox, groups, genstate, pair_ias, &
-       single_ias, temperature, pressure, e_total, n_trials, n_accepted)
-    type(poly_box), intent(inout) :: simbox
-    type(particlegroup_ptr), intent(inout) :: groups(:)
+  subroutine update_volume(genstate, temperature, pressure, e_total, &
+       n_trials, n_accepted)
     type(rngstate), intent(inout) :: genstate
-    type(pair_interaction_ptr), intent(in) :: pair_ias(:, :)
-    type(single_interaction_ptr) :: single_ias(:)
     real(dp), intent(in) :: temperature, pressure
     real(dp), intent(out) :: e_total
     integer, intent(out), optional :: n_trials, n_accepted
     integer :: i
     do i = 1, size(scalingtypes)
-       call movevol(simbox, groups, scalingtypes(i), genstate, pair_ias, &
-            single_ias, temperature, pressure, e_total, n_trials, &
-            n_accepted)
+       call movevol(scalingtypes(i), genstate, temperature, pressure, &
+            e_total, n_trials, n_accepted)
     end do
   end subroutine update_volume
   
 
-  !> Performs a trial volume scaling which scales the @p simbox and all
-  !! the positions of @p particles. For more information see for example
+  !> Performs a trial volume scaling which scales the simbox and all
+  !! the positions of particles. For more information see for example
   !! Allen and Tildesley: Computer Simulation of Liquids: the chapter
   !! about NPT ensemble Monte Carlo.
   !! 
-  !! @param simbox the simulation box.
-  !! @param particles the particles in the simulation box.
   !! @param scalingtype string defining the direction(s) for changing
   !!        the system volume.
   !! @param genstate the random number generator state.
+  !! @param temperature the temperature for the acceptance routine.
+  !! @param pressure the pressure for the acceptance routine.
+  !! @param e_total the total energy after the move.
+  !! @param n_trials the number of attempted volume scalings.
+  !! @param n_accepted the number of accepted volume scalings.
   !! 
-  subroutine movevol(simbox, groups, scalingtype, genstate, pair_ias, &
-       single_ias, temperature, pressure, e_total, n_trials, n_accepted)
-    type(poly_box), intent(inout) :: simbox
-    type(particlegroup_ptr), intent(inout) :: groups(:)
+  subroutine movevol(scalingtype, genstate, temperature, pressure, e_total, &
+       n_trials, n_accepted)
     character(len=*), intent(in) :: scalingtype
     type(rngstate), intent(inout) :: genstate
-    type(pair_interaction_ptr), intent(in) :: pair_ias(:, :)
-    type(single_interaction_ptr) :: single_ias(:)
     real(dp), intent(in) :: temperature, pressure
     real(dp), intent(out) :: e_total
     integer, intent(out), optional :: n_trials, n_accepted
@@ -252,8 +228,7 @@ contains
     oldbox = simbox
     
     !! It seems that total energy may drift (WHY?!) if it is not updated here:
-    call total_energy(groups, simbox, pair_ias, single_ias, &
-       e_total, err)
+    call total_energy(e_total, err)
     if (err /= 0) stop 'movevol: overlap in old configuration! '//&
          'Should never happen!'
     
@@ -266,8 +241,7 @@ contains
     Vn = simbox%volume()
     
     !! Calculate potential energy in the scaled system.
-    call total_energy(groups, simbox, pair_ias, single_ias, &
-         totenew, err)
+    call total_energy(totenew, err)
     
     if (err /= 0) then
        !! Scale particles back to old coordinates.
