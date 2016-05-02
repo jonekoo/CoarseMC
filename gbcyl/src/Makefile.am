@@ -16,9 +16,9 @@ dist_bin_SCRIPTS = \
   replace_with_points.py
 
 AM_FCFLAGS = \
--I${top_builddir}/mt_stream_f90-1.11 \
--I${top_builddir}/mt_stream_f90-1.11/f_jump_ahead_coeff \
--I${top_builddir}/claf90
+-I$(top_builddir)/mt_stream_f90-1.11 \
+-I$(top_builddir)/mt_stream_f90-1.11/f_jump_ahead_coeff \
+-I$(top_builddir)/claf90
 
 
 utils_src = \
@@ -41,10 +41,7 @@ model_src = \
 
 noinst_LTLIBRARIES = libmodel.la
 
-libmodel_la_SOURCES = \
-  $(utils_src) \
-  $(model_src) \
-  $(energy_src)
+libmodel_la_LIBADD = $(top_builddir)/mt_stream_f90-1.11/libmt_stream.la $(top_builddir)/cephes/libhyp2f1.la
 
 m_json_wrapper.$(OBJEXT) : m_json_wrapper.f90 check_parameter.inc process_not_found.inc
 
@@ -60,16 +57,17 @@ energy_src = \
   m_lj2wall_interaction.f90 \
   m_interaction_factory.f90
 
-LDADD = $(ldadd_mtstream) $(ldadd_hyp2f1) $(top_builddir)/claf90/libclaf.la libmodel.la
-
 ## Use hyp2f1 from cephes
 energy_src += m_hyp2f1_negint.f90 cylinder_integrals.f90 ljwall_cephes.f90
-ldadd_hyp2f1 = $(top_builddir)/cephes/libhyp2f1.la
 
-ldadd_mtstream = ${top_builddir}/mt_stream_f90-1.11/libmt_stream.la
+libmodel_la_SOURCES = \
+  $(utils_src) \
+  $(model_src) \
+  $(energy_src)
+
+LDADD = $(top_builddir)/claf90/libclaf.la  libmodel.la
 
 AM_FCFLAGS += -I$(top_builddir)/cephes/cmath
-
 
 ptgbcyl_SOURCES = \
   genvoltrial.f90 \
@@ -105,11 +103,11 @@ driver_SOURCES = \
   driver.f90  
 
 
-driver_FCFLAGS = -I${PFUNIT_DIR}/mod \
--I${top_builddir}/mt_stream_f90-1.11 \
--I${top_builddir}/mt_stream_f90-1.11/f_jump_ahead_coeff
+driver_FCFLAGS = -I$(PFUNIT_DIR)/mod \
+-I$(top_builddir)/mt_stream_f90-1.11 \
+-I$(top_builddir)/mt_stream_f90-1.11/f_jump_ahead_coeff
 
-driver_LDADD = ${PFUNIT_DIR}/lib/libpfunit.a ${ldadd_mtstream} libmodel.la
+driver_LDADD = $(PFUNIT_DIR)/lib/libpfunit.a $(ldadd_mtstream) libmodel.la
 
 TESTS = driver 
 check_PROGRAMS = driver
