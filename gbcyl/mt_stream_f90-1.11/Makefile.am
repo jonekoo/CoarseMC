@@ -32,12 +32,13 @@ check_stream_3_FCFLAGS = -D_DEBUG_ -D_CHECK_SAVEREAD_
 check_stream_3_LDADD = libmt_stream_debug.la
 
 test_1.out : check_stream_1
-	test ! -f sample_1.out && cp ${top_srcdir}/mt_stream_f90-1.11/sample_1.out .
+	if [ ! -f sample_1.out ]; then cp ${top_srcdir}/mt_stream_f90-1.11/sample_1.out .; fi
 	./check_stream_1 > test_1.out
 
 test_2.out : check_stream_2
-	test ! -f sample_2.out && cp ${top_srcdir}/mt_stream_f90-1.11/sample_2.out .
+	if [ ! -f sample_2.out ]; then cp ${top_srcdir}/mt_stream_f90-1.11/sample_2.out .; fi
 	./check_stream_2 > test_2.out
+
 
 endif
 
