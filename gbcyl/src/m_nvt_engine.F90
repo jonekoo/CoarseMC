@@ -4,7 +4,8 @@
 module m_nvt_engine
   use num_kind, only: dp
   use iso_fortran_env, only: output_unit, error_unit
-  use class_poly_box, only: poly_box, getx, gety, getz, minimage
+  use class_poly_box, only: poly_box, getx, gety, getz, minimage, &
+       isxperiodic, isyperiodic, iszperiodic
   use m_point, only: point, &
        pair_interaction, pair_interaction_ptr, &
        single_interaction, single_interaction_ptr, &
