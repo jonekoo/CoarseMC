@@ -35,6 +35,7 @@ model_src = \
   particle_mover.f90 \
   m_point.f90 \
   m_rod.f90 \
+  m_doublerod.f90 \
   m_particlejson_parser.f90 
 
 
@@ -53,6 +54,7 @@ energy_src = \
   m_lj_interaction.f90 \
   m_gb_interaction.f90 \
   m_gblj_interaction.f90 \
+  m_dgb_interaction.f90 \
   m_lj1wall_interaction.f90 \
   m_lj2wall_interaction.f90 \
   m_interaction_factory.f90

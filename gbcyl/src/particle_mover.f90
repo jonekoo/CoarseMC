@@ -99,6 +99,24 @@ contains
     call rotate_vector(uxo, uyo, uzo, nx, ny, nz, theta, uxn, uyn, uzn)
   end subroutine
 
+
+  !> Creates two new unit vectors @p uxn, @p uyn, @p uzn, @p vxn, @p vyn, @p vzn
+  !! by applying a random rotation to unit vector @p uxo, @p uyo, @p uzo,
+  !! @p vxo, @p vyo, @p vzo.
+  !! forked from subroutine rotate (see above) by Perttu Tuovinen
+  pure subroutine doublerotate(uxo, uyo, uzo, vxo, vyo, vzo, uxn, uyn, uzn, vxn, vyn, vzn, genstate)
+    real(dp), intent(in) :: uxo, uyo, uzo, vxo, vyo, vzo
+    real(dp), intent(out) :: uxn, uyn, uzn, vxn, vyn, vzn
+    type(rngstate), intent(inout) :: genstate
+    real(dp) :: theta, nx, ny, nz
+    real(dp) :: r
+    call nvec(nx, ny, nz, genstate)
+    call rng(genstate, r)
+    theta = (2._dp * r - 1._dp) * max_rotation
+    call rotate_vector(uxo, uyo, uzo, nx, ny, nz, theta, uxn, uyn, uzn)
+    call rotate_vector(vxo, vyo, vzo, nx, ny, nz, theta, vxn, vyn, vzn)
+  end subroutine
+
   !> Sets the maximum translation @p distance and maximum rotation
   !! @p angle for a single particle move.
   subroutine setmaxmoves(distance, angle)
