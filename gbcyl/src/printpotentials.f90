@@ -6,6 +6,7 @@ program printpotentials
   use m_gb_interaction, only: gb_interaction
   use m_lj_interaction, only: lj_interaction
   use m_gblj_interaction, only: gblj_interaction
+  use m_dgb_interaction, only: dgb_interaction
   use m_lj1wall_interaction, only: lj1wall_interaction
   use m_lj2wall_interaction, only: lj2wall_interaction
   use mpi
@@ -48,6 +49,9 @@ program printpotentials
      do j = 1, i
         select type (ia => pair_interactions(i, j)%ptr)
         type is (gb_interaction) 
+           call ia%sample(child_val, r)
+           call json_add(json_val, child_val)
+        type is (dgb_interaction) 
            call ia%sample(child_val, r)
            call json_add(json_val, child_val)
         type is (lj_interaction)

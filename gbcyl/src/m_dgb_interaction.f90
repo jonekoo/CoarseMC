@@ -49,6 +49,8 @@ contains
     type(dgb_interaction) :: this
     call get_parameter(json_val, 'r_cutoff', this%cutoff, error_lb=0._dp)
     this%pef = gayberne(json_val)
+
+    !lisää tarvittavat parametrit tähän!
   end function dgb_interaction_from_json
 
   !> Serializes @p this interaction to the JSON value @p json.

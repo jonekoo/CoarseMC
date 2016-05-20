@@ -3,6 +3,7 @@ module m_particlejson_parser
   use iso_fortran_env, only: error_unit
   use m_point, only: point
   use m_rod, only: rod
+  use m_doublerod, only: doublerod
   use json_module, only: json_value, json_get_child, json_count, json_get, CK
   use m_json_wrapper, only: get_parameter
   implicit none
@@ -22,12 +23,14 @@ contains
     call json_get(json_val, 'coordinates', coordinates_json)
     n = json_count(coordinates_json)
     if (typestr == 'rod') then
-       allocate(particles(n), source=rod())
+      allocate(particles(n), source=rod())
     else if (typestr == 'point') then
-       allocate(particles(n), source=point())
+      allocate(particles(n), source=point())
+    else if (typestr == 'doublerod') then
+      allocate(particles(n), source=doublerod())
     else
-       write(error_unit, *) 'ERROR: particlearray_from_json: particle type ', &
-            typestr, ' not recognized. Stopping.'
+      write(error_unit, *) 'ERROR: particlearray_from_json: particle type ', &
+        typestr, ' not recognized. Stopping.'
     end if
     do i = 1, size(particles)
        call json_get_child(coordinates_json, i, particle_json)

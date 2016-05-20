@@ -7,6 +7,7 @@ program create_crystal
   use json_module
   use num_kind, only: dp
   use m_rod, only: rod
+  use m_doublerod, only: doublerod
   implicit none
   integer :: nx = -1, ny = -1, nz = -1
   real(8), allocatable :: xs(:, :, :), ys(:, :, :), zs(:, :, :) 
@@ -72,12 +73,14 @@ program create_crystal
 
   select case (particletype)
   case ("rod")
-     allocate(particles(nx * ny * nz), source=rod())
+    allocate(particles(nx * ny * nz), source=rod())
   case ("point")
-     allocate(particles(nx * ny * nz), source=point())
+    allocate(particles(nx * ny * nz), source=point())
+  case ("doublerod")
+    allocate(particles(nx * ny * nz), source=doublerod())
   case default
-     write(error_unit, *) 'ERROR: Unknown particle type ', particletype
-     stop 'create_crystal is unable to continue.'
+    write(error_unit, *) 'ERROR: Unknown particle type ', particletype
+    stop 'create_crystal is unable to continue.'
   end select
 
   do i = 1, nx * ny * nz
