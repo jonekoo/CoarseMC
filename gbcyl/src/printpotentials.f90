@@ -20,7 +20,7 @@ program printpotentials
   character(len=80) :: pef_filename
   integer :: err, i, j
   real(dp), parameter :: step = 0.01
-  real(dp), parameter :: r(1001) = [(i * step, i = 0, 1000)]
+  real(dp), parameter :: r(1001) = [(i * step, i = -500, 500)] !this was 0 to 1000
   type(json_value), pointer :: json_val, child_val
   
   call mpi_init(err)
@@ -77,5 +77,5 @@ program printpotentials
 
   call json_print(json_val, pef_filename)
   call mpi_finalize(err)
-  
+  !write(*,*) gblength
 end program printpotentials

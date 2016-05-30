@@ -1,5 +1,5 @@
 {
-    "ensemble": "npt",
+    "ensemble": "nvt",
     "max_rotation": 0.0992623185307094,
     "max_scaling": 197.99315994394,
     "max_translation": 0.218287458838194,

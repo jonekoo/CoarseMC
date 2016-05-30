@@ -22,6 +22,7 @@ module m_dgb_interaction
      
      !> Computes the potential energy of the interaction of two rods.
      procedure :: pair_potential => dgb_pair_potential
+     procedure :: testpair_potential
 
      !> Computes the force acting between two rods due to this
      !! interaction. 
@@ -86,13 +87,16 @@ contains
       select type (particlej)
       class is (doublerod)
         gblength = this%pef%kappasigma !! from gayberne, I presume
+        !open(unit=2,file="gblength.txt")
+        !  write(2,*), gblength
+        !close(2)
 
         !! this should be made a bit more optimised: now local copies
         !! of orientation vectors are created.
-        ui = [particlei%ux, particlei%uy, particlei%uz]
-        vi = [particlei%vx, particlei%vy, particlei%vz]
-        uj = [particlej%ux, particlej%uy, particlej%uz]
-        vj = [particlej%vx, particlej%vy, particlej%vz]
+        ui = particlei%orientation_u() ![particlei%ux, particlei%uy, particlei%uz]
+        vi = particlei%orientation_v() ![particlei%vx, particlei%vy, particlei%vz]
+        uj = particlej%orientation_u() ![particlej%ux, particlej%uy, particlej%uz]
+        vj = particlej%orientation_v() ![particlej%vx, particlej%vy, particlej%vz]
 
         do i = 1, 3
           dist1(i) = rij(i) + gblength/2*(uj(i) - vi(i))
@@ -102,10 +106,15 @@ contains
         end do
 
         call this%pef%potential(vi, uj, dist1, potE1, overlap)
-        call this%pef%potential(vi, vj, dist2, potE2, overlap)
-        call this%pef%potential(ui, vj, dist3, potE3, overlap)
-        call this%pef%potential(ui, uj, dist4, potE4, overlap)
+        if (.not. overlap) call this%pef%potential(vi, vj, dist2, potE2, overlap)
+        if (.not. overlap) call this%pef%potential(ui, vj, dist3, potE3, overlap)
+        if (.not. overlap) call this%pef%potential(ui, uj, dist4, potE4, overlap)
         energy = potE1 + potE2 + potE3 + potE4
+        if (gblength == 4.4) then
+          energy = 0
+        else if (gblength == 2.2) then
+          energy = 1
+        end if
         if (overlap) err = 1
 
       class default
@@ -115,6 +124,64 @@ contains
       err = 178
     end select
   end subroutine dgb_pair_potential
+
+
+  !! THIS IS JUST A COPY of the subroutine above, unpure version for testing purposes.
+  subroutine testpair_potential(this, particlei, particlej, rij, &
+       energy, err)
+    class(dgb_interaction), intent(in) :: this
+    class(point), intent(in) :: particlei, particlej
+    real(dp) :: gblength, potE1, potE2, potE3, potE4 
+    integer :: i
+    real(dp), intent(in) :: rij(3)
+    real(dp), intent(out) :: energy
+    integer, intent(out) :: err
+    logical :: overlap
+    real(dp), dimension(3) :: ui, uj, vi, vj, dist1, dist2, dist3, dist4
+    err = 0
+    select type (particlei)
+    class is (doublerod)
+      select type (particlej)
+      class is (doublerod)
+        gblength = this%pef%kappasigma !! from gayberne, I presume
+        !open(unit=2,file="gblength.txt")
+        write(*,*), "GBLENGTH", gblength
+        !close(2)
+
+        !! this should be made a bit more optimised: now local copies
+        !! of orientation vectors are created.
+        ui = particlei%orientation_u() ![particlei%ux, particlei%uy, particlei%uz]
+        vi = particlei%orientation_v() ![particlei%vx, particlei%vy, particlei%vz]
+        uj = particlej%orientation_u() ![particlej%ux, particlej%uy, particlej%uz]
+        vj = particlej%orientation_v() ![particlej%vx, particlej%vy, particlej%vz]
+
+        do i = 1, 3
+          dist1(i) = rij(i) + gblength/2*(uj(i) - vi(i))
+          dist2(i) = rij(i) + gblength/2*(vj(i) - vi(i))
+          dist3(i) = rij(i) + gblength/2*(vj(i) - ui(i))
+          dist4(i) = rij(i) + gblength/2*(uj(i) - ui(i))
+        end do
+
+        call this%pef%potential(vi, uj, dist1, potE1, overlap)
+        if (.not. overlap) call this%pef%potential(vi, vj, dist2, potE2, overlap)
+        if (.not. overlap) call this%pef%potential(ui, vj, dist3, potE3, overlap)
+        if (.not. overlap) call this%pef%potential(ui, uj, dist4, potE4, overlap)
+        energy = potE1 + potE2 + potE3 + potE4
+        !if (gblength == 4.4) then
+        !  energy = 0
+        !else if (gblength == 2.2) then
+        !  energy = 1
+        !end if
+        if (overlap) err = 1
+
+      class default
+        err = 177
+      end select
+    class default
+      err = 178
+    end select
+  end subroutine testpair_potential
+
 
 
   !> Returns the cutoff radius of @p this interaction.
@@ -147,7 +214,8 @@ contains
 
 
   !> Produces a sample of the possible potential energies with given
-  !! distances between particles @p r. The sample is written to the JSON
+  !! distances between particles @p r. The distance is evaluated in the
+  !! x axis. The sample is written to the JSON
   !! value @p json_val. The sample includes combinations of particles
   !! oriented in x, y, and z directions.
   subroutine dgb_sample(this, json_val, r)
@@ -159,9 +227,8 @@ contains
     real(dp) :: energy
     integer :: err, i, j, k
     type(json_value), pointer :: r_json, energy_json
-    character(len=3, kind=CK), parameter :: descriptions(3) = &
+    character(len=4, kind=CK), parameter :: descriptions(3) = &
          ['DGBx', 'DGBy', 'DGBz']
-
     call doublerodsamples(1)%set_orientation_u([1._dp, 0._dp, 0._dp])
     call doublerodsamples(1)%set_orientation_v([-1._dp, 0._dp, 0._dp])
     call doublerodsamples(2)%set_orientation_u([0._dp, 1._dp, 0._dp])
@@ -175,19 +242,26 @@ contains
                descriptions(j))
           call json_create_array(r_json, 'x')
           call json_create_array(energy_json, 'energy')
+          write(*,*) "ui vi", doublerodsamples(i)%ux, doublerodsamples(i)%uy, &
+            doublerodsamples(i)%uz, doublerodsamples(i)%vx, doublerodsamples(i)%vy, &
+            doublerodsamples(i)%vz
+          write(*,*) "ui vi", doublerodsamples(j)%ux, doublerodsamples(j)%uy, &
+            doublerodsamples(j)%uz, doublerodsamples(j)%vx, doublerodsamples(j)%vy, &
+            doublerodsamples(j)%vz
           do k = 1, size(r)
-             call this%pair_potential(doublerodsamples(i), doublerodsamples(j), &
-                  [r(k), 0._dp, 0._dp], energy, err)
-             if (err == 0) then
-                call json_add(r_json, '', r(k))
-                call json_add(energy_json, '', energy)
-             end if
+            call this%testpair_potential(doublerodsamples(i), doublerodsamples(j), &
+              [r(k), 0._dp, 0._dp], energy, err)
+            if (err == 0) then
+              call json_add(r_json, '', r(k))
+              call json_add(energy_json, '', energy)
+            end if
           end do
           call json_add(child, r_json)
           call json_add(child, energy_json)
           call json_add(json_val, child)
        end do
     end do
+   !900 format (A,F4.1)
   end subroutine dgb_sample
   
 end module m_dgb_interaction

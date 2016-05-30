@@ -51,6 +51,7 @@ module m_doublerod
      !> Return the orientation vectors of this doublerod.
      procedure :: orientation => doublerod_orientation_u
      procedure :: orientation_v => doublerod_orientation_v
+     procedure :: orientation_u => doublerod_orientation_u
 
      !> Set the orientation vectors of this doublerod.
      procedure :: set_orientation => doublerod_set_orientation

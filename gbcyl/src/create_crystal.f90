@@ -11,7 +11,8 @@ program create_crystal
   implicit none
   integer :: nx = -1, ny = -1, nz = -1
   real(8), allocatable :: xs(:, :, :), ys(:, :, :), zs(:, :, :) 
-  real(8) :: a = 1.0, d = 3.6
+  real(8) :: a = 1.0, d = 3.6, theta, cab_vy, cab_vz
+  real(dp), parameter :: pi = 3.141592653589793238462643383279502884197169399
   real(8), allocatable :: rs(:, :) !(3, nx * ny * nz)
   type(poly_box) :: simbox
   class(point), allocatable, target :: particles(:), temp(:)
@@ -76,8 +77,15 @@ program create_crystal
     allocate(particles(nx * ny * nz), source=rod())
   case ("point")
     allocate(particles(nx * ny * nz), source=point())
-  case ("doublerod")
+  case ("doublerod-cab")
+    theta = 1.2477984331138 !calculated at computationaShit.ods from optimized cab geometry
+    cab_vy = cos(pi/2 - theta) !v vector lies in the yz plane
+    cab_vz = sin(pi/2 - theta)
+    allocate(particles(nx * ny * nz), source=doublerod(vx=0._dp, vy=cab_vy, vz=cab_vz))
+  case ("doublerod-tab") !the default option, orientation vector v = -u
     allocate(particles(nx * ny * nz), source=doublerod())
+  case ("doublerod")
+    allocate(particles(nx * ny * nz), source=doublerod())    
   case default
     write(error_unit, *) 'ERROR: Unknown particle type ', particletype
     stop 'create_crystal is unable to continue.'
@@ -165,7 +173,7 @@ subroutine print_help
   write(output_unit, *) '    wall the particles are put.'
   write(output_unit, *) ''
   write(output_unit, *) 'particletype="rod"'
-  write(output_unit, *) '    options are "rod", "point". You may need to'
+  write(output_unit, *) '    options are "rod", "doublerod", "point". You may need to'
   write(output_unit, *) '    escape the quotes with backslash. Example:'
   write(output_unit, *) '    particletype=\"point\"'
   write(output_unit, *) ''
