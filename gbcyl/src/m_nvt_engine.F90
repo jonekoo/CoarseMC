@@ -106,6 +106,7 @@ contains
     type(json_value), pointer :: groups_json => null(), groups_element => null()
     character(len=:, kind=CK), allocatable :: group_name
     integer :: i
+    logical :: found
     call get_parameter(json_val, 'move_ratio', moveratio, error_lb=0._dp, &
          error_ub=1._dp)
     call get_parameter(json_val, 'temperature', temperature, error_lb=0._dp)
@@ -114,7 +115,13 @@ contains
          error_ub=nmovetrials, error_lb=0)
 
     ! Getting group names already here, so that we can set up interactions.
-    call json_get(json_val, 'particle_groups', groups_json)
+    call json_get(json_val, 'particle_groups', groups_json, found)
+    if (.not. found) then
+       write(error_unit, *) 'ERROR: particle_groups not found in input.'
+       write(error_unit, *) 'particle_groups should be a list containing ' // &
+            'at least one group.'
+       stop
+    end if
     allocate(group_names(json_count(groups_json)))
     group_names = ''
     do i = 1, json_count(groups_json)
