@@ -31,3 +31,4 @@ mostlyclean-local :
 	-rm -f shortrestart-0.json shortrestart-1.json shortoutput-0.json shortoutput-1.json
 	-rm -f zerosweepsrestart-0.json zerosweepsoutput-0.json
 	-rm -f test_missinginput-0.json test_missinginput.json
+	-rm -f input-0.json
