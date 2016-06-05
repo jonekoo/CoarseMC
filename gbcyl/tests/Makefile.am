@@ -1,5 +1,5 @@
-dist_check_SCRIPTS = test_short.py test_zerosweeps.py test_samename.py
-TESTS = test_short.py test_zerosweeps.py test_samename.py
+dist_check_SCRIPTS = test_short.py test_zerosweeps.py test_samename.py test_missinginput.py
+TESTS = test_short.py test_zerosweeps.py test_samename.py test_missinginput.py
 TEST_EXTENSIONS = .py
 PY_LOG_COMPILER = $(PYTHON)
 AM_PY_LOG_FLAGS = -v
@@ -14,6 +14,11 @@ test_samename.py : input-0.json
 
 test_short.py : shortrestart-0.json shortrestart-1.json shortreference-0.json shortreference-1.json 
 
+test_missinginput.json : $(top_srcdir)/tests/shortinput-0.json
+	cp $(top_srcdir)/tests/shortinput-0.json test_missinginput.json
+
+test_missinginput.py : test_missinginput.json
+
 shortrestart-0.json shortrestart-1.json : shortinput-0.json shortinput-1.json $(top_builddir)/src/ptgbcyl
 	$(RUN_CMD) 2 $(top_builddir)/src/ptgbcyl -i $(top_srcdir)/tests/shortinput-_I_.json -o shortoutput-_I_.json -r shortrestart-_I_.json
 
@@ -25,4 +30,5 @@ zerosweepsrestart-0.json : zerosweepsinput-0.json $(top_builddir)/src/ptgbcyl
 mostlyclean-local :
 	-rm -f shortrestart-0.json shortrestart-1.json shortoutput-0.json shortoutput-1.json
 	-rm -f zerosweepsrestart-0.json zerosweepsoutput-0.json
-
+	-rm -f test_missinginput-0.json test_missinginput.json
+	-rm -f input-0.json
