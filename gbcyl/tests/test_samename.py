@@ -2,12 +2,11 @@
 #-*- coding: utf-8 -*-
 
 """
-Check that the program fails if two groups have the same name.
+Check that the program fails correctly if two groups have the same name.
 """
 import subprocess
 import os.path
 import sys
-import subprocess
 
 def main():
     runcmd = os.environ["RUN_CMD"].replace('"', '')
