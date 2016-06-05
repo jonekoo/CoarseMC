@@ -135,7 +135,7 @@ contains
        end if
        if (i > 1) then
           if (any(group_name == group_names(:i-1))) then
-             write(error_unit, *) 'Two groups must not have the same name: ' //&
+             write(error_unit, *) 'ERROR: Two groups must not have the same name: ' //&
                   group_name
              stop
           end if
