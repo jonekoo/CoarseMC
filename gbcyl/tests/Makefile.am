@@ -5,6 +5,8 @@ PY_LOG_COMPILER = $(PYTHON)
 AM_PY_LOG_FLAGS = -v
 dist_check_DATA = shortreference-0.json shortreference-1.json shortinput-0.json shortinput-1.json total_energies-reference.txt zerosweepsinput-0.json samename-0.json
 
+export RUN_CMD=mpirun -np
+
 test_short.py : shortrestart-0.json shortrestart-1.json shortreference-0.json shortreference-1.json 
 
 test_missinginput.json : $(top_srcdir)/tests/shortinput-0.json

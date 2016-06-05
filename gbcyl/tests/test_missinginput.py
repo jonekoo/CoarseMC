@@ -3,6 +3,7 @@ import json
 import subprocess
 import sys
 import os.path
+import os
 
 
 def main():
@@ -15,8 +16,9 @@ def main():
     with open('test_missinginput-0.json', 'w') as f:
         json.dump(d, f)
     # Run program with input. Catch output.
-    args = ["mpirun", "-np", "1", os.path.join("..", "src", "ptgbcyl"), "-i",
-            "test_missinginput-_I_.json"]
+    runcmd = os.environ['RUN_CMD'].replace('"', '')
+    args = runcmd.split() + ["1", os.path.join("..", "src", "ptgbcyl"), "-i",
+                             "test_missinginput-_I_.json"]
     proc = subprocess.Popen(args, stderr=subprocess.PIPE)
     for line in proc.stderr:
         if "error" in line.lower() and "particle_groups" in line:
