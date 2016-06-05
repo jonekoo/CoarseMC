@@ -1,5 +1,9 @@
 #!/usr/bin/env python 
 # -*- coding: utf-8 -*-
+"""
+Test that simulation is aborted correctly when particle_groups is missing
+from input.
+"""
 import json
 import subprocess
 import sys
