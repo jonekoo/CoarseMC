@@ -1,6 +1,5 @@
 #!/usr/bin/env python 
 #-*- coding: utf-8 -*-
-
 """
 Check that the program fails correctly if two groups have the same name.
 """
