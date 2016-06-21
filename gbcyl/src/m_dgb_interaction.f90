@@ -86,7 +86,7 @@ contains
     class is (doublerod)
       select type (particlej)
       class is (doublerod)
-        gblength = this%pef%kappasigma !! from gayberne, I presume
+        gblength = this%pef%kappasigma*this%pef%sigma0 !! from gayberne, I presume
         !open(unit=2,file="gblength.txt")
         !  write(2,*), gblength
         !close(2)
