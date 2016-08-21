@@ -128,12 +128,18 @@ contains
     type(json_value), pointer, intent(in) :: json_val
     character(kind=CK, len=*), intent(in) :: name
     character(kind=CK, len=*), allocatable, intent(inout) :: val(:)
-    type(json_value), pointer :: temp
-    character(kind=CK, len=len(val)), allocatable :: vec(:)
-    call json_get(json_val, name, temp)
-    call json_get(temp, vec)
-    call process_not_found(json_val, name, val, vec)
-    !call json_destroy(temp, .false.)
+    type(json_value), pointer :: jsonvec, child
+    character(kind=CK, len=:), allocatable :: temp
+    integer :: i
+    call json_get(json_val, name, jsonvec)
+    !call process_not_found(json_val, name, val, jsonvec)
+    if (allocated(val)) deallocate(val)
+    allocate(val(json_count(jsonvec)))
+    do i = 1, json_count(jsonvec)
+       call json_get_child(jsonvec, i, child)
+       call json_get(child, temp)
+       val(i) = temp
+    end do
   end subroutine get_string_vec_parameter
 
   subroutine process_string_vec_not_found(json_val, name, val, temp)
