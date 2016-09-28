@@ -181,10 +181,11 @@ contains
        !iz = int((particles(iparticle)%z / getz(simbox) + 0.5) * sl%nz)
        call cell_index(sl, particles(iparticle), simbox, ix, iy, iz, err)
        if (err /= 0) then
-          write(error_unit, *) 'Invalid cell index ', ix, iy, iz
+          write(error_unit, *) 'ERROR: Particle coordinates '
           call particles(iparticle)%to_unit(error_unit)
+          write(error_unit, *) 'are outside the box '
           call simbox%to_unit(error_unit)
-          stop 'simplelist_populate unable to continue'
+          stop 'simplelist_populate unable to continue. (Invalid cell index)'
        end if
        !! add to the right position in simplelist
        sl%counts(ix, iy, iz) = sl%counts(ix, iy, iz) + 1
