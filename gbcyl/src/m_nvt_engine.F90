@@ -344,7 +344,7 @@ contains
     character(len=*), intent(in) :: group_names(:)
     type(pair_interaction_ptr), intent(inout), allocatable :: pair_ias(:, :)
     type(json_value), pointer :: pair_ia_json, pair_ia_element
-    character(len=len(group_names)), allocatable :: participants(:)
+    character(kind=CK, len=len(group_names)), allocatable :: participants(:)
     logical :: found
     integer :: i, j, k, l
     call json_get(json_val, 'pair_interactions', pair_ia_json, found)

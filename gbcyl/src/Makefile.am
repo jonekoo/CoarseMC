@@ -4,8 +4,7 @@
 bin_PROGRAMS = \
   ptgbcyl \
   create_crystal \
-  printpotentials
-
+  printpotentials 
 
 ## Scripts to install
 dist_bin_SCRIPTS = \
@@ -19,7 +18,6 @@ AM_FCFLAGS = \
 -I$(top_builddir)/mt_stream_f90-1.11 \
 -I$(top_builddir)/mt_stream_f90-1.11/f_jump_ahead_coeff \
 -I$(top_builddir)/claf90
-
 
 utils_src = \
   num_kind.f90 \
@@ -36,8 +34,6 @@ model_src = \
   m_point.f90 \
   m_rod.f90 \
   m_particlejson_parser.f90 
-
-
 
 noinst_LTLIBRARIES = libmodel.la
 
