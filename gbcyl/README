@@ -18,6 +18,8 @@ of the code. See LICENSE file for copyright information.
 
 
 
+
+
 Building
 ---------
 
@@ -32,7 +34,20 @@ Older versions of the compilers may lack support for some Fortran
 compile the included Cephes library. A POSIX-compliant Bourne-shell-like
 environment is expected in the build process, but not necessary. Python
 2.7 with the ujson module (https://pypi.python.org/pypi/ujson) installed
-is recommended to run the scripts used to edit input/output files.
+is recommended to run the scripts used to edit input/output files. If the
+distribution is cloned from the repository, also the GNU Autotools (Automake,
+Autoconf and Libtool) are needed.
+
+
+Cloning from repository:
+
+If ptgbcyl was cloned from the repository, the first step is to go to the
+cloned ptgbcyl/gbcyl directory where configure.ac is located and run 
+
+autoreconf --install
+
+If some errors appear at this step, it is probably due to missing one of the
+GNU Autotools components (see Requirements).
 
 
 Compiling:
