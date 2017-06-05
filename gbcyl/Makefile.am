@@ -16,6 +16,7 @@ DX_CLEANFILES=@DX_DOCDIR@/html/* @DX_DOCDIR@/ptgbcyl.tag
 
 endif
 
+ACLOCAL_AMFLAGS = -I m4
 
 EXTRA_DIST = $(DX_CONFIG)
 
