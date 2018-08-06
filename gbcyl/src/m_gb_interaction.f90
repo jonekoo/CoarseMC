@@ -61,10 +61,11 @@ contains
   
   !> Computes the potential @p energy of the Gay-Berne interaction
   !! acting between @p particlei and @p particlej. @p rij is the vector
-  !! from @p particlei to @p particlej. If the particles overlap,
-  !! @p err = 1. If particlej is not an instance of class rod,
-  !! @p err = 78. If particlej is not an instance of class rod
-  !! @p err = 77.
+  !! from @p particlei to @p particlej. @p err contains the error code
+  !! when the routine fails. The possible values are:
+  !! 1) @p err = 1 if the two particles overlap, 
+  !! 2) @p err = 78 if @p particlei is not an instance of class rod, and 
+  !! 3) @p err = 77 if @p particlej is not an instance of class rod
   !! 
   pure subroutine gb_pair_potential(this, particlei, particlej, rij, &
        energy, err)
