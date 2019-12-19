@@ -3,8 +3,8 @@ dist_doc_DATA = README LICENSE DoxygenLayout.xml
 include $(top_srcdir)/aminclude.am
 
 SUBDIRS = claf90
-SUBDIRS += cephes Examples
-SUBDIRS += mt_stream_f90-1.11 src tests
+SUBDIRS += cephes
+SUBDIRS += mt_stream_f90-1.11 src analysis tests Examples
 
 if DX_COND_html
 

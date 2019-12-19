@@ -148,13 +148,26 @@ contains
     call create_single_interactions_json(json_val, group_names, &
          single_interactions) 
 
+    call nvt_engine_update_box(json_val)
+
+    call nvt_engine_create_groups(json_val, simbox, pair_interactions, groups)
+  end subroutine nvt_engine_init_json
+
+
+  subroutine nvt_engine_update_box(json_val)
+    type(json_value), pointer, intent(in) :: json_val
+    type(json_value), pointer :: box_json
     !! Create box
     call json_get(json_val, 'box', box_json)
     call simbox%from_json(box_json)
+  end subroutine
 
-    call create_groups(json_val, simbox, pair_interactions, groups)
-  end subroutine nvt_engine_init_json
 
+  subroutine nvt_engine_update_groups(json_val)
+    type(json_value), pointer, intent(in) :: json_val
+    call nvt_engine_delete_groups()
+    call nvt_engine_create_groups(json_val, simbox, pair_interactions, groups)
+  end subroutine nvt_engine_update_groups
 
   
   !> Serializes the module state to JSON. The JSON is added to
@@ -238,15 +251,24 @@ contains
        end do
     end do
     deallocate(pair_interactions)
-    !! Delete groups
-    do i = 1, size(groups)
-       if (associated(groups(i)%ptr)) then
-          deallocate(groups(i)%ptr)
-          groups(i)%ptr => null()
-       end if
-    end do
-    deallocate(groups)
+
+    call nvt_engine_delete_groups()
+    deallocate(group_names)
   end subroutine nvt_engine_finalize
+
+  subroutine nvt_engine_delete_groups()
+    !! Delete groups
+    integer :: i
+    if (allocated(groups)) then
+       do i = 1, size(groups)		
+    	   if (associated(groups(i)%ptr)) then
+             deallocate(groups(i)%ptr)
+             groups(i)%ptr => null()
+	   end if
+       end do
+       deallocate(groups)
+     end if
+  end subroutine nvt_engine_delete_groups
 
   subroutine nvt_engine_update_decomposition
     integer :: i
@@ -291,7 +313,7 @@ contains
   !!        to the groups.
   !! @param groups the particlegroups read from JSON.
   !!
-  subroutine create_groups(json_val, simbox, pair_interactions, &
+  subroutine nvt_engine_create_groups(json_val, simbox, pair_interactions, &
        groups)
     type(json_value), pointer, intent(in) :: json_val
     type(poly_box), intent(in) :: simbox
@@ -328,9 +350,9 @@ contains
             min_boundary_width=2 * get_max_translation(), name=group_name))
        if (allocated(particles)) deallocate(particles)
     end do
-  end subroutine create_groups
-  
-  
+  end subroutine nvt_engine_create_groups
+
+
   !> Deserialize pair interactions from JSON. The result is a symmetric
   !! matrix of pair_interaction_ptr:s in which the element pair_ias(i, j)
   !! is the interaction between @p group_names(i) and @p group_names(j).

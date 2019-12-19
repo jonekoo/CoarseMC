@@ -217,6 +217,7 @@ pure SUBROUTINE CROSSP(AX,AY,AZ,BX,BY,BZ,CX,CY,CZ)
   CZ = AX * BY - AY * BX
 END SUBROUTINE
 
+
 !> Returns the value of a polynomial of order n-1 in the point @p x. 
 !! Coefficients of the polynomial are given in table @p a, where 
 !! @p a(i) is the coefficient of the x^(n-i) term. Calculation is done
@@ -268,6 +269,7 @@ pure function fmt_char_dp() result(format_char)
   format_char = trim(adjustl(format_char))
 end function
 
+
 !> Returns a formatting character for an array of double precision real
 !! numbers. To be used when consistent formatting of real numbers is
 !! needed. 
@@ -302,6 +304,7 @@ subroutine readstr(unit, str, ios)
   end do
 end subroutine readstr
   
+
 subroutine readlines(unit, lines, ios)
   intrinsic new_line
   integer, intent(in) :: unit
