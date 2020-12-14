@@ -2,6 +2,10 @@
 *.o 
 *.lo
 *.Plo
+*.la
+*.a
+.dirstamp
+m4
 aclocal.m4
 ar-lib
 compile
@@ -14,3 +18,15 @@ depcomp
 install-sh
 libtool
 ltmain.sh
+Makefile.in
+Makefile
+.gitignore
+.gitignore
+test-driver
+autom4te.cache/*
+build
+missing
+src/create_crystal
+src/ptgbcyl
+src/printpotentials
+src/dummy
