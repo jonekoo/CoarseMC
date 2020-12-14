@@ -1,10 +1,16 @@
 ##SUBDIRS=tests
+noinst_LTLIBRARIES = libmodel.la
 
 ## Programs to install
+## dummy is an ugly hack to get libmodel.la compiled before ptgbcyl. There
+## must be a better way to do that.
 bin_PROGRAMS = \
+  dummy \
   ptgbcyl \
   create_crystal \
   printpotentials 
+
+dummy_SOURCES = dummy.f90
 
 ## Scripts to install
 dist_bin_SCRIPTS = \
@@ -34,8 +40,6 @@ model_src = \
   m_point.f90 \
   m_rod.f90 \
   m_particlejson_parser.f90 
-
-noinst_LTLIBRARIES = libmodel.la
 
 libmodel_la_LIBADD = $(top_builddir)/mt_stream_f90-1.11/libmt_stream.la $(top_builddir)/cephes/libhyp2f1.la
 
