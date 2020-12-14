@@ -1,4 +1,10 @@
-If not explicitly stated otherwise, (e.g. in a source or text file) the
+This license may not apply to the contents of the following subdirectories/-packages:
+cephes
+claf90
+mt_stream_f90-1.11
+
+If not explicitly stated otherwise, (e.g. in a source file or in a text file
+named as COPYRIGHT or LICENCE in the subdirectory of a source file file) the
 following copyright conditions hold:
 
 Copyright (c) 2016 Jouni Karjalainen
