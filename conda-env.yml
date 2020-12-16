@@ -1,0 +1,7 @@
+name: coarsemc
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=2.7
+  - numpy
