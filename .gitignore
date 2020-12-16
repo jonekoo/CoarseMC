@@ -35,3 +35,14 @@ examples/*/output-*.json
 examples/LJ_and_GB_in_R7/ljgbr7-*.json
 examples/LJ_and_GB_in_R7/geometry.json
 examples/LJ_and_GB_in_R7/temperatures.json
+ptgbcyl-1.0.0.tar.gz
+test*.log
+test_*.trs
+tests/input-0.json
+tests/shortoutput-0.json
+tests/shortoutput-1.json
+tests/shortrestart-0.json
+tests/shortrestart-1.json
+tests/test_missinginput-0.json
+tests/test_missinginput.json
+tests/zerosweepsrestart-0.json
