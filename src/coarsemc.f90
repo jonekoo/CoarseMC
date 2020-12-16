@@ -1,7 +1,7 @@
 !> This is the main program of the CoarseMC Monte Carlo simulation
 !! program for coarse-grained molecular models. 
 !!
-program gbcyl
+program coarsemc
   use mc_engine
   use mpi
   use json_module
@@ -76,4 +76,4 @@ contains
        stop
     end if
   end subroutine parse_filename
-end program gbcyl
+end program coarsemc

@@ -42,7 +42,7 @@ Autoconf and Libtool) are needed.
 Cloning from repository:
 
 If coarsemc was cloned from the repository, the first step is to go to the
-cloned coarsemc/gbcyl directory where configure.ac is located and run 
+cloned coarsemc directory where configure.ac is located and run 
 
 autoreconf --install
 
