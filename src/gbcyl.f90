@@ -1,4 +1,4 @@
-!> This is the main program of the PTGBCYL Monte Carlo simulation
+!> This is the main program of the CoarseMC Monte Carlo simulation
 !! program for coarse-grained molecular models. 
 !!
 program gbcyl

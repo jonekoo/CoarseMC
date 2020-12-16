@@ -1,7 +1,7 @@
 
 
 
-PTGBCYL Quick Start Guide
+CoarseMC Quick Start Guide
 -------------------
 
 Jouni Karjalainen
@@ -12,7 +12,7 @@ jouni.m.karjalainen@gmail.com
 Introduction
 ------------
 
-This is PTGBCYL, a Monte Carlo simulation package for coarse-grained
+This is CoarseMC, a Monte Carlo simulation package for coarse-grained
 molecular models. The copyright belongs to Jouni Karjalainen for most
 of the code. See LICENSE file for copyright information.
 
@@ -62,18 +62,20 @@ configuring and building the package with GNU and Intel compilers:
 GCC:
 ./configure --prefix=yourinstallationpath FC=mpif90 \
 FCFLAGS="-fno-range-check -O2 -fopenmp" CC=mpicc CFLAGS="-O2 -fopenmp" \
-F77=mpif90 FFLAGS="-O2 -fopenmp"
+F77=mpif90 FFLAGS="-O2 -fopenmp" PYTHON=pathtopython2
 make
 
 Intel:
 ./configure --prefix=yourinstallationpath FC=mpif90 \
 FCFLAGS="-standard-semantics -O2 -openmp" CC=mpicc CFLAGS="-O2 -openmp" \
-F77=mpif90 FFLAGS="-O2 -openmp" 
+F77=mpif90 FFLAGS="-O2 -openmp" PYTHON=pathtopython2
 make
 
 Note that the compiler flags "-standard-semantics" (Intel) and
-"-fno-range-check" (GNU) are mandatory. The --prefix option is
-optional and needed only if you want to install the binaries with
+"-fno-range-check" (GNU) are mandatory. Giving the path to a Python 2.6 
+(or 2.7) installation is necessary only for running the python scripts, which
+include tests and examples. The --prefix option is also optional and needed
+only if you want to install the binaries with
 
 make install
 

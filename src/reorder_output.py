@@ -1,6 +1,6 @@
 #-*- coding: utf-8 -*-
 """
-Reorders PTGBCYL output by temperature. 
+Reorders CoarseMC output by temperature. 
 
 Usage example:
 python reorder_output.py output-*.json

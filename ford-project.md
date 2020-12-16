@@ -1,4 +1,4 @@
-project: PTGBCYL
+project: CoarseMC
 summary: Flexible hybrid-parallel Monte Carlo simulation program for coarse-grained molecular models.
 author: Jouni Karjalainen
 year: 2016
@@ -18,8 +18,8 @@ warn: true
 graph: true
 
 Here is the API documentation for the Monte Carlo molecular simulation
-program PTGBCYL. The documentation is aimed at
-developers interested in extending PTGBCYL. The purpose is to provide
+program CoarseMC. The documentation is aimed at
+developers interested in extending CoarseMC. The purpose is to provide
 sufficient information about the interfaces and derived types that
 provide points of extension. These are mostly concentrated in the
 m_particle module, which contains the particle, pair_interaction and

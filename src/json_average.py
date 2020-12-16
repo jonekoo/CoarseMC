@@ -1,6 +1,6 @@
 #-*- coding: utf-8 -*-
 """
-This script computes the average total energy for PTGBCYL output sorted
+This script computes the average total energy for CoarseMC output sorted
 by temperature. Before using this, one should first process the files with 
 reorder_output.py.
 
