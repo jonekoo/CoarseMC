@@ -76,7 +76,7 @@ coarsemc_SOURCES = \
   m_nvt_engine.F90 \
   m_npt_engine.F90 \
   mc_engine.F90 \
-  gbcyl.f90 
+  coarsemc.f90 
 
 create_crystal_SOURCES = \
   crystal.f90 \
