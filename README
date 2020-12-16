@@ -1,0 +1,133 @@
+
+
+
+CoarseMC Quick Start Guide
+-------------------
+
+Jouni Karjalainen
+jouni.m.karjalainen@gmail.com
+
+
+
+Introduction
+------------
+
+This is CoarseMC, a Monte Carlo simulation package for coarse-grained
+molecular models. The copyright belongs to Jouni Karjalainen for most
+of the code. See LICENSE file for copyright information.
+
+
+
+
+
+Building
+---------
+
+Requirements:
+
+
+The program has been successfully compiled using Gnu Compiler Collection
+(GCC) 6.0.0 with OpenMPI 1.10.0, as well as Intel Parallel Studio XE
+versions 2015 and 2016, with Intel MPI 5.0.1 and 5.1.1, respectively.
+Older versions of the compilers may lack support for some Fortran 
+2003/2008 features used in the program. A C compiler is also needed to
+compile the included Cephes library. A POSIX-compliant Bourne-shell-like
+environment is expected in the build process, but not necessary. Python
+2.7 with the ujson module (https://pypi.python.org/pypi/ujson) installed
+is recommended to run the scripts used to edit input/output files. If the
+distribution is cloned from the repository, also the GNU Autotools (Automake,
+Autoconf and Libtool) are needed.
+
+
+Cloning from repository:
+
+If coarsemc was cloned from the repository, the first step is to go to the
+cloned coarsemc/gbcyl directory where configure.ac is located and run 
+
+autoreconf --install
+
+If some errors appear at this step, it is probably due to missing one of the
+GNU Autotools components (see Requirements).
+
+
+Compiling:
+
+Here we assume that the MPI wrappers for your Fortran and C compilers
+are called mpif90 and mpicc, respectively.
+
+The top folder of the package contains the script configure to configure
+the package before building it with make. Here are examples of
+configuring and building the package with GNU and Intel compilers:
+ 
+GCC:
+./configure --prefix=yourinstallationpath FC=mpif90 \
+FCFLAGS="-fno-range-check -O2 -fopenmp" CC=mpicc CFLAGS="-O2 -fopenmp" \
+F77=mpif90 FFLAGS="-O2 -fopenmp" PYTHON=pathtopython2
+make
+
+Intel:
+./configure --prefix=yourinstallationpath FC=mpif90 \
+FCFLAGS="-standard-semantics -O2 -openmp" CC=mpicc CFLAGS="-O2 -openmp" \
+F77=mpif90 FFLAGS="-O2 -openmp" PYTHON=pathtopython2
+make
+
+Note that the compiler flags "-standard-semantics" (Intel) and
+"-fno-range-check" (GNU) are mandatory. Giving the path to a Python 2.6 
+(or 2.7) installation is necessary only for running the python scripts, which
+include tests and examples. The --prefix option is also optional and needed
+only if you want to install the binaries with
+
+make install
+
+To see more configuration options, use command
+./configure --help
+
+VPATH builds are supported so that one can do in the top directory for example:
+mkdir build
+cd build
+../configure [the options as listed above]
+make
+
+
+Running:
+
+To run a simulation you need at least one input file. The Examples
+folder gives these for different systems. Assuming the input file 
+input-0.json and the program binary coarsemc exist in the current folder,
+one can run the program with 
+
+mpirun -np 1 ./coarsemc
+
+This will produce files output-0.json containing the snapshots (the 
+trajectory) and restart-0.json, which is provided for restarting the
+simulation. 
+
+More detailed information about the files and running a simulation can
+be found from the User Manual and the Examples folder.
+
+
+
+Package folders (in alphabetical order)
+---------------------------------------
+
+cephes:
+Mathematical library of special functions. Used by the ljwall_interaction.
+
+claf90:
+Library for command-line parsing. Used by the main program.
+
+doxygen-doc:
+Created if doxygen is available
+
+Examples:
+Contains example input files for simulations.
+
+mt_stream_f90-1.11:
+Multiple Stream Mersenne Twister Pseudo-Random Number Generator
+
+src:
+The program source code and accompanied scripts for processing input and
+output files
+
+
+

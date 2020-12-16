@@ -1,8 +1,0 @@
-This directory contains a very simple example of point-like particles in a
-periodic rectangular box, interacting via the Lennard-Jones potential. The
-only input file needed is input-0.json, which contains the parameters for the
-simulation and the particle coordinates.
-
-Run with:
-
-mpirun -np 1 ../src/ptgbcyl
