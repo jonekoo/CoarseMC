@@ -537,7 +537,7 @@ contains
       n_max = min(maxval(groups(i_group)%ptr%sl%counts) * 27, &
         size(groups(i_group)%ptr%particles))
       allocate(ds(i_group)%arr(n_max), &
-        source=groups(i_group)%ptr%particles)
+        source=groups(i_group)%ptr%particles(1:n_max))
       allocate(ds(i_group)%mask(n_max), source = .false.)
       ds(i_group)%n_cell = 0
       ds(i_group)%n = 0
@@ -588,7 +588,7 @@ contains
     end do
     do i_group = 1, size(groups)
        call ds(i_group)%delete()
-    end do   
+    end do
     !$OMP END PARALLEL
 
     do i_group = 1, size(groups)
