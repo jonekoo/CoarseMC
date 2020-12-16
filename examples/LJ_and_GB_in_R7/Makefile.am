@@ -27,12 +27,12 @@ example : $(OUTPUT)
 
 OUTPUT = restart-0.json restart-1.json output-0.json output-1.json
 
-$(OUTPUT) : ljgbr7-0.json ljgbr7-1.json $(top_builddir)/src/ptgbcyl
+$(OUTPUT) : ljgbr7-0.json ljgbr7-1.json $(top_builddir)/src/coarsemc
 	@echo "\nCleaning previous output files out of the way."
 	rm -f output-0.json output-1.json
 	@echo "\nRunning a simulation with two replicas."
 	@echo "This might take a while..."
-	mpirun -np 2 $(top_builddir)/src/ptgbcyl -i ljgbr7-_I_.json 
+	mpirun -np 2 $(top_builddir)/src/coarsemc -i ljgbr7-_I_.json 
 
 mostlyclean-local : 
 	-rm -f geometry.json

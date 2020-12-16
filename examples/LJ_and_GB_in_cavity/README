@@ -10,7 +10,7 @@ How to run:
 1) Serial simulation
 
 To run the simulation with one core:
-mpirun -np 1 ../../src/ptgbcyl
+mpirun -np 1 ../../src/coarsemc
 
 
 2) Domain decomposition with OpenMP and 4 threads:
@@ -19,7 +19,7 @@ To use 4 threads for domain decomposition set the OMP_NUM_THREADS variable
 (assuming bash here):
 
 export OMP_NUM_THREADS=4
-mpirun -np 1 ../../src/ptgbcyl
+mpirun -np 1 ../../src/coarsemc
 
 
 3) Parallel tempering and domain decomposition:
@@ -28,7 +28,7 @@ To use two replicas and parallel tempering, with each replica having two
 threads:
 
 export OMP_NUM_THREADS=2
-mpirun -np 2 ../../src/ptgbcyl
+mpirun -np 2 ../../src/coarsemc
 
 
 To run a longer simulation, change the parameters n_equilibration_sweeps

@@ -7,7 +7,7 @@ import sys
 import numpy
 
 def main():
-    program = os.path.realpath("ptgbcyl")
+    program = os.path.realpath("coarsemc")
     #inputdir = os.path.join("tests",
     #                        "zero_sweeps")
     inputdir = ""

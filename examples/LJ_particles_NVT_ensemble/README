@@ -5,4 +5,4 @@ simulation and the particle coordinates.
 
 Run with:
 
-mpirun -np 1 ../src/ptgbcyl
+mpirun -np 1 ../src/coarsemc

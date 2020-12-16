@@ -24,7 +24,7 @@ for i in range(ntemperatures-ntasks, -1, -1):
         sys.argv[1:]=['inputparameters.'+str(j), 'n_equilibration_sweeps', str(1)]
         replaceparameter.main() 
 
-    p=subprocess.call(["mpirun", "-np", str(ntasks), "../src/ptgbcyl"])
+    p=subprocess.call(["mpirun", "-np", str(ntasks), "../src/coarsemc"])
 
     if i>0:
         p=subprocess.call(["cp", "restartparameters."+str(ntasks-1), "restartparameters."+str(i+ntasks-1)])

@@ -37,7 +37,7 @@ program gbcyl
        description='File to write parameters for restart.', &
        kkind=cla_char, default='restart-_I_.json')
   
-  call cla_validate('ptgbcyl')
+  call cla_validate('coarsemc')
   
   call cla_get('--input-file', input_filename)
   call parse_filename(input_filename, parameter_infile)

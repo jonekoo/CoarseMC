@@ -19,13 +19,13 @@ test_missinginput.json : $(top_srcdir)/tests/shortinput-0.json
 
 test_missinginput.py : test_missinginput.json
 
-shortrestart-0.json shortrestart-1.json : shortinput-0.json shortinput-1.json $(top_builddir)/src/ptgbcyl
-	$(RUN_CMD) 2 $(top_builddir)/src/ptgbcyl -i $(top_srcdir)/tests/shortinput-_I_.json -o shortoutput-_I_.json -r shortrestart-_I_.json
+shortrestart-0.json shortrestart-1.json : shortinput-0.json shortinput-1.json $(top_builddir)/src/coarsemc
+	$(RUN_CMD) 2 $(top_builddir)/src/coarsemc -i $(top_srcdir)/tests/shortinput-_I_.json -o shortoutput-_I_.json -r shortrestart-_I_.json
 
 test_zerosweeps.py : zerosweepsrestart-0.json total_energies-reference.txt
 
-zerosweepsrestart-0.json : zerosweepsinput-0.json $(top_builddir)/src/ptgbcyl
-	$(RUN_CMD) 1 $(top_builddir)/src/ptgbcyl -i $(top_srcdir)/tests/zerosweepsinput-_I_.json -o zerosweepsoutput-_I_.json -r zerosweepsrestart-_I_.json
+zerosweepsrestart-0.json : zerosweepsinput-0.json $(top_builddir)/src/coarsemc
+	$(RUN_CMD) 1 $(top_builddir)/src/coarsemc -i $(top_srcdir)/tests/zerosweepsinput-_I_.json -o zerosweepsoutput-_I_.json -r zerosweepsrestart-_I_.json
 
 mostlyclean-local :
 	-rm -f shortrestart-0.json shortrestart-1.json shortoutput-0.json shortoutput-1.json

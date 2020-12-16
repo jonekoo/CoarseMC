@@ -2,11 +2,11 @@
 noinst_LTLIBRARIES = libmodel.la
 
 ## Programs to install
-## dummy is an ugly hack to get libmodel.la compiled before ptgbcyl. There
+## dummy is an ugly hack to get libmodel.la compiled before coarsemc. There
 ## must be a better way to do that.
 bin_PROGRAMS = \
   dummy \
-  ptgbcyl \
+  coarsemc \
   create_crystal \
   printpotentials 
 
@@ -69,7 +69,7 @@ LDADD = $(top_builddir)/claf90/libclaf.la  libmodel.la
 
 AM_FCFLAGS += -I$(top_builddir)/cephes/cmath
 
-ptgbcyl_SOURCES = \
+coarsemc_SOURCES = \
   genvoltrial.f90 \
   beta_exchange.f90 \
   class_simplelist.f90 \

@@ -22,7 +22,7 @@ def main():
         json.dump(d, f)
     # Run program with input. Catch output.
     runcmd = os.environ['RUN_CMD'].replace('"', '')
-    args = runcmd.split() + ["1", os.path.join("..", "src", "ptgbcyl"), "-i",
+    args = runcmd.split() + ["1", os.path.join("..", "src", "coarsemc"), "-i",
                              "test_missinginput-_I_.json"]
     proc = subprocess.Popen(args, stderr=subprocess.PIPE)
     for line in proc.stderr:

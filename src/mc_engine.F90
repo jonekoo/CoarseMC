@@ -247,7 +247,7 @@ subroutine finalize(id)
   end do
   if (allocated(mts)) deallocate(mts)
   if (id == 0) write (output_unit, *) &
-       'Program ptgbcyl was finalized succesfully.'
+       'Program coarsemc was finalized succesfully.'
 end subroutine 
 
   

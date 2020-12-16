@@ -41,8 +41,8 @@ Autoconf and Libtool) are needed.
 
 Cloning from repository:
 
-If ptgbcyl was cloned from the repository, the first step is to go to the
-cloned ptgbcyl/gbcyl directory where configure.ac is located and run 
+If coarsemc was cloned from the repository, the first step is to go to the
+cloned coarsemc/gbcyl directory where configure.ac is located and run 
 
 autoreconf --install
 
@@ -93,10 +93,10 @@ Running:
 
 To run a simulation you need at least one input file. The Examples
 folder gives these for different systems. Assuming the input file 
-input-0.json and the program binary ptgbcyl exist in the current folder,
+input-0.json and the program binary coarsemc exist in the current folder,
 one can run the program with 
 
-mpirun -np 1 ./ptgbcyl
+mpirun -np 1 ./coarsemc
 
 This will produce files output-0.json containing the snapshots (the 
 trajectory) and restart-0.json, which is provided for restarting the

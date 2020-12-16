@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(ptgbcyl, 1.0.0, jouni.m.karjalainen@gmail.com)
+AC_INIT(coarsemc, 1.0.0, jouni.m.karjalainen@gmail.com)
 AM_INIT_AUTOMAKE([-Wall -Werror subdir-objects foreign tar-pax])
 AC_PROG_FC
 AC_PROG_CC

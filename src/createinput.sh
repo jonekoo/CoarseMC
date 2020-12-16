@@ -2,7 +2,7 @@
 
 INSTALLDIR=${HOME}
 
-PARAMETERFILE=${INSTALLDIR}/share/ptgbcyl.in
+PARAMETERFILE=${INSTALLDIR}/share/coarsemc.in
 GEOMETRYFILE=${INSTALLDIR}/share/r9-n1290-cr.gb
 
 i=0

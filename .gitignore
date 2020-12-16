@@ -27,7 +27,7 @@ autom4te.cache/*
 build
 missing
 src/create_crystal
-src/ptgbcyl
+src/coarsemc
 src/printpotentials
 src/dummy
 examples/*/restart-*.json
@@ -35,7 +35,7 @@ examples/*/output-*.json
 examples/LJ_and_GB_in_R7/ljgbr7-*.json
 examples/LJ_and_GB_in_R7/geometry.json
 examples/LJ_and_GB_in_R7/temperatures.json
-ptgbcyl-1.0.0.tar.gz
+coarsemc-1.0.0.tar.gz
 test*.log
 test_*.trs
 tests/input-0.json
