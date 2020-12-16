@@ -14,8 +14,8 @@ temperatures.json : $(top_srcdir)/src/geometric_progression.py
 
 ljgbr7-0.json ljgbr7-1.json : geometry.json input-0.json temperatures.json $(top_srcdir)/src/update_json.py $(top_srcdir)/src/replace_with_points.py $(top_srcdir)/src/scatter.py
 	@echo "\nCreating input files from template."
-	cp $(top_srcdir)/Examples/LJ_and_GB_in_R7/input-0.json ljgbr7-0.json
-	cp $(top_srcdir)/Examples/LJ_and_GB_in_R7/input-0.json ljgbr7-1.json
+	cp $(top_srcdir)/examples/LJ_and_GB_in_R7/input-0.json ljgbr7-0.json
+	cp $(top_srcdir)/examples/LJ_and_GB_in_R7/input-0.json ljgbr7-1.json
 	@echo "\nSetting temperatures to input files."
 	$(PYTHON) $(top_srcdir)/src/scatter.py temperatures.json ljgbr7-_I_.json 2
 	@echo "\nAdding coordinates to input files."

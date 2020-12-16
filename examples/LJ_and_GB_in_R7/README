@@ -1,0 +1,12 @@
+This folder contains an example of creating input using the bundled Python 2
+scripts and running a simulation for GB particles and LJ atoms. 
+
+To run the scripts and the simulation:
+make example
+
+To make this work one must have a working Python 2.6 or 2.7 installation and
+have configured the package with:
+./configure PYTHON=pathtopython2 [other options]
+
+(and of course compiled after that)
+

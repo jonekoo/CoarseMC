@@ -32,3 +32,6 @@ src/printpotentials
 src/dummy
 examples/*/restart-*.json
 examples/*/output-*.json
+examples/LJ_and_GB_in_R7/ljgbr7-*.json
+examples/LJ_and_GB_in_R7/geometry.json
+examples/LJ_and_GB_in_R7/temperatures.json
