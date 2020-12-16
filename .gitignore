@@ -30,3 +30,5 @@ src/create_crystal
 src/ptgbcyl
 src/printpotentials
 src/dummy
+examples/*/restart-*.json
+examples/*/output-*.json

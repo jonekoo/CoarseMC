@@ -1,6 +1,6 @@
 {
-  "n_equilibration_sweeps": 100000,
-  "n_production_sweeps": 200000,
+  "n_equilibration_sweeps": 100,
+  "n_production_sweeps": 200,
   "production_period": 400,
   "move_adjusting_period": 100,
   "pt_period": 10,
@@ -51,7 +51,7 @@
   "single_interactions": [
     {
       "participant": "gb",
-      "type": "ljwall_interaction",
+      "type": "lj2wall_interaction",
       "wall_density": 0.1E+1,
       "rodwall": "ljdimer-wall",
       "alpha_A": 0.1E+1,
@@ -67,7 +67,7 @@
     },
     {
       "participant": "lj",
-      "type": "ljwall_interaction",
+      "type": "lj1wall_interaction",
       "wall_density": 0.1E+1,
       "rodwall": "ljdimer-wall",
       "alpha_A": 0.1E+1,

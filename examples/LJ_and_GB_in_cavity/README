@@ -31,3 +31,5 @@ export OMP_NUM_THREADS=2
 mpirun -np 2 ../../src/ptgbcyl
 
 
+To run a longer simulation, change the parameters n_equilibration_sweeps
+and n_production_sweeps in both files input-0.json and input-1.json.
